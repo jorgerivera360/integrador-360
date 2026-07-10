@@ -23,3 +23,5 @@ build/
 .idea/
 *.swp
 EOF
+
+prueba.py
