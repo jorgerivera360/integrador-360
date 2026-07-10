@@ -1,0 +1,15 @@
+-- schema.sql — BD del integrador
+-- 9 tablas · índices · relaciones
+-- Fase: 5 — BD del integrador
+--
+-- Tablas:
+--   clients              — maestro de clientes
+--   users                — usuarios del sistema
+--   user_permissions     — acceso por cliente
+--   client_config        — configuración técnica
+--   sql_templates        — SQLs editables
+--   scheduler_state      — estado del scheduler
+--   flow_execution_logs  — logs de ejecución
+--   flow_record_errors   — detalle de errores
+--   client_notes         — notas del cliente
+--   client_attachments   — archivos adjuntos
