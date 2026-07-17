@@ -177,9 +177,6 @@ class JsonRPC:
             model=model, method=method, args=[ids], kwargs=kwargs,
         )
 
-    # ------------------------------------------------------------------
-    # Utilidad
-    # ------------------------------------------------------------------
 
     def test_connection(self) -> tuple:
         ok, msg = self.authenticate()
