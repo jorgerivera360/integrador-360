@@ -20,7 +20,7 @@ class ERPConnector(ABC):
         pass
     
     @abstractmethod
-    def test_conntection(self) -> tuple:
+    def test_connection(self) -> tuple:
         """Prueba la conexión al ERP, retorna tupla (status: boo, mensaje: str)
            status: True si la conexión fue exitosa
            mensaje: Descripción del resultado"""
