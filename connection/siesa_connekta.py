@@ -15,12 +15,13 @@ from connection.base import ERPConnector
 class SiesaConnekta(ERPConnector):
 
     def __init__(self, config: dict):
-        self.url = config["erp"]["url"]
-        self.compania = config["erp"]["compania"]
-        self.conni_key = config["erp"]["conni_key"]
-        self.conni_token = config["erp"]["conni_token"]
-        self.client_id = config["client_id"]
-        self.logger = IntegradorLogger(client_id=self.client_id)
+        self.url         = config["erp"]["url"]
+        self.url_qa      = config["erp"].get("url_qa", "")
+        self.id_compania = config["erp"]["idcompania"]
+        self.conni_key   = config["erp"]["connikey"]
+        self.conni_token = config["erp"]["connitoken"]
+        self.client_id   = config["client_id"]
+        self.logger      = IntegradorLogger(client_id=self.client_id)
 
     def _get_headers(self) -> dict:
         return {
@@ -47,7 +48,7 @@ class SiesaConnekta(ERPConnector):
         try:
             while True:
                 # Construcción dinámica de la URL con query params
-                url = f"{self.url}?idCompania={self.compania}&descripcion={query_desc}"
+                url = f"{self.url}?idCompania={self.id_compania}&descripcion={query_desc}"
                 if not no_paginar:
                     url += f"&paginacion=numPag={num_pag}|tamPag={tam_pag}"
 
@@ -88,12 +89,18 @@ class SiesaConnekta(ERPConnector):
         except Exception as e:
             self.logger.error(f"Error al traer {query_desc} de Siesa Connekta: {e}")
             return False, str(e)
-
+    
     def test_connection(self) -> tuple:
-        status, data = self.get(
-            endpoint="productosysolucionesquimicas_items_wms",
-            params={"single_page": True, "tam_pag": 1}
-        )
-        if status:
-            return True, f"Conexión exitosa con Siesa Connekta - Compañía {self.compania}"
-        return False, f"No se pudo conectar con Siesa Connekta: {data}"
+        try:
+            response = requests.get(
+                self.url,
+                headers=self._get_headers(),
+                verify=True,
+                timeout=10
+            )
+            if response.status_code in (200, 400, 404):
+                return True, f"Conexión exitosa con SIESA Connekta — compañía {self.id_compania}"
+            return False, f"No se pudo conectar — status {response.status_code}"
+        except Exception as e:
+            self.logger.error(f"Error al probar conexión Connekta: {e}")
+            return False, str(e)
