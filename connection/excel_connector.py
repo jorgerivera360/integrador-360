@@ -45,8 +45,9 @@ class ExcelConnector(ERPConnector):
             return True, []
         
         try:
-            df   = pd.read_excel(ruta, header=0)
-            data = df.where(pd.notna(df), None).to_dict(orient="records")
+            df   = pd.read_excel(ruta, header=0, dtype=str)
+            records = df.to_dict(orient="records")
+            data    = [{k: (None if pd.isnull(v) else v) for k, v in row.items()} for row in records]
             self.logger.info(f"Excel '{endpoint}' leído correctamente — {len(data)} registros")
             return True, data
         except Exception as e:
@@ -70,3 +71,4 @@ class ExcelConnector(ERPConnector):
 
         self.logger.info(f"Archivos encontrados: {archivos_encontrados} — faltantes: {archivos_faltantes}")
         return True, f"Archivos disponibles: {archivos_encontrados}"
+    

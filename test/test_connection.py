@@ -485,3 +485,492 @@ class TestSiesaConnekta:
             from connection.siesa_connekta import SiesaConnekta
             ck = SiesaConnekta(CONNEKTA_CONFIG)
             assert ck.id_compania == "7936"
+
+    def test_connekta_constructor_extrae_conni_key_y_token(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            assert ck.conni_key   == "test_key"
+            assert ck.conni_token == "test_token"
+
+    def test_connekta_get_headers_retorna_los_cuatro_headers(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck      = SiesaConnekta(CONNEKTA_CONFIG)
+            headers = ck._get_headers()
+            assert "ConniKey"     in headers
+            assert "ConniToken"   in headers
+            assert "Content-Type" in headers
+            assert "Accept"       in headers
+
+    def test_connekta_get_sin_query_desc_retorna_false(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            status, msg = ck.get("", params={})
+            assert status is False
+
+    def test_connekta_get_construye_url_con_id_compania(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "codigo": 0,
+                "detalle": {"Datos": [], "total_páginas": 1}
+            }
+            with patch("requests.get", return_value=mock_response) as mock_get:
+                ck.get("items_wms", params={"no_paginar": True})
+                url_llamada = mock_get.call_args[0][0]
+                assert "idCompania=7936" in url_llamada
+
+    def test_connekta_get_agrega_paginacion_cuando_no_paginar_es_false(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "codigo": 0,
+                "detalle": {"Datos": [], "total_páginas": 1}
+            }
+            with patch("requests.get", return_value=mock_response) as mock_get:
+                ck.get("items_wms", params={"no_paginar": False})
+                url_llamada = mock_get.call_args[0][0]
+                assert "paginacion" in url_llamada
+
+    def test_connekta_get_no_agrega_paginacion_cuando_no_paginar_es_true(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "codigo": 0,
+                "detalle": {"Datos": [], "total_páginas": 1}
+            }
+            with patch("requests.get", return_value=mock_response) as mock_get:
+                ck.get("items_wms", params={"no_paginar": True})
+                url_llamada = mock_get.call_args[0][0]
+                assert "paginacion" not in url_llamada
+
+    def test_connekta_get_detecta_formato_datos(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "codigo": 0,
+                "detalle": {"Datos": [{"id": 1}, {"id": 2}], "total_páginas": 1}
+            }
+            with patch("requests.get", return_value=mock_response):
+                status, data = ck.get("items_wms", params={"no_paginar": True})
+                assert status is True
+                assert len(data) == 2
+
+    def test_connekta_get_detecta_formato_table_cuando_datos_no_existe(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "codigo": 0,
+                "detalle": {"Table": [{"id": 1}], "total_páginas": 1}
+            }
+            with patch("requests.get", return_value=mock_response):
+                status, data = ck.get("items_wms", params={"no_paginar": True})
+                assert status is True
+                assert len(data) == 1
+
+    def test_connekta_get_retorna_lista_vacia_cuando_items_esta_vacio(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "codigo": 0,
+                "detalle": {"Datos": [], "total_páginas": 1}
+            }
+            with patch("requests.get", return_value=mock_response):
+                status, data = ck.get("items_wms", params={"no_paginar": True})
+                assert status is True
+                assert data == []
+
+    def test_connekta_get_para_con_single_page_true(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "codigo": 0,
+                "detalle": {"Datos": [{"id": 1}], "total_páginas": 5}
+            }
+            with patch("requests.get", return_value=mock_response) as mock_get:
+                ck.get("items_wms", params={"single_page": True})
+                assert mock_get.call_count == 1
+
+    def test_connekta_get_retorna_false_cuando_codigo_no_es_cero(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "codigo": 1,
+                "mensaje": "Token inválido"
+            }
+            with patch("requests.get", return_value=mock_response):
+                status, msg = ck.get("items_wms", params={"no_paginar": True})
+                assert status is False
+                assert "Token inválido" in msg
+
+    def test_connekta_get_retorna_false_cuando_hay_excepcion(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            with patch("requests.get", side_effect=Exception("network error")):
+                status, msg = ck.get("items_wms")
+                assert status is False
+                assert "network error" in msg
+
+    def test_connekta_test_connection_retorna_true_con_status_200_400_404(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.siesa_connekta import SiesaConnekta
+            ck = SiesaConnekta(CONNEKTA_CONFIG)
+            for status_code in [200, 400, 404]:
+                mock_response = MagicMock()
+                mock_response.status_code = status_code
+                with patch("requests.get", return_value=mock_response):
+                    status, msg = ck.test_connection()
+                    assert status is True
+
+# -- ExcelConnector — excel_connector.py
+
+class TestExcelConnector:
+
+    def test_excel_constructor_asigna_client_id(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            assert ec.client_id == "test_client"
+
+    def test_excel_constructor_construye_ruta_base_correcta(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            assert ec.ruta_base == "/etc/integrador/excel/test_client/"
+
+    def test_excel_get_ruta_archivo_retorna_ruta_correcta(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec   = ExcelConnector(EXCEL_CONFIG)
+            ruta = ec._get_ruta_archivo("productos")
+            assert "test_client-productos.xlsx" in ruta
+            assert "/etc/integrador/excel/test_client/" in ruta
+
+    def test_excel_get_endpoint_invalido_retorna_false(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            status, msg = ec.get("clientes")
+            assert status is False
+            assert "no válido" in msg
+
+    def test_excel_get_archivo_no_existe_retorna_lista_vacia(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            with patch("os.path.exists", return_value=False):
+                status, data = ec.get("productos")
+                assert status is True
+                assert data == []
+
+    def test_excel_get_lee_archivo_y_retorna_lista_de_dicts(self, tmp_path):
+        import pandas as pd
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            config = {"client_id": "test", "erp": {"tipo": "excel"}, "odoo": {}}
+            ec = ExcelConnector(config)
+            archivo = tmp_path / "test-productos.xlsx"
+            df = pd.DataFrame([{"referencia": "1000039", "descripcion": "PRODUCTO A"}])
+            df.to_excel(archivo, index=False)
+            ec.ruta_base = str(tmp_path) + "/"
+            status, data = ec.get("productos")
+            assert status is True
+            assert len(data) == 1
+            assert data[0]["referencia"] == "1000039"
+
+    def test_excel_get_convierte_nan_a_none(self, tmp_path):
+        import pandas as pd
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            config = {"client_id": "test", "erp": {"tipo": "excel"}, "odoo": {}}
+            ec = ExcelConnector(config)
+            archivo = tmp_path / "test-productos.xlsx"
+            df = pd.DataFrame([{"referencia": "1000039", "barras": None}])
+            df.to_excel(archivo, index=False)
+            ec.ruta_base = str(tmp_path) + "/"
+            status, data = ec.get("productos")
+            assert status is True
+            assert data[0]["barras"] is None
+
+    def test_excel_test_connection_retorna_false_sin_archivos(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            with patch("os.path.exists", return_value=False):
+                status, msg = ec.test_connection()
+                assert status is False
+
+    def test_excel_constructor_asigna_client_id(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            assert ec.client_id == "test_client"
+
+    def test_excel_constructor_construye_ruta_base_correcta(self):
+        """self.ruta_base sigue el estándar /etc/integrador/excel/{client_id}/."""
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            assert ec.ruta_base == "/etc/integrador/excel/test_client/"
+
+    def test_excel_get_ruta_archivo_retorna_ruta_correcta(self):
+        """_get_ruta_archivo() retorna ruta completa con nombre {client_id}-{proceso}.xlsx."""
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec   = ExcelConnector(EXCEL_CONFIG)
+            ruta = ec._get_ruta_archivo("productos")
+            assert "test_client-productos.xlsx" in ruta
+            assert "/etc/integrador/excel/test_client/" in ruta
+
+    def test_excel_get_endpoint_invalido_retorna_false(self):
+        """get() retorna (False, error) cuando endpoint no está en ARCHIVOS_VALIDOS."""
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            status, msg = ec.get("clientes")
+            assert status is False
+            assert "no válido" in msg
+
+    def test_excel_get_archivo_no_existe_retorna_lista_vacia(self):
+        """get() retorna (True, []) con WARNING cuando el archivo no existe."""
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            with patch("os.path.exists", return_value=False):
+                status, data = ec.get("productos")
+                assert status is True
+                assert data == []
+
+    def test_excel_get_lee_archivo_y_retorna_lista_de_dicts(self, tmp_path):
+        """get() lee el archivo xlsx y retorna lista de dicts."""
+        import pandas as pd
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            config = {"client_id": "test", "erp": {"tipo": "excel"}, "odoo": {}}
+            ec = ExcelConnector(config)
+            archivo = tmp_path / "test-productos.xlsx"
+            df = pd.DataFrame([{"referencia": "1000039", "descripcion": "PRODUCTO A"}])
+            df.to_excel(archivo, index=False)
+            ec.ruta_base = str(tmp_path) + "/"
+            status, data = ec.get("productos")
+            assert status is True
+            assert len(data) == 1
+            assert data[0]["referencia"] == "1000039"
+
+    def test_excel_get_convierte_nan_a_none(self, tmp_path):
+        """get() convierte celdas vacías del Excel a None."""
+        import pandas as pd
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            config = {"client_id": "test", "erp": {"tipo": "excel"}, "odoo": {}}
+            ec = ExcelConnector(config)
+            archivo = tmp_path / "test-productos.xlsx"
+            df = pd.DataFrame([{"referencia": "1000039", "barras": None}])
+            df.to_excel(archivo, index=False)
+            ec.ruta_base = str(tmp_path) + "/"
+            status, data = ec.get("productos")
+            assert status is True
+            assert data[0]["barras"] is None
+
+    def test_excel_test_connection_retorna_false_sin_archivos(self):
+        """test_connection() retorna (False, error) cuando no existe ningún archivo."""
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.excel_connector import ExcelConnector
+            ec = ExcelConnector(EXCEL_CONFIG)
+            with patch("os.path.exists", return_value=False):
+                status, msg = ec.test_connection()
+                assert status is False
+
+
+# -- JsonRPC — jsonrpc.py
+
+class TestJsonRPC:
+
+    def test_jsonrpc_constructor_extrae_url_sin_barra_final(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            config = {**JSONRPC_CONFIG, "odoo": {**JSONRPC_CONFIG["odoo"], "url": "https://test.odoo.com/"}}
+            rpc = JsonRPC(config)
+            assert not rpc.url.endswith("/")
+            assert rpc.url == "https://test.odoo.com"
+
+    def test_jsonrpc_constructor_extrae_db_usuario_clave(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            assert rpc.db       == "test_db"
+            assert rpc.username == "test"
+            assert rpc.password == "test"
+
+    def test_jsonrpc_constructor_inicializa_authenticated_en_false(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            assert rpc._authenticated is False
+
+    def test_jsonrpc_authenticate_exitoso_pone_authenticated_en_true(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": {"session_id": "xyz789"}}
+            with patch.object(rpc._session, "post", return_value=mock_response):
+                rpc.authenticate()
+                assert rpc._authenticated is True
+
+    def test_jsonrpc_authenticate_exitoso_guarda_session_id(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": {"session_id": "xyz789"}}
+            with patch.object(rpc._session, "post", return_value=mock_response):
+                rpc.authenticate()
+                assert rpc._session_id == "xyz789"
+
+    def test_jsonrpc_authenticate_fallido_retorna_false(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "error": {"data": {"message": "Credenciales incorrectas", "arguments": []}}
+            }
+            with patch.object(rpc._session, "post", return_value=mock_response):
+                status, msg = rpc.authenticate()
+                assert status is False
+
+    def test_jsonrpc_authenticate_loggea_info_cuando_exitoso(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": {"session_id": "xyz789"}}
+            with patch.object(rpc._session, "post", return_value=mock_response):
+                with patch.object(rpc.logger, "info") as mock_info:
+                    rpc.authenticate()
+                    mock_info.assert_called()
+
+    def test_jsonrpc_authenticate_loggea_error_cuando_falla(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "error": {"data": {"message": "Error", "arguments": []}}
+            }
+            with patch.object(rpc._session, "post", return_value=mock_response):
+                with patch.object(rpc.logger, "error") as mock_error:
+                    rpc.authenticate()
+                    mock_error.assert_called()
+
+    def test_jsonrpc_call_kw_sin_autenticar_retorna_false(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            status, msg = rpc._call_kw("product.template", "search_read", [], {})
+            assert status is False
+            assert "No autenticado" in msg
+
+    def test_jsonrpc_call_kw_construye_payload_correcto(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            rpc._authenticated = True
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": []}
+            with patch.object(rpc._session, "post", return_value=mock_response) as mock_post:
+                rpc._call_kw("product.template", "search_read", [], {"domain": []})
+                payload = mock_post.call_args[1]["json"]
+                assert payload["params"]["model"]  == "product.template"
+                assert payload["params"]["method"] == "search_read"
+
+    def test_jsonrpc_call_kw_retorna_false_cuando_odoo_retorna_error(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            rpc._authenticated = True
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "error": {"data": {"message": "Access Denied", "arguments": []}}
+            }
+            with patch.object(rpc._session, "post", return_value=mock_response):
+                status, msg = rpc._call_kw("product.template", "search_read", [], {})
+                assert status is False
+                assert "Access Denied" in msg
+
+    def test_jsonrpc_call_kw_retorna_true_con_result(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            rpc._authenticated = True
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": [{"id": 1}]}
+            with patch.object(rpc._session, "post", return_value=mock_response):
+                status, data = rpc._call_kw("product.template", "search_read", [], {})
+                assert status is True
+                assert data == [{"id": 1}]
+
+    def test_jsonrpc_extract_odoo_error_extrae_message(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            body = {"error": {"data": {"message": "Access Denied", "arguments": []}}}
+            msg  = JsonRPC._extract_odoo_error(body)
+            assert msg == "Access Denied"
+
+    def test_jsonrpc_extract_odoo_error_extrae_arguments_sin_message(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            body = {"error": {"data": {"message": "", "arguments": ["error arg"]}}}
+            msg  = JsonRPC._extract_odoo_error(body)
+            assert "error arg" in msg
+
+    def test_jsonrpc_search_read_llama_call_kw_con_method_correcto(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            rpc._authenticated = True
+            with patch.object(rpc, "_call_kw", return_value=(True, [])) as mock_call:
+                rpc.search_read("product.template", domain=[["active", "=", True]])
+                _, kwargs = mock_call.call_args
+                assert kwargs["method"] == "search_read"
+
+    def test_jsonrpc_read_pasa_ids_en_args(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            rpc._authenticated = True
+            with patch.object(rpc, "_call_kw", return_value=(True, [])) as mock_call:
+                rpc.read("product.template", ids=[1, 2, 3])
+                _, kwargs = mock_call.call_args
+                assert [1, 2, 3] in kwargs["args"]
+
+    def test_jsonrpc_write_pasa_ids_y_fields_en_args(self):
+        with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+            from connection.jsonrpc import JsonRPC
+            rpc = JsonRPC(JSONRPC_CONFIG)
+            rpc._authenticated = True
+            with patch.object(rpc, "_call_kw", return_value=(True, True)) as mock_call:
+                rpc.write("product.template", ids=[1847], fields={"name": "nuevo"})
+                _, kwargs = mock_call.call_args
+                assert [1847] in kwargs["args"]
+                assert {"name": "nuevo"} in kwargs["args"]
