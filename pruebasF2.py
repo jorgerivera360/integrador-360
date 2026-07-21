@@ -80,8 +80,8 @@ def probar_ws(config):
     if not status:
         return
 
-    info("get() — SELECT TOP 3 f430_id, f430_rowid FROM t430...")
-    s, data = ws.get("", params={"sql": "SELECT TOP 3 f430_id, f430_rowid FROM t430 WITH(NOLOCK)"})
+    info("get() — SELECT 1")
+    s, data = ws.get("", params={"sql": "SELECT 1"})
     (ok if s else err)(f"get(): {len(data) if s else data} {'registros' if s else ''}")
     if s:
         muestra(data)

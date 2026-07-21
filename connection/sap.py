@@ -40,7 +40,7 @@ class SAP(ERPConnector):
                 "Content-Type": "application/json",
                 "Cookie":       "B1SESSION=; ROUTEID=.node3",
             }
-            response = requests.post(url, headers=headers, data=payload, verify=False)
+            response = requests.post(url, headers=headers, data=payload, verify=False, timeout=30)
             response.raise_for_status()
             self.session_id = response.json().get("SessionId")
             self.logger.info(f"Login SAP exitoso para {self.compania}")
