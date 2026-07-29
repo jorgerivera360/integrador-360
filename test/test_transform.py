@@ -967,3 +967,317 @@ class TestTransformConnekta:
         for flow_name in flows:
             result = t.get_flow(connector, flow_name, {"query_desc": "test"})
             assert result == [], f"Flow {flow_name} debería retornar [] con raw vacío"
+
+# -- TransformSAP — transform_sap.py
+
+@patch.dict(os.environ, {"ENV": "dev"}, clear=True)
+class TestTransformSAP:
+
+    def test_constructor_asigna_client_id_y_categorias_vacio(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        assert t.client_id == "test_client"
+        assert t._categorias == {}
+
+    def test_get_flow_flow_invalido_retorna_vacio(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        result = t.get_flow(MagicMock(), "no_existe", {})
+        assert result == []
+
+    # -- get_flow: autenticación
+    def test_get_flow_sin_session_id_hace_login(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.session_id = None
+        connector.login_api.return_value = True
+        connector.get.return_value = (True, [])
+        t.get_flow(connector, "compras", {"endpoint": "PurchaseOrders"})
+        connector.login_api.assert_called_once()
+
+    def test_get_flow_login_falla_retorna_vacio(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.session_id = None
+        connector.login_api.return_value = False
+        result = t.get_flow(connector, "compras", {"endpoint": "PurchaseOrders"})
+        assert result == []
+        connector.get.assert_not_called()
+
+    def test_get_flow_sin_endpoint_retorna_vacio(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.session_id = "SESSION-123"
+        result = t.get_flow(connector, "compras", {})
+        assert result == []
+        connector.get.assert_not_called()
+
+    # -- get_flow: pre-fetch de categorías
+    def test_get_flow_items_llama_prefetch_categories(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.session_id = "SESSION-123"
+        connector.get.return_value = (True, [])
+        with patch.object(t, "_prefetch_categories") as mock_prefetch:
+            t.get_flow(connector, "items", {"endpoint": "Items"})
+            mock_prefetch.assert_called_once_with(connector)
+
+    def test_get_flow_no_items_no_llama_prefetch(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.session_id = "SESSION-123"
+        connector.get.return_value = (True, [])
+        with patch.object(t, "_prefetch_categories") as mock_prefetch:
+            t.get_flow(connector, "compras", {"endpoint": "PurchaseOrders"})
+            mock_prefetch.assert_not_called()
+
+    def test_get_flow_pasa_filter_al_connector(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.session_id = "SESSION-123"
+        connector.get.return_value = (True, [])
+        flow_config = {
+            "endpoint": "PurchaseOrders",
+            "filter": "DocType eq 'dDocument_Items'",
+        }
+        t.get_flow(connector, "compras", flow_config)
+        kwargs = connector.get.call_args[1]
+        assert kwargs["endpoint"] == "PurchaseOrders"
+        assert kwargs["params"] == {"filter": "DocType eq 'dDocument_Items'"}
+
+    # -- _prefetch_categories
+    def test_prefetch_categories_exitoso(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.get.return_value = (True, [
+            {"Number": 100, "GroupName": "Materias Primas"},
+            {"Number": 200, "GroupName": "Producto Terminado"},
+        ])
+        t._prefetch_categories(connector)
+        assert t._categorias == {100: "Materias Primas", 200: "Producto Terminado"}
+        connector.get.assert_called_once_with(endpoint="ItemGroups", params={})
+
+    def test_prefetch_categories_falla_deja_dict_vacio(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.get.return_value = (False, "Error de conexión")
+        t._prefetch_categories(connector)
+        assert t._categorias == {}
+
+    # -- _flatten_lines
+    def test_flatten_lines_aplana_document_lines(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        raw = [{
+            "DocNum": 12345,
+            "CardCode": "P-ACME",
+            "DocumentLines": [
+                {"ItemCode": "SKU001", "Quantity": 10},
+                {"ItemCode": "SKU002", "Quantity": 20},
+            ],
+        }]
+        mapping_lineas = {"origen": "DocumentLines", "campos": {"ItemCode": "producto"}}
+        result = t._flatten_lines(raw, mapping_lineas)
+        assert len(result) == 2
+        assert result[0]["DocNum"] == 12345
+        assert result[0]["ItemCode"] == "SKU001"
+        assert result[1]["ItemCode"] == "SKU002"
+        assert "DocumentLines" not in result[0]
+
+    def test_flatten_lines_sin_mapping_lineas_retorna_raw(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        raw = [{"ItemCode": "SKU001"}]
+        assert t._flatten_lines(raw, {}) == raw
+
+    def test_flatten_lines_documento_sin_lineas_se_descarta(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        raw = [
+            {"DocNum": 1, "DocumentLines": []},
+            {"DocNum": 2, "DocumentLines": [{"ItemCode": "SKU001"}]},
+        ]
+        mapping_lineas = {"origen": "DocumentLines", "campos": {"ItemCode": "producto"}}
+        result = t._flatten_lines(raw, mapping_lineas)
+        assert len(result) == 1
+        assert result[0]["DocNum"] == 2
+
+    # -- _normalize_items
+    def test_normalize_items_inyecta_categoria_resuelta(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        t._categorias = {100: "Materias Primas"}
+        raw = [{"ItemCode": "SKU001", "ItemName": "Producto A", "ItemsGroupCode": 100}]
+        flow_config = {
+            "mapping": {
+                "ItemCode": "referencia",
+                "ItemName": "descripcion",
+                "ItemsGroupCode_resolved": "categoria",
+            },
+            "hardcodes": {}, "conditionals": [],
+        }
+        result = t._normalize_items(raw, flow_config)
+        assert len(result) == 1
+        assert result[0]["categoria"] == "Materias Primas"
+
+    def test_normalize_items_tipado_float_e_int(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        raw = [{
+            "ItemCode": "SKU001", "ItemName": "Producto A",
+            "SalesUnitWeight": "2.5", "U_Vida_Util": "30",
+        }]
+        flow_config = {
+            "mapping": {
+                "ItemCode": "referencia", "ItemName": "descripcion",
+                "SalesUnitWeight": "peso", "U_Vida_Util": "vence",
+            },
+            "hardcodes": {"impuesto": 19}, "conditionals": [],
+        }
+        result = t._normalize_items(raw, flow_config)
+        assert len(result) == 1
+        assert result[0]["peso"] == 2.5
+        assert result[0]["vence"] == 30
+        assert result[0]["impuesto"] == 19
+
+    # -- _normalize_partners
+    def test_normalize_partners_con_flatten_bp_addresses(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        raw = [{
+            "CardCode": "900123456", "CardName": "Empresa X",
+            "EmailAddress": "contacto@empresax.com",
+            "BPAddresses": [
+                {"AddressName": "SUC01", "Street": " Calle 1 ", "City": "Medellín"},
+            ],
+        }]
+        flow_config = {
+            "mapping": {
+                "CardCode": "identificacion", "CardName": "nombre",
+                "EmailAddress": "email",
+            },
+            "mapping_lineas": {
+                "origen": "BPAddresses",
+                "campos": {
+                    "AddressName": "sucursal", "Street": "direccion", "City": "ciudad",
+                },
+            },
+            "hardcodes": {"pais": "Colombia"}, "conditionals": [],
+        }
+        result = t._normalize_partners(raw, flow_config)
+        assert len(result) == 1
+        assert result[0]["nombre"] == "Empresa X"
+        assert result[0]["identificacion"] == "900123456"
+        assert result[0]["sucursal"] == "SUC01"
+        assert result[0]["direccion"] == "Calle 1"
+        assert result[0]["pais"] == "Colombia"
+
+    # -- _normalize_purchases
+    def test_normalize_purchases_combined_mapping(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        raw = [{
+            "DocNum": 12345, "CardCode": "P-ACME", "DocDate": "2026-01-15T00:00:00",
+            "DocumentLines": [
+                {"ItemCode": "SKU001", "Quantity": "10", "UnitPrice": "5.50",
+                 "WarehouseCode": "WH01"},
+            ],
+        }]
+        flow_config = {
+            "mapping": {
+                "DocNum": "compra", "CardCode": "proveedor", "DocDate": "fecha_entrega",
+            },
+            "mapping_lineas": {
+                "origen": "DocumentLines",
+                "campos": {
+                    "ItemCode": "producto", "Quantity": "cantidad",
+                    "UnitPrice": "precio_unitario", "WarehouseCode": "bodega_sap",
+                },
+            },
+            "hardcodes": {
+                "sucursal_proveedor": "000", "estado": "draft",
+                "almacen": "ALM01", "impuesto": 19,
+            },
+            "conditionals": [],
+        }
+        result = t._normalize_purchases(raw, flow_config)
+        assert len(result) == 1
+        assert result[0]["proveedor"] == "P-ACME"
+        assert result[0]["producto"] == "SKU001"
+        assert result[0]["bodega_sap"] == "WH01"
+        assert result[0]["estado"] == "draft"
+        assert result[0]["sucursal_proveedor"] == "000"
+        assert result[0]["cantidad"] == 10.0
+        assert result[0]["precio_unitario"] == 5.50
+        assert result[0]["fecha_entrega"] == "2026-01-15"
+
+    # -- _normalize_sales
+    def test_normalize_sales_combined_mapping(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        raw = [{
+            "DocNum": 56797, "CardCode": "C-001", "DocDate": "2026-01-15T00:00:00",
+            "ShipToCode": "S001",
+            "DocumentLines": [
+                {"ItemCode": "SKU001", "Quantity": "5", "UnitPrice": "200",
+                 "WarehouseCode": "WH01"},
+            ],
+        }]
+        flow_config = {
+            "mapping": {
+                "DocNum": "pedido", "CardCode": "cliente", "DocDate": "fecha_pedido",
+                "ShipToCode": "sucursal_cliente",
+            },
+            "mapping_lineas": {
+                "origen": "DocumentLines",
+                "campos": {
+                    "ItemCode": "producto", "Quantity": "cantidad_pedida",
+                    "UnitPrice": "precio_unitario", "WarehouseCode": "bodega_sap",
+                },
+            },
+            "hardcodes": {"estado": "draft", "almacen": "ALM01", "impuesto": 19},
+            "conditionals": [],
+        }
+        result = t._normalize_sales(raw, flow_config)
+        assert len(result) == 1
+        assert result[0]["cliente"] == "C-001"
+        assert result[0]["sucursal_cliente"] == "S001"
+        assert result[0]["producto"] == "SKU001"
+        assert result[0]["estado"] == "draft"
+        assert result[0]["cantidad_pedida"] == 5.0
+        assert result[0]["precio_unitario"] == 200.0
+        assert result[0]["fecha_pedido"] == "2026-01-15"
+
+    def test_normalize_map_tiene_14_flow_names(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.session_id = "SESSION-123"
+        connector.get.return_value = (True, [])
+        flows = [
+            "items", "partners",
+            "compras", "compras_importacion", "devolucion_in",
+            "entrada_directa", "transferencia_entrada", "nota_credito",
+            "ventas", "facturas", "devolucion_out",
+            "salida_directa", "transferencia_salida", "transferencia_interna",
+        ]
+        for flow_name in flows:
+            result = t.get_flow(connector, flow_name, {"endpoint": "Test"})
+            assert result == [], f"Flow {flow_name} debería retornar [] con raw vacío"
+
+    def test_get_flow_exception_retorna_vacio(self):
+        from transform.transform_sap import TransformSAP
+        t = TransformSAP(SAP_CONFIG)
+        connector = MagicMock()
+        connector.session_id = "SESSION-123"
+        connector.get.side_effect = Exception("Boom")
+        result = t.get_flow(connector, "compras", {"endpoint": "PurchaseOrders"})
+        assert result == []
