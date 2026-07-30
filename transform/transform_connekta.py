@@ -83,13 +83,18 @@ class TransformConnekta(Transform):
             return []
 
     def _apply_mapping(self, row: dict, mapping: dict) -> dict:
-        if not mapping:
-            return row
-        mapped = {}
-        for key_api, key_canon in mapping.items():
-            if key_api in row:
-                mapped[key_canon] = row[key_api]
-        return mapped
+          if not mapping:
+              return row
+          mapped = {}
+          mapped_keys = set()
+          for key_api, key_canon in mapping.items():
+              if key_api in row:
+                  mapped[key_canon] = row[key_api]
+                  mapped_keys.add(key_api)
+          for key, value in row.items():
+              if key not in mapped_keys:
+                  mapped[key] = value
+          return mapped
 
     def _apply_hardcodes(self, row: dict, hardcodes: dict) -> dict:
         if not hardcodes:
@@ -115,6 +120,12 @@ class TransformConnekta(Transform):
                 resultado = default
                 for regla in reglas:
                     if str(regla.get("si", "")).strip() == valor_origen:
+                        if "entonces" not in regla:
+                            self.logger.error(
+                                f"_apply_conditionals: regla sin 'entonces' para "
+                                f"campo_destino '{campo_destino}' — regla: {regla}"
+                            )
+                            break
                         resultado = regla["entonces"]
                         break
 

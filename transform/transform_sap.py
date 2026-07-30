@@ -66,7 +66,8 @@ class TransformSAP(Transform):
                 params["filter"] = filter_str
 
             if flow_name == "items":
-                self._prefetch_categories(connector)
+                if not self._prefetch_categories(connector):
+                    return []
 
             status, raw = connector.get(endpoint=endpoint, params=params)
             if not status:
@@ -84,16 +85,28 @@ class TransformSAP(Transform):
             return []
 
     def _prefetch_categories(self, connector):
-        status, categorias_raw = connector.get(endpoint="ItemGroups", params={})
-        if status and categorias_raw:
-            self._categorias = {
-                c.get("Number"): c.get("GroupName", "Sin categoría")
-                for c in categorias_raw
-            }
-            self.logger.info(f"Pre-fetch categorías: {len(self._categorias)} grupos")
-        else:
-            self.logger.warning("No se pudieron obtener las categorías de SAP")
-            self._categorias = {}
+        max_retries = 3
+        for intento in range(1, max_retries + 1):
+            status, categorias_raw = connector.get(endpoint="ItemGroups", params={})
+            if status and categorias_raw:
+                self._categorias = {
+                    c.get("Number"): c.get("GroupName", "Sin categoría")
+                    for c in categorias_raw
+                }
+                self.logger.info(f"Pre-fetch categorías: {len(self._categorias)} grupos")
+                return True
+            self.logger.warning(
+              f"Pre-fetch categorías: intento {intento}/{max_retries} falló"
+          )
+
+        self.logger.error(
+          "No se pudieron obtener las categorías de SAP después de "
+          f"{max_retries} intentos — Service Layer posiblemente caído"
+        ) 
+        self._categorias = {}
+        return False
+       
+            
 
     def _flatten_lines(self, raw: list, mapping_lineas: dict) -> list:
         if not mapping_lineas:
@@ -120,13 +133,18 @@ class TransformSAP(Transform):
         return flattened
 
     def _apply_mapping(self, row: dict, mapping: dict) -> dict:
-        if not mapping:
-            return row
-        mapped = {}
-        for key_api, key_canon in mapping.items():
-            if key_api in row:
-                mapped[key_canon] = row[key_api]
-        return mapped
+      if not mapping:
+          return row
+      mapped = {}
+      mapped_keys = set()
+      for key_api, key_canon in mapping.items():
+          if key_api in row:
+              mapped[key_canon] = row[key_api]
+              mapped_keys.add(key_api)
+      for key, value in row.items():
+          if key not in mapped_keys:
+              mapped[key] = value
+      return mapped
 
     def _apply_hardcodes(self, row: dict, hardcodes: dict) -> dict:
         if not hardcodes:
@@ -152,6 +170,12 @@ class TransformSAP(Transform):
                 resultado = default
                 for regla in reglas:
                     if str(regla.get("si", "")).strip() == valor_origen:
+                        if "entonces" not in regla:
+                            self.logger.error(
+                                f"_apply_conditionals: regla sin 'entonces' para "
+                                f"campo_destino '{campo_destino}' — regla: {regla}"
+                            )
+                            break
                         resultado = regla["entonces"]
                         break
 
