@@ -435,12 +435,88 @@ def test_ws_errores_datos():
         traceback.print_exc()
         return False
 
+# ============================================================
+#  CONNEKTA — Pruebas de error de configuración (B4-B7)
+# ============================================================
+
+def test_connekta_errores_config():
+    separador("Connekta — B4: query_desc sin resultados")
+    try:
+        json_b4 = {
+            "client_id": "oit",
+            "flow_name": "items",
+            "flow_type": "items",
+            "query_desc": "consulta_que_no_existe_xyz",
+            "parametros": "",
+            "paginacion": False,
+            "mapping": {},
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b4), "Connekta/B4-SinResultados")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'OK - manejo error sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B4: {e}")
+
+    separador("Connekta — B5: query_desc invalido")
+    try:
+        json_b5 = {
+            "client_id": "oit",
+            "flow_name": "items",
+            "flow_type": "items",
+            "query_desc": "!@#$%^&*BASURA",
+            "parametros": "",
+            "paginacion": False,
+            "mapping": {},
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b5), "Connekta/B5-QueryInvalido")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'OK - manejo error sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B5: {e}")
+
+    separador("Connekta — B6: flow_name no soportado")
+    try:
+        json_b6 = {
+            "client_id": "oit",
+            "flow_name": "inventario",
+            "flow_type": "items",
+            "query_desc": "productosysolucionesquimicas_items_wms",
+            "parametros": "",
+            "paginacion": False,
+            "mapping": {},
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b6), "Connekta/B6-FlowNoSoportado")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'OK - manejo error sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B6: {e}")
+
+    separador("Connekta — B7: sin query_desc")
+    try:
+        json_b7 = {
+            "client_id": "oit",
+            "flow_name": "items",
+            "flow_type": "items",
+            "parametros": "",
+            "paginacion": False,
+            "mapping": {},
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b7), "Connekta/B7-SinQueryDesc")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'OK - manejo error sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B7: {e}")
+
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("  PRUEBAS FASE 3 — Transform Layer — WS Errores Datos")
+    print("  PRUEBAS FASE 3 — Connekta Errores Config")
     print("  ENV: staging | Logs: /var/log/integrador/")
     print("="*80)
 
-    test_ws_errores_datos()
+    test_connekta_errores_config()
 
-    print(f"\n  Revisa: /var/log/integrador/fenix.log")
+    print(f"\n  Revisa: /var/log/integrador/oit.log")
