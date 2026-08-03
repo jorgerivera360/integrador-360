@@ -380,12 +380,67 @@ def test_ws_errores_config():
     except Exception as e:
         print(f"  [FALLO] B7 crasheo: {e}")
 
+def test_ws_errores_datos():
+    separador("WS — B1-B3: Registros con datos malos mezclados con buenos")
+    try:
+        json_front = {
+            "client_id": "fenix",
+            "flow_name": "items",
+            "flow_type": "items",
+            "sql": """
+                SET QUOTED_IDENTIFIER OFF;
+                SELECT TOP 3
+                    f120_id AS referencia,
+                    f120_descripcion AS descripcion,
+                    0 AS costo,
+                    ISNULL(TRIM(f120_id_unidad_inventario), "UNID") AS unidad,
+                    CAST(ISNULL(f122_peso, 0) AS VARCHAR(12)) AS peso,
+                    CAST(ISNULL(f122_volumen, 0) AS VARCHAR(10)) AS volumen,
+                    0 AS iva,
+                    0 AS precio,
+                    ISNULL(f120_vida_util, 0) AS vence,
+                    1 AS use_expiration_date
+                FROM t120_mc_items
+                LEFT JOIN t122_mc_items_unidades
+                    ON (f120_rowid = f122_rowid_item AND f122_id_unidad = f120_id_unidad_inventario)
+                WHERE f120_id_cia = 7
+
+                UNION ALL
+
+                SELECT NULL AS referencia, "Producto sin ref" AS descripcion,
+                    0 AS costo, "UNID" AS unidad, "0" AS peso, "0" AS volumen,
+                    0 AS iva, 0 AS precio, 0 AS vence, 1 AS use_expiration_date
+
+                UNION ALL
+
+                SELECT "REF-TEST" AS referencia, NULL AS descripcion,
+                    0 AS costo, "UNID" AS unidad, "0" AS peso, "0" AS volumen,
+                    0 AS iva, 0 AS precio, 0 AS vence, 1 AS use_expiration_date
+
+                UNION ALL
+
+                SELECT "REF-PESO-MAL" AS referencia, "Producto peso invalido" AS descripcion,
+                    0 AS costo, "UNID" AS unidad, "abc" AS peso, "xyz" AS volumen,
+                    0 AS iva, 0 AS precio, 0 AS vence, 1 AS use_expiration_date;
+
+                SET QUOTED_IDENTIFIER ON;
+            """
+        }
+
+        return ejecutar_flow(json_front, "WS/B1-B3-DatosMalos")
+
+    except Exception as e:
+        print(f"  [FALLO] B1-B3: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("  PRUEBAS FASE 3 — Transform Layer — WS Errores Config")
+    print("  PRUEBAS FASE 3 — Transform Layer — WS Errores Datos")
     print("  ENV: staging | Logs: /var/log/integrador/")
     print("="*80)
 
-    test_ws_errores_config()
+    test_ws_errores_datos()
 
     print(f"\n  Revisa: /var/log/integrador/fenix.log")
