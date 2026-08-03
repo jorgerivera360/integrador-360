@@ -73,6 +73,12 @@ class SAP(ERPConnector):
                   url += f"&$select={select_str}"
 
                 response = requests.get(url, headers=self._get_headers(), verify=False)
+
+                if response.status_code == 401 and count == 0:
+                    self.logger.warning("Sesión SAP expirada, reintentando login")
+                    if not self.login_api():
+                        return False, "No se pudo re-autenticar en SAP"
+                    response = requests.get(url, headers=self._get_headers(), verify=False)
                 response.raise_for_status()
                 data  = response.json()
                 items = data.get("value", [])
