@@ -166,6 +166,7 @@ def test_ws_items():
             "flow_name": "items",
             "flow_type": "items",
             "sql": """
+                SET QUOTED_IDENTIFIER OFF;
                 SELECT TOP 50
                     ISNULL(f120_id, '') AS referencia,
                     ISNULL(f120_descripcion, '') AS descripcion,
@@ -212,6 +213,7 @@ def test_ws_items():
                         AND t_marca.f125_id_cia = t_marca_desc.f106_id_cia)
                 WHERE f120_id_cia = 7
                 ORDER BY f120_id ASC;
+                SET QUOTED_IDENTIFIER ON;
             """
         }
 
