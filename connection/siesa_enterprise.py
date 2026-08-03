@@ -8,7 +8,7 @@ Responsabilidades:
 Hereda: ERPConnector
 Fase: 2 — Connection Layer
 """
-from zeep import Client
+from zeep import Client, helpers
 from zeep.transports import Transport
 import requests
 from config.logger import IntegradorLogger
@@ -68,6 +68,7 @@ class SiesaEnterprise(ERPConnector):
             xml    = self._build_xml(sql)
             client = self._get_client()
             result = client.service.EjecutarConsultaXML(xml)
+            result = helpers.serialize_object(result, target_cls=dict)
             datos  = result['_value_1']['_value_1']
 
             if not datos:
@@ -90,7 +91,7 @@ class SiesaEnterprise(ERPConnector):
             return False, str(e)
     
     def test_connection(self) -> tuple:
-        sql = "SELECT TOP 1 f430_id FROM t430"
+        sql = "SELECT 1"
         status, data = self.get(
             endpoint="EjecutarConsultaXML",
             params={"sql": sql}
