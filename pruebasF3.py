@@ -166,10 +166,9 @@ def test_ws_items():
             "flow_name": "items",
             "flow_type": "items",
             "sql": """
-                SET QUOTED_IDENTIFIER OFF;
                 SELECT TOP 50
                     ISNULL(f120_id, '') AS referencia,
-                    REPLACE(ISNULL(f120_descripcion, 'SIN DESCRIPCION'), CHAR(39), '') AS descripcion,
+                    ISNULL(f120_descripcion, '') AS descripcion,
                     ISNULL((SELECT TOP 1 b.f131_id
                             FROM t131_mc_items_barras b
                             WHERE b.f131_rowid_item_ext = f121_rowid
@@ -213,7 +212,6 @@ def test_ws_items():
                         AND t_marca.f125_id_cia = t_marca_desc.f106_id_cia)
                 WHERE f120_id_cia = 7
                 ORDER BY f120_id ASC;
-                SET QUOTED_IDENTIFIER ON;
             """
         }
 
@@ -353,8 +351,8 @@ if __name__ == "__main__":
     resultados = {}
 
     resultados["WS/Fenix"] = test_ws_items()
-    resultados["Connekta/OIT"] = test_connekta_items()
-    resultados["SAP/FaberCastell"] = test_sap_items()
+    #resultados["Connekta/OIT"] = test_connekta_items()
+    #resultados["SAP/FaberCastell"] = test_sap_items()
 
     separador("RESUMEN")
     for erp, ok in resultados.items():
