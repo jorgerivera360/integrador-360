@@ -390,7 +390,7 @@ def test_ws_errores_datos():
             "sql": """
                 SET QUOTED_IDENTIFIER OFF;
                 SELECT TOP 3
-                    f120_id AS referencia,
+                    CAST(f120_id AS VARCHAR(50)) AS referencia,
                     f120_descripcion AS descripcion,
                     0 AS costo,
                     ISNULL(TRIM(f120_id_unidad_inventario), "UNID") AS unidad,
