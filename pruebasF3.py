@@ -325,25 +325,67 @@ def test_sap_items():
 
 
 # ============================================================
-#  MAIN
+#  SIESA WS — Pruebas de error de configuración (B4-B7)
 # ============================================================
+
+def test_ws_errores_config():
+    separador("WS — B4: SQL sin resultados")
+    try:
+        json_b4 = {
+            "client_id": "fenix",
+            "flow_name": "items",
+            "flow_type": "items",
+            "sql": "SELECT TOP 0 f120_id AS referencia, f120_descripcion AS descripcion FROM t120_mc_items WHERE f120_id_cia = 7"
+        }
+        result = ejecutar_flow(dict(json_b4), "WS/B4-SinResultados")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'FALLO'}")
+    except Exception as e:
+        print(f"  [FALLO] B4: {e}")
+
+    separador("WS — B5: SQL invalido")
+    try:
+        json_b5 = {
+            "client_id": "fenix",
+            "flow_name": "items",
+            "flow_type": "items",
+            "sql": "SELEC MAL QUERY INVALIDO"
+        }
+        result = ejecutar_flow(dict(json_b5), "WS/B5-SQLInvalido")
+        print(f"  Resultado: {'OK - manejo error sin crash' if result else 'OK - retorno False sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B5 crasheo: {e}")
+
+    separador("WS — B6: flow_name no soportado")
+    try:
+        json_b6 = {
+            "client_id": "fenix",
+            "flow_name": "inventario",
+            "flow_type": "items",
+            "sql": "SELECT 1 AS referencia"
+        }
+        result = ejecutar_flow(dict(json_b6), "WS/B6-FlowNoSoportado")
+        print(f"  Resultado: {'OK - manejo error sin crash' if result else 'OK - retorno False sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B6 crasheo: {e}")
+
+    separador("WS — B7: flow_config sin SQL")
+    try:
+        json_b7 = {
+            "client_id": "fenix",
+            "flow_name": "items",
+            "flow_type": "items"
+        }
+        result = ejecutar_flow(dict(json_b7), "WS/B7-SinSQL")
+        print(f"  Resultado: {'OK - manejo error sin crash' if result else 'OK - retorno False sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B7 crasheo: {e}")
 
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("  PRUEBAS FASE 3 — Transform Layer — Items")
+    print("  PRUEBAS FASE 3 — Transform Layer — WS Errores Config")
     print("  ENV: staging | Logs: /var/log/integrador/")
     print("="*80)
 
-    resultados = {}
+    test_ws_errores_config()
 
-    resultados["WS/Fenix"] = test_ws_items()
-    #resultados["Connekta/OIT"] = test_connekta_items()
-    #resultados["SAP/FaberCastell"] = test_sap_items()
-
-    separador("RESUMEN")
-    for erp, ok in resultados.items():
-        estado = "PASO" if ok else "FALLO"
-        print(f"  {erp}: {estado}")
-
-    print(f"\n  Logs en: /var/log/integrador/")
-    print(f"  Buscar: _normalize_items, fallidos, validate_record\n")
+    print(f"\n  Revisa: /var/log/integrador/fenix.log")
