@@ -584,12 +584,150 @@ def test_connekta_errores_datos():
         print(f"  [FALLO] B3: {e}")
 
 
+# ============================================================
+#  SAP — Pruebas de error de configuración (B4-B7)
+# ============================================================
+
+def test_sap_errores_config():
+    separador("SAP — B4: filter sin resultados")
+    try:
+        json_b4 = {
+            "client_id": "fabercastell",
+            "flow_name": "items",
+            "flow_type": "items",
+            "endpoint": "Items",
+            "filter": "ItemCode eq 'NOEXISTE999999'",
+            "mapping": {},
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b4), "SAP/B4-SinResultados")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'OK - manejo error sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B4: {e}")
+
+    separador("SAP — B5: endpoint invalido")
+    try:
+        json_b5 = {
+            "client_id": "fabercastell",
+            "flow_name": "items",
+            "flow_type": "items",
+            "endpoint": "RecursoQueNoExiste",
+            "filter": "",
+            "mapping": {},
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b5), "SAP/B5-EndpointInvalido")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'OK - manejo error sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B5: {e}")
+
+    separador("SAP — B6: flow_name no soportado")
+    try:
+        json_b6 = {
+            "client_id": "fabercastell",
+            "flow_name": "inventario",
+            "flow_type": "items",
+            "endpoint": "Items",
+            "filter": "",
+            "mapping": {},
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b6), "SAP/B6-FlowNoSoportado")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'OK - manejo error sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B6: {e}")
+
+    separador("SAP — B7: sin endpoint")
+    try:
+        json_b7 = {
+            "client_id": "fabercastell",
+            "flow_name": "items",
+            "flow_type": "items",
+            "mapping": {},
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b7), "SAP/B7-SinEndpoint")
+        print(f"  Resultado: {'OK - retorno vacio sin crash' if result else 'OK - manejo error sin crash'}")
+    except Exception as e:
+        print(f"  [FALLO] B7: {e}")
+
+
+# ============================================================
+#  SAP — Pruebas de error de datos (B1-B3)
+# ============================================================
+
+def test_sap_errores_datos():
+    separador("SAP — B1: ItemCode renombrado (pierde referencia)")
+    try:
+        json_b1 = {
+            "client_id": "fabercastell",
+            "flow_name": "items",
+            "flow_type": "items",
+            "endpoint": "Items",
+            "filter": "U_FB_EnviarWMS eq 'Y' and ItemType eq 'itItems'",
+            "mapping": {
+                "ItemCode": "codigo_interno",
+                "ItemName": "descripcion"
+            },
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b1), "SAP/B1-SinReferencia")
+    except Exception as e:
+        print(f"  [FALLO] B1: {e}")
+
+    separador("SAP — B2: ItemName renombrado (pierde descripcion)")
+    try:
+        json_b2 = {
+            "client_id": "fabercastell",
+            "flow_name": "items",
+            "flow_type": "items",
+            "endpoint": "Items",
+            "filter": "U_FB_EnviarWMS eq 'Y' and ItemType eq 'itItems'",
+            "mapping": {
+                "ItemCode": "referencia",
+                "ItemName": "nombre_interno"
+            },
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b2), "SAP/B2-SinDescripcion")
+    except Exception as e:
+        print(f"  [FALLO] B2: {e}")
+
+    separador("SAP — B3: hardcode float invalido")
+    try:
+        json_b3 = {
+            "client_id": "fabercastell",
+            "flow_name": "items",
+            "flow_type": "items",
+            "endpoint": "Items",
+            "filter": "U_FB_EnviarWMS eq 'Y' and ItemType eq 'itItems'",
+            "mapping": {
+                "ItemCode": "referencia",
+                "ItemName": "descripcion"
+            },
+            "hardcodes": {
+                "peso": "abc",
+                "volumen": "xyz"
+            },
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b3), "SAP/B3-FloatInvalido")
+    except Exception as e:
+        print(f"  [FALLO] B3: {e}")
+
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("  PRUEBAS FASE 3 — Connekta Errores Datos")
+    print("  PRUEBAS FASE 3 — SAP Errores Config + Datos")
     print("  ENV: staging | Logs: /var/log/integrador/")
     print("="*80)
 
-    test_connekta_errores_datos()
+    test_sap_errores_config()
+    test_sap_errores_datos()
 
-    print(f"\n  Revisa: /var/log/integrador/oit.log")
+    print(f"\n  Revisa: /var/log/integrador/fabercastell.log")
