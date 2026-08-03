@@ -168,11 +168,11 @@ def test_ws_items():
             "sql": """
                 SET QUOTED_IDENTIFIER OFF;
                 SELECT TOP 5
-                    ISNULL(f120_id, '') AS referencia,
-                    ISNULL(f120_descripcion, '') AS descripcion,
-                    ISNULL(TRIM(f120_id_unidad_inventario), '') AS unidad,
-                    ISNULL(CAST(f122_peso AS VARCHAR(12)), '') AS peso,
-                    ISNULL(f120_vida_util, '') AS vence
+                    f120_id AS referencia,
+                    f120_descripcion AS descripcion,
+                    TRIM(f120_id_unidad_inventario) AS unidad,
+                    CAST(f122_peso AS VARCHAR(12)) AS peso,
+                    f120_vida_util AS vence
                 FROM t120_mc_items
                 LEFT JOIN t122_mc_items_unidades
                     ON (f120_rowid = f122_rowid_item AND f122_id_unidad = f120_id_unidad_inventario)
