@@ -34,8 +34,8 @@ def route_compra_manufactura_prefijo(row: dict, params: dict, logger=None):
     campo_referencia = params.get("campo_referencia", "")
     prefijo = params.get("prefijo_manufactura", "")
 
-    compra = str(row.get(campo_compra, "")).strip() == "True"
-    manufactura = str(row.get(campo_manufactura, "")).strip() == "True"
+    compra = str(row.get(campo_compra, "")).strip().lower() in ("true", "si", "1")
+    manufactura = str(row.get(campo_manufactura, "")).strip().lower() in ("true", "si", "1")
     referencia = str(row.get(campo_referencia, "")).strip()
 
     if prefijo and referencia.startswith(prefijo):
@@ -87,7 +87,7 @@ def concatenar_campos(row: dict, params: dict, logger=None):
         return ""
 
     valores = [str(row.get(campo, "")).strip() for campo in campos]
-    return separador.join(valores)
+    return separador.join(v for v in valores if v)
 
 def valor_por_campo(row: dict, params: dict, logger=None):
 
@@ -141,7 +141,7 @@ def doc_name_por_rango(row: dict, params: dict, logger=None):
             try:
                 inicio = int(partes[0])
                 fin = int(partes[1])
-                if inicio <= numero < fin:
+                if inicio <= numero <= fin:
                     return f"{prefijo}{separador}{numero}"
             except ValueError:
                 continue

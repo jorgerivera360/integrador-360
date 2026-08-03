@@ -457,7 +457,7 @@ class TestSiesaEnterprise:
             with patch.object(ws, "get", return_value=(True, [])) as mock_get:
                 ws.test_connection()
                 _, kwargs = mock_get.call_args
-                assert "SELECT TOP 1 f430_id FROM t430" in kwargs["params"]["sql"]
+                assert "SELECT 1" in kwargs["params"]["sql"]
 
     def test_ws_test_connection_retorna_true_cuando_get_es_exitoso(self):
         with patch.dict(os.environ, {"ENV": "dev"}, clear=True):

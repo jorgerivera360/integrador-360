@@ -205,7 +205,7 @@ def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str
                     f"validate_record: línea descartada - cantidad ausente "
                     f"en compra '{compra}' - datos recibidos: {row}"
                 )
-            return False, "cantidad <= 0"
+            return False, "cantidad ausente"
         try:
             if float(cantidad) <= 0:
                 if logger:
