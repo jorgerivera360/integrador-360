@@ -75,6 +75,7 @@ class TransformWS(Transform):
                         "ind_compra", "ind_venta", "ind_manufactura"}
 
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -82,6 +83,7 @@ class TransformWS(Transform):
 
                 valid, reason = validate_record(row, "items", logger=self.logger)
                 if not valid:
+                    fallidos.append({"ref": row.get("referencia", "?"), "desc": row.get("descripcion", "?"), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -93,17 +95,21 @@ class TransformWS(Transform):
                 results.append(row)
 
             except Exception as e:
-                ref = row.get("referencia", "?")
-                self.logger.error(f"_normalize_items: error procesando registro '{ref}': {e}")
+                fallidos.append({"ref": row.get("referencia", "?"), "desc": row.get("descripcion", "?"), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_items: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_items: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - {f['ref']} ({f['desc']}): {f['razon']}")
         return results
 
     def _normalize_partners(self, raw: list, flow_config: dict) -> list:
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -111,18 +117,22 @@ class TransformWS(Transform):
 
                 valid, reason = validate_record(row, "partners", logger=self.logger)
                 if not valid:
+                    fallidos.append({"nombre": row.get("nombre", "?"), "id": row.get("identificacion", "?"), "razon": reason})
                     continue
 
                 results.append(row)
 
             except Exception as e:
-                nombre = row.get("nombre", "?")
-                self.logger.error(f"_normalize_partners: error procesando '{nombre}': {e}")
+                fallidos.append({"nombre": row.get("nombre", "?"), "id": row.get("identificacion", "?"), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_partners: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_partners: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - {f['nombre']} ({f['id']}): {f['razon']}")
         return results
 
 # Transacciones
@@ -133,6 +143,7 @@ class TransformWS(Transform):
         campos_fecha = {"fecha_entrega"}
 
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -140,6 +151,7 @@ class TransformWS(Transform):
 
                 valid, reason = validate_record(row, "purchases", logger=self.logger)
                 if not valid:
+                    fallidos.append({"compra": row.get("compra", "?"), "producto": row.get("producto", "?"), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -151,13 +163,16 @@ class TransformWS(Transform):
                 results.append(row)
 
             except Exception as e:
-                compra = row.get("compra", "?")
-                self.logger.error(f"_normalize_purchases: error procesando '{compra}': {e}")
+                fallidos.append({"compra": row.get("compra", "?"), "producto": row.get("producto", "?"), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_purchases: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_purchases: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - Compra {f['compra']}, producto {f['producto']}: {f['razon']}")
         return results
 
     def _normalize_sales(self, raw: list, flow_config: dict) -> list:
@@ -165,6 +180,7 @@ class TransformWS(Transform):
         campos_fecha = {"fecha_pedido"}
 
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -172,6 +188,7 @@ class TransformWS(Transform):
 
                 valid, reason = validate_record(row, "sales", logger=self.logger)
                 if not valid:
+                    fallidos.append({"pedido": row.get("pedido", "?"), "producto": row.get("producto", "?"), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -183,11 +200,14 @@ class TransformWS(Transform):
                 results.append(row)
 
             except Exception as e:
-                pedido = row.get("pedido", "?")
-                self.logger.error(f"_normalize_sales: error procesando '{pedido}': {e}")
+                fallidos.append({"pedido": row.get("pedido", "?"), "producto": row.get("producto", "?"), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_sales: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_sales: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - Pedido {f['pedido']}, producto {f['producto']}: {f['razon']}")
         return results

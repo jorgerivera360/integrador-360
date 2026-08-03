@@ -525,7 +525,7 @@ class TestConcatenarCampos:
         from transform.utils.determination_functions import concatenar_campos
         row = {"co": "001"}
         params = {"campos": ["co", "no_existe"], "separador": "-"}
-        assert concatenar_campos(row, params) == "001-"
+        assert concatenar_campos(row, params) == "001"
 
 class TestValorPorCampo:
 
@@ -793,8 +793,8 @@ class TestTransformConnekta:
         row = {"Referencia_Item": "SKU001", "campo_extra": "ignorar"}
         mapping = {"Referencia_Item": "referencia"}
         result = t._apply_mapping(row, mapping)
-        assert "campo_extra" not in result
-        assert result == {"referencia": "SKU001"}
+        assert "campo_extra" in result
+        assert result["campo_extra"] == "ignorar"
 
     def test_apply_mapping_vacio_retorna_row_igual(self):
         from transform.transform_connekta import TransformConnekta

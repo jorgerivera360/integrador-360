@@ -83,13 +83,18 @@ class TransformConnekta(Transform):
             return []
 
     def _apply_mapping(self, row: dict, mapping: dict) -> dict:
-        if not mapping:
-            return row
-        mapped = {}
-        for key_api, key_canon in mapping.items():
-            if key_api in row:
-                mapped[key_canon] = row[key_api]
-        return mapped
+          if not mapping:
+              return row
+          mapped = {}
+          mapped_keys = set()
+          for key_api, key_canon in mapping.items():
+              if key_api in row:
+                  mapped[key_canon] = row[key_api]
+                  mapped_keys.add(key_api)
+          for key, value in row.items():
+              if key not in mapped_keys:
+                  mapped[key] = value
+          return mapped
 
     def _apply_hardcodes(self, row: dict, hardcodes: dict) -> dict:
         if not hardcodes:
@@ -115,11 +120,22 @@ class TransformConnekta(Transform):
                 resultado = default
                 for regla in reglas:
                     if str(regla.get("si", "")).strip() == valor_origen:
+                        if "entonces" not in regla:
+                            self.logger.error(
+                                f"_apply_conditionals: regla sin 'entonces' para "
+                                f"campo_destino '{campo_destino}' — regla: {regla}"
+                            )
+                            break
                         resultado = regla["entonces"]
                         break
 
                 if resultado is not None:
                     row[campo_destino] = resultado
+                else:
+                    self.logger.warning(
+                        f"_apply_conditionals: ninguna regla matcheó para "
+                        f"campo_destino '{campo_destino}' y no hay default configurado"
+                    )
 
             elif tipo == "funcion":
                 nombre_fn = cond.get("funcion", "")
@@ -139,6 +155,7 @@ class TransformConnekta(Transform):
                       "ind_compra", "ind_venta", "ind_manufactura"}
 
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -149,6 +166,7 @@ class TransformConnekta(Transform):
 
                 valid, reason = validate_record(row, "items", logger=self.logger)
                 if not valid:
+                    fallidos.append({"ref": row.get("referencia", "?"), "desc": row.get("descripcion", "?"), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -160,13 +178,16 @@ class TransformConnekta(Transform):
                 results.append(row)
 
             except Exception as e:
-                ref = row.get("referencia", "?")
-                self.logger.error(f"_normalize_items: error procesando '{ref}': {e}")
+                fallidos.append({"ref": row.get("referencia", "?"), "desc": row.get("descripcion", "?"), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_items: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_items: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - {f['ref']} ({f['desc']}): {f['razon']}")
         return results
 
     def _normalize_partners(self, raw: list, flow_config: dict) -> list:
@@ -175,6 +196,7 @@ class TransformConnekta(Transform):
         conditionals = flow_config.get("conditionals", [])
 
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -185,18 +207,22 @@ class TransformConnekta(Transform):
 
                 valid, reason = validate_record(row, "partners", logger=self.logger)
                 if not valid:
+                    fallidos.append({"nombre": row.get("nombre", "?"), "id": row.get("identificacion", "?"), "razon": reason})
                     continue
 
                 results.append(row)
 
             except Exception as e:
-                nombre = row.get("nombre", "?")
-                self.logger.error(f"_normalize_partners: error procesando '{nombre}': {e}")
+                fallidos.append({"nombre": row.get("nombre", "?"), "id": row.get("identificacion", "?"), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_partners: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_partners: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - {f['nombre']} ({f['id']}): {f['razon']}")
         return results
 
     def _normalize_purchases(self, raw: list, flow_config: dict) -> list:
@@ -207,6 +233,7 @@ class TransformConnekta(Transform):
         campos_fecha = {"fecha_entrega", "fecha_compra"}
 
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -217,6 +244,7 @@ class TransformConnekta(Transform):
 
                 valid, reason = validate_record(row, "purchases", logger=self.logger)
                 if not valid:
+                    fallidos.append({"compra": row.get("compra", "?"), "producto": row.get("producto", "?"), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -228,13 +256,16 @@ class TransformConnekta(Transform):
                 results.append(row)
 
             except Exception as e:
-                compra = row.get("compra", "?")
-                self.logger.error(f"_normalize_purchases: error procesando '{compra}': {e}")
+                fallidos.append({"compra": row.get("compra", "?"), "producto": row.get("producto", "?"), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_purchases: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_purchases: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - Compra {f['compra']}, producto {f['producto']}: {f['razon']}")
         return results
 
     def _normalize_sales(self, raw: list, flow_config: dict) -> list:
@@ -245,6 +276,7 @@ class TransformConnekta(Transform):
         campos_fecha = {"fecha_pedido", "fecha_entrega"}
 
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -255,6 +287,7 @@ class TransformConnekta(Transform):
 
                 valid, reason = validate_record(row, "sales", logger=self.logger)
                 if not valid:
+                    fallidos.append({"pedido": row.get("pedido", "?"), "producto": row.get("producto", "?"), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -266,11 +299,14 @@ class TransformConnekta(Transform):
                 results.append(row)
 
             except Exception as e:
-                pedido = row.get("pedido", "?")
-                self.logger.error(f"_normalize_sales: error procesando '{pedido}': {e}")
+                fallidos.append({"pedido": row.get("pedido", "?"), "producto": row.get("producto", "?"), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_sales: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_sales: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - Pedido {f['pedido']}, producto {f['producto']}: {f['razon']}")
         return results

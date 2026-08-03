@@ -199,24 +199,30 @@ def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str
                 )
             return False, "precio_unitario ausente"
         cantidad = row.get("cantidad")
-        if cantidad is not None:
-            try:
-                if float(cantidad) <= 0:
-                    if logger:
-                        logger.warning(
-                            f"validate_record: línea descartada — "
-                            f"cantidad <= 0 en compra '{compra}' "
-                            f"— datos recibidos: {row}"
-                        )
-                    return False, "cantidad <= 0"
-            except (ValueError, TypeError):
+        if cantidad is None or str(cantidad).strip() == "":
+            if logger:
+                logger.warning(
+                    f"validate_record: línea descartada - cantidad ausente "
+                    f"en compra '{compra}' - datos recibidos: {row}"
+                )
+            return False, "cantidad ausente"
+        try:
+            if float(cantidad) <= 0:
                 if logger:
-                    logger.error(
-                        f"validate_record: línea descartada — cantidad no "
-                        f"numérica '{cantidad}' en compra '{compra}' "
+                    logger.warning(
+                        f"validate_record: línea descartada — "
+                        f"cantidad <= 0 en compra '{compra}' "
                         f"— datos recibidos: {row}"
                     )
-                return False, f"cantidad no numérica: {cantidad}"
+                return False, "cantidad <= 0"
+        except (ValueError, TypeError):
+            if logger:
+                logger.error(
+                    f"validate_record: línea descartada — cantidad no "
+                    f"numérica '{cantidad}' en compra '{compra}' "
+                    f"— datos recibidos: {row}"
+                )
+            return False, f"cantidad no numérica: {cantidad}"
     elif entity_type == "sales":
         pedido = row.get("pedido", "")
         if not pedido or not str(pedido).strip():
@@ -283,22 +289,28 @@ def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str
                 )
             return False, "precio_unitario ausente"
         cantidad = row.get("cantidad_pedida")
-        if cantidad is not None:
-            try:
-                if float(cantidad) <= 0:
-                    if logger:
-                        logger.warning(
-                            f"validate_record: línea descartada — "
-                            f"cantidad_pedida <= 0 en pedido '{pedido}' "
-                            f"— datos recibidos: {row}"
-                        )
-                    return False, "cantidad_pedida <= 0"
-            except (ValueError, TypeError):
+        if cantidad is None or str(cantidad).strip() == "":
+            if logger:
+                logger.warning(
+                    f"validate_record: línea descartada — cantidad_pedida ausente "
+                    f"en pedido '{pedido}' — datos recibidos: {row}"
+                )
+            return False, "cantidad_pedida ausente"
+        try:
+            if float(cantidad) <= 0:
                 if logger:
-                    logger.error(
-                        f"validate_record: línea descartada — cantidad_pedida no "
-                        f"numérica '{cantidad}' en pedido '{pedido}' "
+                    logger.warning(
+                        f"validate_record: línea descartada — "
+                        f"cantidad_pedida <= 0 en pedido '{pedido}' "
                         f"— datos recibidos: {row}"
                     )
-                return False, f"cantidad_pedida no numérica: {cantidad}"
+                return False, "cantidad_pedida <= 0"
+        except (ValueError, TypeError):
+            if logger:
+                logger.error(
+                    f"validate_record: línea descartada — cantidad_pedida no "
+                    f"numérica '{cantidad}' en pedido '{pedido}' "
+                    f"— datos recibidos: {row}"
+                )
+            return False, f"cantidad_pedida no numérica: {cantidad}"
     return True, ""

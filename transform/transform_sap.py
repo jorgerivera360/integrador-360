@@ -66,7 +66,8 @@ class TransformSAP(Transform):
                 params["filter"] = filter_str
 
             if flow_name == "items":
-                self._prefetch_categories(connector)
+                if not self._prefetch_categories(connector):
+                    return []
 
             status, raw = connector.get(endpoint=endpoint, params=params)
             if not status:
@@ -84,16 +85,26 @@ class TransformSAP(Transform):
             return []
 
     def _prefetch_categories(self, connector):
-        status, categorias_raw = connector.get(endpoint="ItemGroups", params={})
-        if status and categorias_raw:
-            self._categorias = {
-                c.get("Number"): c.get("GroupName", "Sin categoría")
-                for c in categorias_raw
-            }
-            self.logger.info(f"Pre-fetch categorías: {len(self._categorias)} grupos")
-        else:
-            self.logger.warning("No se pudieron obtener las categorías de SAP")
-            self._categorias = {}
+        max_retries = 3
+        for intento in range(1, max_retries + 1):
+            status, categorias_raw = connector.get(endpoint="ItemGroups", params={})
+            if status and categorias_raw:
+                self._categorias = {
+                    c.get("Number"): c.get("GroupName", "Sin categoría")
+                    for c in categorias_raw
+                }
+                self.logger.info(f"Pre-fetch categorías: {len(self._categorias)} grupos")
+                return True
+            self.logger.warning(
+              f"Pre-fetch categorías: intento {intento}/{max_retries} falló"
+          )
+
+        self.logger.error(
+          "No se pudieron obtener las categorías de SAP después de "
+          f"{max_retries} intentos — Service Layer posiblemente caído"
+        ) 
+        self._categorias = {}
+        return False        
 
     def _flatten_lines(self, raw: list, mapping_lineas: dict) -> list:
         if not mapping_lineas:
@@ -108,6 +119,10 @@ class TransformSAP(Transform):
             header = {k: v for k, v in doc.items() if k != origen}
             lines = doc.get(origen, [])
             if not lines:
+                doc_id = doc.get("DocNum", doc.get("DocEntry", "?"))
+                self.logger.warning(
+                    f"_flatten_lines: documento {doc_id} sin líneas en '{origen}' — descartado"
+                )
                 continue
             for line in lines:
                 row = {**header}
@@ -120,13 +135,18 @@ class TransformSAP(Transform):
         return flattened
 
     def _apply_mapping(self, row: dict, mapping: dict) -> dict:
-        if not mapping:
-            return row
-        mapped = {}
-        for key_api, key_canon in mapping.items():
-            if key_api in row:
-                mapped[key_canon] = row[key_api]
-        return mapped
+      if not mapping:
+          return row
+      mapped = {}
+      mapped_keys = set()
+      for key_api, key_canon in mapping.items():
+          if key_api in row:
+              mapped[key_canon] = row[key_api]
+              mapped_keys.add(key_api)
+      for key, value in row.items():
+          if key not in mapped_keys:
+              mapped[key] = value
+      return mapped
 
     def _apply_hardcodes(self, row: dict, hardcodes: dict) -> dict:
         if not hardcodes:
@@ -152,11 +172,22 @@ class TransformSAP(Transform):
                 resultado = default
                 for regla in reglas:
                     if str(regla.get("si", "")).strip() == valor_origen:
+                        if "entonces" not in regla:
+                            self.logger.error(
+                                f"_apply_conditionals: regla sin 'entonces' para "
+                                f"campo_destino '{campo_destino}' — regla: {regla}"
+                            )
+                            break
                         resultado = regla["entonces"]
                         break
 
                 if resultado is not None:
                     row[campo_destino] = resultado
+                else:
+                    self.logger.warning(
+                        f"_apply_conditionals: ninguna regla matcheó para "
+                        f"campo_destino '{campo_destino}' y no hay default configurado"
+                    )
 
             elif tipo == "funcion":
                 nombre_fn = cond.get("funcion", "")
@@ -176,6 +207,7 @@ class TransformSAP(Transform):
                       "ind_compra", "ind_venta", "ind_manufactura"}
 
         results = []
+        fallidos = []
 
         for row in raw:
             try:
@@ -193,6 +225,7 @@ class TransformSAP(Transform):
 
                 valid, reason = validate_record(row, "items", logger=self.logger)
                 if not valid:
+                    fallidos.append({"ref": row.get("referencia", row.get("ItemCode", "?")), "desc": row.get("descripcion", row.get("ItemName", "?")), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -204,13 +237,16 @@ class TransformSAP(Transform):
                 results.append(row)
 
             except Exception as e:
-                ref = row.get("referencia", row.get("ItemCode", "?"))
-                self.logger.error(f"_normalize_items: error procesando '{ref}': {e}")
+                fallidos.append({"ref": row.get("referencia", row.get("ItemCode", "?")), "desc": row.get("descripcion", row.get("ItemName", "?")), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_items: {len(results)}/{len(raw)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_items: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - {f['ref']} ({f['desc']}): {f['razon']}")
         return results
 
     def _normalize_partners(self, raw: list, flow_config: dict) -> list:
@@ -228,6 +264,7 @@ class TransformSAP(Transform):
         rows = self._flatten_lines(raw, mapping_lineas)
 
         results = []
+        fallidos = []
 
         for row in rows:
             try:
@@ -238,18 +275,22 @@ class TransformSAP(Transform):
 
                 valid, reason = validate_record(row, "partners", logger=self.logger)
                 if not valid:
+                    fallidos.append({"nombre": row.get("nombre", row.get("CardName", "?")), "id": row.get("identificacion", row.get("CardCode", "?")), "razon": reason})
                     continue
 
                 results.append(row)
 
             except Exception as e:
-                nombre = row.get("nombre", row.get("CardName", "?"))
-                self.logger.error(f"_normalize_partners: error procesando '{nombre}': {e}")
+                fallidos.append({"nombre": row.get("nombre", row.get("CardName", "?")), "id": row.get("identificacion", row.get("CardCode", "?")), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_partners: {len(results)}/{len(rows)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_partners: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - {f['nombre']} ({f['id']}): {f['razon']}")
         return results
 
     def _normalize_purchases(self, raw: list, flow_config: dict) -> list:
@@ -267,6 +308,7 @@ class TransformSAP(Transform):
         rows = self._flatten_lines(raw, mapping_lineas)
 
         results = []
+        fallidos = []
 
         for row in rows:
             try:
@@ -277,6 +319,7 @@ class TransformSAP(Transform):
 
                 valid, reason = validate_record(row, "purchases", logger=self.logger)
                 if not valid:
+                    fallidos.append({"compra": row.get("compra", row.get("DocNum", "?")), "producto": row.get("producto", row.get("ItemCode", "?")), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -288,13 +331,16 @@ class TransformSAP(Transform):
                 results.append(row)
 
             except Exception as e:
-                compra = row.get("compra", row.get("DocNum", "?"))
-                self.logger.error(f"_normalize_purchases: error procesando '{compra}': {e}")
+                fallidos.append({"compra": row.get("compra", row.get("DocNum", "?")), "producto": row.get("producto", row.get("ItemCode", "?")), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_purchases: {len(results)}/{len(rows)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_purchases: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - Compra {f['compra']}, producto {f['producto']}: {f['razon']}")
         return results
 
     def _normalize_sales(self, raw: list, flow_config: dict) -> list:
@@ -312,6 +358,7 @@ class TransformSAP(Transform):
         rows = self._flatten_lines(raw, mapping_lineas)
 
         results = []
+        fallidos = []
 
         for row in rows:
             try:
@@ -322,6 +369,7 @@ class TransformSAP(Transform):
 
                 valid, reason = validate_record(row, "sales", logger=self.logger)
                 if not valid:
+                    fallidos.append({"pedido": row.get("pedido", row.get("DocNum", "?")), "producto": row.get("producto", row.get("ItemCode", "?")), "razon": reason})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -333,11 +381,14 @@ class TransformSAP(Transform):
                 results.append(row)
 
             except Exception as e:
-                pedido = row.get("pedido", row.get("DocNum", "?"))
-                self.logger.error(f"_normalize_sales: error procesando '{pedido}': {e}")
+                fallidos.append({"pedido": row.get("pedido", row.get("DocNum", "?")), "producto": row.get("producto", row.get("ItemCode", "?")), "razon": str(e)})
                 continue
 
         self.logger.info(
             f"_normalize_sales: {len(results)}/{len(rows)} registros válidos"
         )
+        if fallidos:
+            self.logger.warning(f"_normalize_sales: {len(fallidos)} registros descartados:")
+            for f in fallidos:
+                self.logger.warning(f"  - Pedido {f['pedido']}, producto {f['producto']}: {f['razon']}")
         return results
