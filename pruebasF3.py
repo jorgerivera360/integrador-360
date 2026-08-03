@@ -77,26 +77,21 @@ def ejecutar_flow(transform, connector, json_bd, erp_name, mostrar_crudo=False, 
     2. El resto es flow_config para transform
     3. Llama transform.get_flow(connector, flow_name, flow_config)
     """
-    # main.py extraería estos del JSON
     flow_name = json_bd.pop("flow_name")
     flow_type = json_bd.pop("flow_type")
-    flow_config = json_bd  # lo que queda es el flow_config
+    flow_config = json_bd
 
     print(f"  flow_name: {flow_name}")
     print(f"  flow_type: {flow_type}")
 
-    # Opcionalmente mostrar datos crudos de la API
     if mostrar_crudo and fn_crudo:
         fn_crudo(connector, flow_config)
 
-    # Transform — como lo llamaría main.py
     print(f"\n  Ejecutando transform.get_flow(connector, '{flow_name}', flow_config)...")
     resultado = transform.get_flow(connector, flow_name, flow_config)
 
-    # Validar resultado
     validar_items(resultado, erp_name)
 
-    # En main.py seguiría: _dispatch_flow(resultado, flow_type, odoo, token, config)
     print(f"\n  [Siguiente paso] _dispatch_flow(data, '{flow_type}', odoo, token, config)")
 
     return True
@@ -109,12 +104,10 @@ def ejecutar_flow(transform, connector, json_bd, erp_name, mostrar_crudo=False, 
 def test_ws_items():
     separador("1. SIESA WS — Fénix — Items")
     try:
-        loader = ConfigLoader()
-        config = loader.load_credentials("fenix")
+        config = ConfigLoader("fenix").load_credentials()
         connector = SiesaEnterprise(config)
         transform = TransformWS(config)
 
-        # JSON tal cual vendría de BD
         json_bd = {
             "flow_name": "items",
             "flow_type": "items",
@@ -186,12 +179,10 @@ def test_ws_items():
 def test_connekta_items():
     separador("2. SIESA Connekta — OIT — Items")
     try:
-        loader = ConfigLoader()
-        config = loader.load_credentials("oit")
+        config = ConfigLoader("oit").load_credentials()
         connector = SiesaConnekta(config)
         transform = TransformConnekta(config)
 
-        # JSON tal cual vendría de BD
         json_bd = {
             "flow_name": "items",
             "flow_type": "items",
@@ -233,7 +224,7 @@ def test_connekta_items():
         }
 
         def mostrar_crudo(connector, flow_config):
-            print("  Probando conexión cruda para ver campos de la API...")
+            print("  Probando conexion cruda para ver campos de la API...")
             status, raw = connector.get(
                 endpoint=flow_config["query_desc"],
                 params={
@@ -243,11 +234,11 @@ def test_connekta_items():
                 }
             )
             if status and raw:
-                print(f"  API retornó {len(raw)} registros")
+                print(f"  API retorno {len(raw)} registros")
                 print(f"  Campos de la API: {list(raw[0].keys())}")
                 print(f"  Ejemplo crudo: {raw[0]}")
             else:
-                print(f"  [!] API no retornó datos: {raw}")
+                print(f"  [!] API no retorno datos: {raw}")
 
         return ejecutar_flow(transform, connector, json_bd, "Connekta/OIT",
                             mostrar_crudo=True, fn_crudo=mostrar_crudo)
@@ -266,12 +257,10 @@ def test_connekta_items():
 def test_sap_items():
     separador("3. SAP B1 — Faber Castell — Items")
     try:
-        loader = ConfigLoader()
-        config = loader.load_credentials("fabercastell")
+        config = ConfigLoader("fabercastell").load_credentials()
         connector = SAP(config)
         transform = TransformSAP(config)
 
-        # JSON tal cual vendría de BD
         json_bd = {
             "flow_name": "items",
             "flow_type": "items",
@@ -325,10 +314,10 @@ def test_sap_items():
                 params={"filter": flow_config["filter"]}
             )
             if status and raw:
-                print(f"  API retornó {len(raw)} registros")
+                print(f"  API retorno {len(raw)} registros")
                 print(f"  Campos de la API: {list(raw[0].keys())}")
             else:
-                print(f"  [!] API no retornó datos: {raw}")
+                print(f"  [!] API no retorno datos: {raw}")
 
         return ejecutar_flow(transform, connector, json_bd, "SAP/FaberCastell",
                             mostrar_crudo=True, fn_crudo=mostrar_crudo)
