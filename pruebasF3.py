@@ -511,12 +511,85 @@ def test_connekta_errores_config():
     except Exception as e:
         print(f"  [FALLO] B7: {e}")
 
+# ============================================================
+#  CONNEKTA — Pruebas de error de datos (B1-B3)
+# ============================================================
+
+def test_connekta_errores_datos():
+    separador("Connekta — B1: mapping sin referencia")
+    try:
+        json_b1 = {
+            "client_id": "oit",
+            "flow_name": "items",
+            "flow_type": "items",
+            "query_desc": "productosysolucionesquimicas_items_wms",
+            "parametros": "",
+            "paginacion": True,
+            "mapping": {
+                "descripcion": "descripcion",
+                "codigo_barras": "codigo_barras",
+                "categoria": "categoria"
+            },
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b1), "Connekta/B1-SinReferencia")
+    except Exception as e:
+        print(f"  [FALLO] B1: {e}")
+
+    separador("Connekta — B2: mapping sin descripcion")
+    try:
+        json_b2 = {
+            "client_id": "oit",
+            "flow_name": "items",
+            "flow_type": "items",
+            "query_desc": "productosysolucionesquimicas_items_wms",
+            "parametros": "",
+            "paginacion": True,
+            "mapping": {
+                "referencia": "referencia",
+                "codigo_barras": "codigo_barras",
+                "categoria": "categoria"
+            },
+            "hardcodes": {},
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b2), "Connekta/B2-SinDescripcion")
+    except Exception as e:
+        print(f"  [FALLO] B2: {e}")
+
+    separador("Connekta — B3: hardcode float invalido")
+    try:
+        json_b3 = {
+            "client_id": "oit",
+            "flow_name": "items",
+            "flow_type": "items",
+            "query_desc": "productosysolucionesquimicas_items_wms",
+            "parametros": "",
+            "paginacion": True,
+            "mapping": {
+                "referencia": "referencia",
+                "descripcion": "descripcion",
+                "codigo_barras": "codigo_barras",
+                "categoria": "categoria"
+            },
+            "hardcodes": {
+                "peso": "abc",
+                "volumen": "xyz"
+            },
+            "conditionals": []
+        }
+        result = ejecutar_flow(dict(json_b3), "Connekta/B3-FloatInvalido")
+    except Exception as e:
+        print(f"  [FALLO] B3: {e}")
+
+
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("  PRUEBAS FASE 3 — Connekta Errores Config")
+    print("  PRUEBAS FASE 3 — Connekta Errores Datos")
     print("  ENV: staging | Logs: /var/log/integrador/")
     print("="*80)
 
-    test_connekta_errores_config()
+    test_connekta_errores_datos()
 
     print(f"\n  Revisa: /var/log/integrador/oit.log")
