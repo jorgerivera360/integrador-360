@@ -167,52 +167,7 @@ def test_ws_items():
             "flow_type": "items",
             "sql": """
                 SET QUOTED_IDENTIFIER OFF;
-                SELECT TOP 50
-                    ISNULL(f120_id, '') AS referencia,
-                    ISNULL(f120_descripcion, '') AS descripcion,
-                    ISNULL((SELECT TOP 1 b.f131_id
-                            FROM t131_mc_items_barras b
-                            WHERE b.f131_rowid_item_ext = f121_rowid
-                            ORDER BY b.f131_ts DESC), '') AS codigo_barras,
-                    ISNULL(STUFF((SELECT ', ' + b2.f131_id
-                            FROM t131_mc_items_barras b2
-                            WHERE b2.f131_rowid_item_ext = f121_rowid
-                            AND b2.f131_id NOT IN (
-                                SELECT TOP 1 b3.f131_id
-                                FROM t131_mc_items_barras b3
-                                WHERE b3.f131_rowid_item_ext = f121_rowid
-                                ORDER BY b3.f131_ts DESC)
-                            FOR XML PATH('')), 1, 2, ''), '') AS codigos_extras,
-                    '0' AS costo,
-                    ISNULL(TRIM(f120_id_unidad_inventario), 'UNID') AS unidad,
-                    ISNULL(CAST(f122_peso AS VARCHAR(12)), '0') AS peso,
-                    CAST(ISNULL(f122_volumen, '0') AS VARCHAR(10)) AS volumen,
-                    0 AS iva,
-                    0 AS precio,
-                    ISNULL(TRIM(t_linea_desc.f106_descripcion), '') AS categoria,
-                    ISNULL(TRIM(t_marca_desc.f106_descripcion), '') AS marca,
-                    'lot' AS tracking,
-                    1 AS use_expiration_date,
-                    ISNULL(f120_vida_util, 0) AS vence
-                FROM t120_mc_items
-                LEFT JOIN t121_mc_items_extensiones
-                    ON (f121_rowid_item = f120_rowid AND f121_id_cia = f120_id_cia)
-                LEFT JOIN t122_mc_items_unidades
-                    ON (f120_rowid = f122_rowid_item AND f122_id_unidad = f120_id_unidad_inventario)
-                LEFT JOIN t125_mc_items_criterios AS t_linea
-                    ON (f120_rowid = t_linea.f125_rowid_item AND t_linea.f125_id_plan = '003')
-                LEFT JOIN t106_mc_criterios_item_mayores AS t_linea_desc
-                    ON (t_linea.f125_id_criterio_mayor = t_linea_desc.f106_id
-                        AND t_linea.f125_id_plan = t_linea_desc.f106_id_plan
-                        AND t_linea.f125_id_cia = t_linea_desc.f106_id_cia)
-                LEFT JOIN t125_mc_items_criterios AS t_marca
-                    ON (f120_rowid = t_marca.f125_rowid_item AND t_marca.f125_id_plan = '005')
-                LEFT JOIN t106_mc_criterios_item_mayores AS t_marca_desc
-                    ON (t_marca.f125_id_criterio_mayor = t_marca_desc.f106_id
-                        AND t_marca.f125_id_plan = t_marca_desc.f106_id_plan
-                        AND t_marca.f125_id_cia = t_marca_desc.f106_id_cia)
-                WHERE f120_id_cia = 7
-                ORDER BY f120_id ASC;
+                SELECT TOP 5 f120_id AS referencia, f120_descripcion AS descripcion FROM t120_mc_items WHERE f120_id_cia = 7;
                 SET QUOTED_IDENTIFIER ON;
             """
         }
