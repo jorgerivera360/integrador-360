@@ -167,15 +167,37 @@ def test_ws_items():
             "flow_type": "items",
             "sql": """
                 SET QUOTED_IDENTIFIER OFF;
-                SELECT TOP 5
+                SELECT TOP 50
                     f120_id AS referencia,
                     f120_descripcion AS descripcion,
                     TRIM(f120_id_unidad_inventario) AS unidad,
                     CAST(f122_peso AS VARCHAR(12)) AS peso,
-                    f120_vida_util AS vence
+                    CAST(ISNULL(f122_volumen, 0) AS VARCHAR(10)) AS volumen,
+                    ISNULL(f120_vida_util, 0) AS vence,
+                    0 AS costo,
+                    0 AS precio,
+                    0 AS iva,
+                    TRIM(t_linea_desc.f106_descripcion) AS categoria,
+                    TRIM(t_marca_desc.f106_descripcion) AS marca,
+                    'lot' AS tracking,
+                    1 AS use_expiration_date
                 FROM t120_mc_items
+                LEFT JOIN t121_mc_items_extensiones
+                    ON (f121_rowid_item = f120_rowid AND f121_id_cia = f120_id_cia)
                 LEFT JOIN t122_mc_items_unidades
                     ON (f120_rowid = f122_rowid_item AND f122_id_unidad = f120_id_unidad_inventario)
+                LEFT JOIN t125_mc_items_criterios AS t_linea
+                    ON (f120_rowid = t_linea.f125_rowid_item AND t_linea.f125_id_plan = '003')
+                LEFT JOIN t106_mc_criterios_item_mayores AS t_linea_desc
+                    ON (t_linea.f125_id_criterio_mayor = t_linea_desc.f106_id
+                        AND t_linea.f125_id_plan = t_linea_desc.f106_id_plan
+                        AND t_linea.f125_id_cia = t_linea_desc.f106_id_cia)
+                LEFT JOIN t125_mc_items_criterios AS t_marca
+                    ON (f120_rowid = t_marca.f125_rowid_item AND t_marca.f125_id_plan = '005')
+                LEFT JOIN t106_mc_criterios_item_mayores AS t_marca_desc
+                    ON (t_marca.f125_id_criterio_mayor = t_marca_desc.f106_id
+                        AND t_marca.f125_id_plan = t_marca_desc.f106_id_plan
+                        AND t_marca.f125_id_cia = t_marca_desc.f106_id_cia)
                 WHERE f120_id_cia = 7
                 ORDER BY f120_id ASC;
                 SET QUOTED_IDENTIFIER ON;
