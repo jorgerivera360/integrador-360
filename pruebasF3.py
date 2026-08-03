@@ -2,7 +2,8 @@
 pruebasF3.py — Pruebas de integración Fase 3 (Transform Layer)
 Ejecutar en wms-servertest con ENV=staging
 Prueba: items para los 3 ERPs con flow_configs simulados del front
-Simula el flujo real: BD → main.py extrae flow_name/flow_type → transform
+Simula el flujo real: Front envia JSON → main.py extrae client_id,
+carga credenciales, inyecta client_id, extrae flow_name/flow_type → transform
 """
 import os
 os.environ["ENV"] = "staging"
@@ -34,14 +35,12 @@ def validar_items(resultado, erp_name):
     for k, v in ejemplo.items():
         print(f"    {k}: {v!r} ({type(v).__name__})")
 
-    # Alias canónicos obligatorios
     obligatorios = ["referencia", "descripcion"]
     print(f"\n  Campos obligatorios:")
     for campo in obligatorios:
         estado = "OK" if campo in ejemplo and ejemplo[campo] else "FALTA"
         print(f"    [{estado}] {campo}: {ejemplo.get(campo, '???')!r}")
 
-    # Tipos float
     campos_float = ["peso", "volumen", "costo", "precio", "iva"]
     print(f"\n  Campos float:")
     for campo in campos_float:
@@ -50,7 +49,6 @@ def validar_items(resultado, erp_name):
             estado = "OK" if tipo_ok else "ERROR"
             print(f"    [{estado}] {campo}: {ejemplo[campo]!r} ({type(ejemplo[campo]).__name__})")
 
-    # Tipos int
     campos_int = ["vence", "use_expiration_date", "expiration_time",
                 "ind_compra", "ind_venta", "ind_manufactura"]
     print(f"\n  Campos int:")
@@ -60,7 +58,6 @@ def validar_items(resultado, erp_name):
             estado = "OK" if tipo_ok else "ERROR"
             print(f"    [{estado}] {campo}: {ejemplo[campo]!r} ({type(ejemplo[campo]).__name__})")
 
-    # Muestra de 3 registros
     print(f"\n  Muestra (3 registros):")
     for i, row in enumerate(resultado[:3]):
         ref = row.get("referencia", "?")
@@ -70,23 +67,83 @@ def validar_items(resultado, erp_name):
         print(f"    [{i+1}] {ref} | {desc} | cat={cat} | tracking={tracking}")
 
 
-def ejecutar_flow(transform, connector, json_bd, erp_name, mostrar_crudo=False, fn_crudo=None):
+def ejecutar_flow(json_front, erp_name, mostrar_crudo=False):
     """
     Simula el flujo real de main.py:
-    1. Extrae flow_name y flow_type del JSON de BD
-    2. El resto es flow_config para transform
-    3. Llama transform.get_flow(connector, flow_name, flow_config)
+    1. Front envia JSON con client_id + flow_name + flow_type + config del flow
+    2. main.py extrae client_id → carga credenciales → inyecta client_id
+    3. Instancia connector y transform segun erp.tipo
+    4. Extrae flow_name y flow_type del JSON
+    5. Llama transform.get_flow(connector, flow_name, flow_config)
+    6. Pasaria flow_type a _dispatch_flow() (no implementado aun)
     """
-    flow_name = json_bd.pop("flow_name")
-    flow_type = json_bd.pop("flow_type")
-    flow_config = json_bd
 
+    # --- Paso 1: main.py extrae client_id del JSON del front ---
+    client_id = json_front.pop("client_id")
+    flow_name = json_front.pop("flow_name")
+    flow_type = json_front.pop("flow_type")
+    flow_config = json_front  # lo que queda
+
+    print(f"  client_id: {client_id}")
     print(f"  flow_name: {flow_name}")
     print(f"  flow_type: {flow_type}")
 
-    if mostrar_crudo and fn_crudo:
-        fn_crudo(connector, flow_config)
+    # --- Paso 2: cargar credenciales y armar config ---
+    config = ConfigLoader(client_id).load_config()
+    config["client_id"] = client_id
 
+    erp_tipo = config["erp"]["tipo"]
+    print(f"  erp.tipo: {erp_tipo}")
+
+    # --- Paso 3: instanciar connector y transform (build_connector / build_transform) ---
+    if erp_tipo == "ws":
+        connector = SiesaEnterprise(config)
+        transform = TransformWS(config)
+    elif erp_tipo == "connekta":
+        connector = SiesaConnekta(config)
+        transform = TransformConnekta(config)
+    elif erp_tipo == "sap":
+        connector = SAP(config)
+        transform = TransformSAP(config)
+    else:
+        print(f"  [FALLO] ERP tipo '{erp_tipo}' no soportado")
+        return False
+
+    # --- Opcional: mostrar datos crudos de la API ---
+    if mostrar_crudo and erp_tipo == "connekta":
+        print("\n  Datos crudos de la API (1 pagina)...")
+        status, raw = connector.get(
+            endpoint=flow_config["query_desc"],
+            params={
+                "query_desc": flow_config["query_desc"],
+                "no_paginar": False,
+                "single_page": True
+            }
+        )
+        if status and raw:
+            print(f"  API retorno {len(raw)} registros")
+            print(f"  Campos de la API: {list(raw[0].keys())}")
+            print(f"  Ejemplo crudo: {raw[0]}")
+        else:
+            print(f"  [!] API no retorno datos: {raw}")
+
+    elif mostrar_crudo and erp_tipo == "sap":
+        print("\n  Login SAP...")
+        if not connector.login_api():
+            print("  [FALLO] No se pudo autenticar en SAP")
+            return False
+        print("  Login OK — obteniendo campos crudos...")
+        status, raw = connector.get(
+            endpoint=flow_config["endpoint"],
+            params={"filter": flow_config.get("filter", "")}
+        )
+        if status and raw:
+            print(f"  API retorno {len(raw)} registros")
+            print(f"  Campos de la API: {list(raw[0].keys())}")
+        else:
+            print(f"  [!] API no retorno datos: {raw}")
+
+    # --- Paso 4: transform ---
     print(f"\n  Ejecutando transform.get_flow(connector, '{flow_name}', flow_config)...")
     resultado = transform.get_flow(connector, flow_name, flow_config)
 
@@ -102,13 +159,10 @@ def ejecutar_flow(transform, connector, json_bd, erp_name, mostrar_crudo=False, 
 # ============================================================
 
 def test_ws_items():
-    separador("1. SIESA WS — Fénix — Items")
+    separador("1. SIESA WS — Fenix — Items")
     try:
-        config = ConfigLoader("fenix").load_credentials()
-        connector = SiesaEnterprise(config)
-        transform = TransformWS(config)
-
-        json_bd = {
+        json_front = {
+            "client_id": "fenix",
             "flow_name": "items",
             "flow_type": "items",
             "sql": """
@@ -163,7 +217,7 @@ def test_ws_items():
             """
         }
 
-        return ejecutar_flow(transform, connector, json_bd, "WS/Fenix")
+        return ejecutar_flow(json_front, "WS/Fenix")
 
     except Exception as e:
         print(f"  [FALLO] WS Items: {e}")
@@ -179,11 +233,8 @@ def test_ws_items():
 def test_connekta_items():
     separador("2. SIESA Connekta — OIT — Items")
     try:
-        config = ConfigLoader("oit").load_credentials()
-        connector = SiesaConnekta(config)
-        transform = TransformConnekta(config)
-
-        json_bd = {
+        json_front = {
+            "client_id": "oit",
             "flow_name": "items",
             "flow_type": "items",
             "query_desc": "productosysolucionesquimicas_items_wms",
@@ -223,25 +274,7 @@ def test_connekta_items():
             ]
         }
 
-        def mostrar_crudo(connector, flow_config):
-            print("  Probando conexion cruda para ver campos de la API...")
-            status, raw = connector.get(
-                endpoint=flow_config["query_desc"],
-                params={
-                    "query_desc": flow_config["query_desc"],
-                    "no_paginar": False,
-                    "single_page": True
-                }
-            )
-            if status and raw:
-                print(f"  API retorno {len(raw)} registros")
-                print(f"  Campos de la API: {list(raw[0].keys())}")
-                print(f"  Ejemplo crudo: {raw[0]}")
-            else:
-                print(f"  [!] API no retorno datos: {raw}")
-
-        return ejecutar_flow(transform, connector, json_bd, "Connekta/OIT",
-                            mostrar_crudo=True, fn_crudo=mostrar_crudo)
+        return ejecutar_flow(json_front, "Connekta/OIT", mostrar_crudo=True)
 
     except Exception as e:
         print(f"  [FALLO] Connekta Items: {e}")
@@ -257,11 +290,8 @@ def test_connekta_items():
 def test_sap_items():
     separador("3. SAP B1 — Faber Castell — Items")
     try:
-        config = ConfigLoader("fabercastell").load_credentials()
-        connector = SAP(config)
-        transform = TransformSAP(config)
-
-        json_bd = {
+        json_front = {
+            "client_id": "fabercastell",
             "flow_name": "items",
             "flow_type": "items",
             "endpoint": "Items",
@@ -301,26 +331,7 @@ def test_sap_items():
             ]
         }
 
-        def mostrar_crudo(connector, flow_config):
-            print("  Probando login SAP...")
-            if not connector.session_id:
-                if not connector.login_api():
-                    print("  [FALLO] No se pudo autenticar en SAP")
-                    return
-            print("  Login OK")
-            print("  Obteniendo registros crudos para ver campos...")
-            status, raw = connector.get(
-                endpoint="Items",
-                params={"filter": flow_config["filter"]}
-            )
-            if status and raw:
-                print(f"  API retorno {len(raw)} registros")
-                print(f"  Campos de la API: {list(raw[0].keys())}")
-            else:
-                print(f"  [!] API no retorno datos: {raw}")
-
-        return ejecutar_flow(transform, connector, json_bd, "SAP/FaberCastell",
-                            mostrar_crudo=True, fn_crudo=mostrar_crudo)
+        return ejecutar_flow(json_front, "SAP/FaberCastell", mostrar_crudo=True)
 
     except Exception as e:
         print(f"  [FALLO] SAP Items: {e}")
