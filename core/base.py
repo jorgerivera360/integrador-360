@@ -1,12 +1,17 @@
 """
-ProcessBase — Clase base del core
-Responsabilidades:
-  - Lookups en lote comunes a todos los procesos
-  - _lookup_uoms() — busca UOMs en Odoo
-  - _lookup_taxes() — busca impuestos en Odoo
-  - _lookup_departments() — busca departamentos en Odoo
-  - _lookup_countries() — busca países en Odoo
-Hereda: JsonRPC
-Nota: No es abstracta — agrupa utilidades compartidas
-Fase: 4 — Core Layer
-"""
+  CoreProcessor — Clase base abstracta del core (Strategy)
+  Responsabilidades:
+    - Contrato único: process(data) → dict
+    - Cada subclase implementa la carga a Odoo para su entidad
+    - Los lookups compartidos viven en core/utils/lookups.py
+    - Las utilidades compartidas viven en core/utils/helpers.py
+  Fase: 4 — Core Layer
+  """
+from abc import ABC, abstractmethod
+
+class CoreProcessor(ABC):
+
+    @abstractmethod
+    def process(self, data: list) -> dict:
+        """Procesa la lista de registros y retorna resumen de resultado"""
+        pass
