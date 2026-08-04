@@ -1,0 +1,274 @@
+"""
+resolve_missing_masters — Resuelve maestros faltantes antes de procesar transacciones
+Responsabilidades:
+- Identifica productos, proveedores y clientes que están en las transacciones
+    pero no existen en Odoo
+- Consulta al ERP via connector + transform para obtener los datos completos
+- Crea los faltantes en Odoo via ProcessItems / ProcessPartners
+- Solo se ejecuta si hay faltantes — si todo existe, termina en milisegundos
+No hereda CoreProcessor — es un paso de orquestación
+Fase: 4 — Core Layer
+"""
+from core.process_items import ProcessItems
+from core.process_partners import ProcessPartners
+
+
+def resolve_missing_masters(
+    odoo, connector, transform,
+    data_purchases, data_sales,
+    flow_configs, config, logger
+):
+    """
+    Identifica maestros faltantes en Odoo y los crea consultando al ERP.
+
+    flow_configs: {
+        "items": flow_config para productos,
+        "customer": flow_config para clientes,
+        "supplier": flow_config para proveedores
+    }
+
+    Retorna dict con resumen de lo resuelto.
+    """
+    resumen = {
+        "productos_faltantes": 0,
+        "productos_resueltos": 0,
+        "proveedores_faltantes": 0,
+        "proveedores_resueltos": 0,
+        "clientes_faltantes": 0,
+        "clientes_resueltos": 0,
+        "no_resueltos": [],
+    }
+
+    try:
+        # ---- Fase 1: Extraer dependencias únicas de las transacciones ----
+        productos_refs = set()
+        proveedores_keys = set()
+        clientes_keys = set()
+
+        for row in (data_purchases or []):
+            if row.get("producto"):
+                productos_refs.add(row["producto"])
+            if row.get("proveedor"):
+                proveedores_keys.add((row["proveedor"], row.get("sucursal_proveedor", "")))
+
+        for row in (data_sales or []):
+            if row.get("producto"):
+                productos_refs.add(row["producto"])
+            if row.get("cliente"):
+                clientes_keys.add((row["cliente"], row.get("sucursal_cliente", "")))
+
+        if not productos_refs and not proveedores_keys and not clientes_keys:
+            logger.info("Resolve Masters | Sin dependencias que verificar")
+            return resumen
+
+        logger.info(
+            f"Resolve Masters | Dependencias: {len(productos_refs)} productos, "
+            f"{len(proveedores_keys)} proveedores, {len(clientes_keys)} clientes"
+        )
+
+        # ---- Fase 2: Verificar cuáles existen en Odoo ----
+        productos_faltantes = set()
+        if productos_refs:
+            ok, result = odoo.search_read(
+                "product.product",
+                [["default_code", "in", list(productos_refs)]],
+                ["default_code"]
+            )
+            if ok:
+                existentes = {p["default_code"] for p in (result or [])}
+                productos_faltantes = productos_refs - existentes
+            else:
+                logger.error(f"Resolve Masters | Error verificando productos: {result}")
+
+        proveedores_faltantes = set()
+        if proveedores_keys:
+            vats_prov = list({k[0] for k in proveedores_keys})
+            ok, result = odoo.search_read(
+                "res.partner",
+                [["vat", "in", vats_prov]],
+                ["vat", "sucursal"]
+            )
+            if ok:
+                existentes = {(p["vat"], p.get("sucursal", "")) for p in (result or [])}
+                proveedores_faltantes = proveedores_keys - existentes
+            else:
+                logger.error(f"Resolve Masters | Error verificando proveedores: {result}")
+
+        clientes_faltantes = set()
+        if clientes_keys:
+            vats_cli = list({k[0] for k in clientes_keys})
+            ok, result = odoo.search_read(
+                "res.partner",
+                [["vat", "in", vats_cli]],
+                ["vat", "sucursal"]
+            )
+            if ok:
+                existentes = {(p["vat"], p.get("sucursal", "")) for p in (result or [])}
+                clientes_faltantes = clientes_keys - existentes
+            else:
+                logger.error(f"Resolve Masters | Error verificando clientes: {result}")
+
+        resumen["productos_faltantes"] = len(productos_faltantes)
+        resumen["proveedores_faltantes"] = len(proveedores_faltantes)
+        resumen["clientes_faltantes"] = len(clientes_faltantes)
+
+        if not productos_faltantes and not proveedores_faltantes and not clientes_faltantes:
+            logger.info("Resolve Masters | Todos los maestros existen en Odoo — sin acción")
+            return resumen
+
+        logger.info(
+            f"Resolve Masters | Faltantes: {len(productos_faltantes)} productos, "
+            f"{len(proveedores_faltantes)} proveedores, {len(clientes_faltantes)} clientes"
+        )
+
+        # ---- Fase 3: Consultar al ERP y crear faltantes ----
+
+        # --- Productos faltantes ---
+        if productos_faltantes and flow_configs.get("items"):
+            try:
+                logger.info(f"Resolve Masters | Consultando ERP por {len(productos_faltantes)} productos faltantes")
+                items_flow_config = flow_configs["items"]
+                all_items = transform.get_flow(connector, "items", items_flow_config)
+
+                if all_items:
+                    missing_data = [
+                        row for row in all_items
+                        if row.get("referencia") in productos_faltantes
+                    ]
+                    if missing_data:
+                        logger.info(
+                            f"Resolve Masters | {len(missing_data)} productos encontrados en ERP, creando en Odoo"
+                        )
+                        processor = ProcessItems(odoo, config, items_flow_config)
+                        result = processor.process(missing_data)
+                        resumen["productos_resueltos"] = result.get("creados", 0)
+
+                        no_encontrados = productos_faltantes - {
+                            row["referencia"] for row in missing_data
+                        }
+                        for ref in no_encontrados:
+                            resumen["no_resueltos"].append({
+                                "tipo": "producto", "referencia": ref,
+                                "razon": "No existe en el ERP"
+                            })
+                    else:
+                        for ref in productos_faltantes:
+                            resumen["no_resueltos"].append({
+                                "tipo": "producto", "referencia": ref,
+                                "razon": "No existe en el ERP"
+                            })
+                else:
+                    logger.warning("Resolve Masters | ERP no retornó datos de productos")
+            except Exception as e:
+                logger.error(f"Resolve Masters | Error resolviendo productos: {e}")
+
+        # --- Proveedores faltantes ---
+        if proveedores_faltantes and flow_configs.get("supplier"):
+            try:
+                logger.info(
+                    f"Resolve Masters | Consultando ERP por {len(proveedores_faltantes)} proveedores faltantes"
+                )
+                supplier_flow_config = flow_configs["supplier"]
+                all_suppliers = transform.get_flow(connector, "partners", supplier_flow_config)
+
+                if all_suppliers:
+                    missing_data = [
+                        row for row in all_suppliers
+                        if (row.get("identificacion"), row.get("sucursal", "")) in proveedores_faltantes
+                    ]
+                    if missing_data:
+                        logger.info(
+                            f"Resolve Masters | {len(missing_data)} proveedores encontrados en ERP, creando en Odoo"
+                        )
+                        processor = ProcessPartners(odoo, config, supplier_flow_config)
+                        result = processor.process(missing_data)
+                        resumen["proveedores_resueltos"] = result.get("creados", 0)
+
+                        no_encontrados = proveedores_faltantes - {
+                            (row["identificacion"], row.get("sucursal", ""))
+                            for row in missing_data
+                        }
+                        for vat, suc in no_encontrados:
+                            resumen["no_resueltos"].append({
+                                "tipo": "proveedor", "identificacion": vat,
+                                "sucursal": suc, "razon": "No existe en el ERP"
+                            })
+                    else:
+                        for vat, suc in proveedores_faltantes:
+                            resumen["no_resueltos"].append({
+                                "tipo": "proveedor", "identificacion": vat,
+                                "sucursal": suc, "razon": "No existe en el ERP"
+                            })
+                else:
+                    logger.warning("Resolve Masters | ERP no retornó datos de proveedores")
+            except Exception as e:
+                logger.error(f"Resolve Masters | Error resolviendo proveedores: {e}")
+
+        # --- Clientes faltantes ---
+        if clientes_faltantes and flow_configs.get("customer"):
+            try:
+                logger.info(
+                    f"Resolve Masters | Consultando ERP por {len(clientes_faltantes)} clientes faltantes"
+                )
+                customer_flow_config = flow_configs["customer"]
+                all_customers = transform.get_flow(connector, "partners", customer_flow_config)
+
+                if all_customers:
+                    missing_data = [
+                        row for row in all_customers
+                        if (row.get("identificacion"), row.get("sucursal", "")) in clientes_faltantes
+                    ]
+                    if missing_data:
+                        logger.info(
+                            f"Resolve Masters | {len(missing_data)} clientes encontrados en ERP, creando en Odoo"
+                        )
+                        processor = ProcessPartners(odoo, config, customer_flow_config)
+                        result = processor.process(missing_data)
+                        resumen["clientes_resueltos"] = result.get("creados", 0)
+
+                        no_encontrados = clientes_faltantes - {
+                            (row["identificacion"], row.get("sucursal", ""))
+                            for row in missing_data
+                        }
+                        for vat, suc in no_encontrados:
+                            resumen["no_resueltos"].append({
+                                "tipo": "cliente", "identificacion": vat,
+                                "sucursal": suc, "razon": "No existe en el ERP"
+                            })
+                    else:
+                        for vat, suc in clientes_faltantes:
+                            resumen["no_resueltos"].append({
+                                "tipo": "cliente", "identificacion": vat,
+                                "sucursal": suc, "razon": "No existe en el ERP"
+                            })
+                else:
+                    logger.warning("Resolve Masters | ERP no retornó datos de clientes")
+            except Exception as e:
+                logger.error(f"Resolve Masters | Error resolviendo clientes: {e}")
+
+        # ---- Fase 4: Resumen ----
+        logger.info(
+            f"Resolve Masters | Resultado: "
+            f"{resumen['productos_resueltos']}/{resumen['productos_faltantes']} productos, "
+            f"{resumen['proveedores_resueltos']}/{resumen['proveedores_faltantes']} proveedores, "
+            f"{resumen['clientes_resueltos']}/{resumen['clientes_faltantes']} clientes resueltos"
+        )
+        if resumen["no_resueltos"]:
+            logger.warning(
+                f"Resolve Masters | {len(resumen['no_resueltos'])} maestros no resueltos:"
+            )
+            for nr in resumen["no_resueltos"]:
+                if nr["tipo"] == "producto":
+                    logger.warning(f"  - Producto '{nr['referencia']}': {nr['razon']}")
+                else:
+                    logger.warning(
+                        f"  - {nr['tipo'].capitalize()} {nr['identificacion']} "
+                        f"(suc={nr.get('sucursal', '')}): {nr['razon']}"
+                    )
+
+        return resumen
+
+    except Exception as e:
+        logger.error(f"Resolve Masters | Error fatal: {e}")
+        resumen["error"] = str(e)
+        return resumen
