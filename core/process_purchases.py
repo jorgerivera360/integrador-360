@@ -68,6 +68,19 @@ class ProcessPurchases(CoreProcessor):
             if not data_nueva:
                 return {"creados": 0, "fallidos": [], "descartados": descartados, "total": len(data)}
 
+            # ---- Default picking type (fallback) ----
+            default_picking_type_id = None
+            ok_pt, pts = self.odoo.search_read(
+                "stock.picking.type",
+                [["code", "=", "incoming"]],
+                ["id"], limit=1
+            )
+            if ok_pt and pts:
+                default_picking_type_id = pts[0]["id"]
+                self.logger.info(f"Purchases | Default picking type: {default_picking_type_id}")
+            else:
+                self.logger.warning("Purchases | No se encontró picking type 'incoming' por defecto")
+
             # ---- Fase 2: Pre-resolver proveedores ----
             cache_partner = {}
             proveedores_resueltos = {}
@@ -124,21 +137,21 @@ class ProcessPurchases(CoreProcessor):
                     continue
 
                 # Resolver almacén
-                almacen = row.get("almacen", "")
+                picking_type_id = default_picking_type_id
                 bodega_erp = row.get("bodega_siesa") or row.get("bodega_sap")
                 if bodega_erp and warehouse_mapping:
                     almacen_resuelto = resolve_warehouse(
                         bodega_erp, warehouse_mapping, logger=self.logger
                     )
                     if almacen_resuelto:
-                        almacen = almacen_resuelto
+                        picking_type_id = almacen_resuelto
 
                 lineas_validas.append({
                     **row,
                     "supplier_id": supplier_id,
                     "product_id": producto["id"],
                     "uom_id": producto["uom_id"],
-                    "almacen_resuelto": almacen,
+                    "picking_type_id": picking_type_id,
                 })
 
             # ---- Fase 5: Agrupar por cabecera ----
@@ -150,7 +163,7 @@ class ProcessPurchases(CoreProcessor):
                     linea.get("referencia_compra", ""),
                     linea.get("fecha_entrega", ""),
                     linea.get("estado", "draft"),
-                    linea.get("almacen_resuelto", ""),
+                    linea.get("picking_type_id", ""),
                 )
                 ordenes[header_key].append(linea)
 
@@ -163,7 +176,7 @@ class ProcessPurchases(CoreProcessor):
             creados = 0
 
             for header_key, lineas in ordenes.items():
-                compra, supplier_id, referencia, fecha, estado, almacen = header_key
+                compra, supplier_id, referencia, fecha, estado, picking_type_id = header_key
                 try:
                     # Armar order_lines
                     order_lines = []
@@ -186,8 +199,8 @@ class ProcessPurchases(CoreProcessor):
                         "partner_ref": referencia or lineas[0].get("comprador", ""),
                         "order_line": order_lines,
                     }
-                    if almacen:
-                        payload["picking_type_id"] = int(almacen)
+                    if picking_type_id:
+                          payload["picking_type_id"] = picking_type_id
 
                     ok, res = self.odoo.create("purchase.order", payload)
                     if ok:

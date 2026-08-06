@@ -68,6 +68,19 @@ class ProcessSales(CoreProcessor):
             if not data_nueva:
                 return {"creados": 0, "fallidos": [], "descartados": descartados, "total": len(data)}
 
+            # ---- Default warehouse (fallback) ----
+            default_warehouse_id = None
+            ok_wh, whs = self.odoo.search_read(
+                "stock.warehouse",
+                [],
+                ["id"], limit=1
+            )
+            if ok_wh and whs:
+                default_warehouse_id = whs[0]["id"]
+                self.logger.info(f"Sales | Default warehouse: {default_warehouse_id}")
+            else:
+                self.logger.warning("Sales | No se encontró warehouse por defecto")
+
             # ---- Fase 2: Pre-resolver clientes ----
             cache_partner = {}
             clientes_resueltos = {}
@@ -135,14 +148,14 @@ class ProcessSales(CoreProcessor):
                     continue
 
                 # Resolver almacén
-                almacen = row.get("almacen", "")
+                warehouse_id = default_warehouse_id
                 bodega_erp = row.get("bodega_siesa") or row.get("bodega_sap")
                 if bodega_erp and warehouse_mapping:
                     almacen_resuelto = resolve_warehouse(
                         bodega_erp, warehouse_mapping, logger=self.logger
                     )
                     if almacen_resuelto:
-                        almacen = almacen_resuelto
+                        warehouse_id = almacen_resuelto
 
                 # Resolver zona
                 zone_id = zonas_resueltas.get(row.get("zona"))
@@ -152,7 +165,7 @@ class ProcessSales(CoreProcessor):
                     "customer_id": customer_id,
                     "product_id": producto["id"],
                     "uom_id": producto["uom_id"],
-                    "almacen_resuelto": almacen,
+                    "warehouse_id": warehouse_id,
                     "zone_id": zone_id,
                 })
 
@@ -165,7 +178,7 @@ class ProcessSales(CoreProcessor):
                     linea.get("zone_id") or 0,
                     linea.get("vendedor", ""),
                     linea.get("condicion_pago", ""),
-                    linea.get("almacen_resuelto", ""),
+                    linea.get("warehouse_id"),
                     linea.get("observacion", ""),
                     linea.get("fecha_pedido", ""),
                 )
@@ -180,7 +193,7 @@ class ProcessSales(CoreProcessor):
             creados = 0
 
             for header_key, lineas in ordenes.items():
-                pedido, customer_id, zone_id, vendedor, condicion, almacen, observacion, fecha = header_key
+                pedido, customer_id, zone_id, vendedor, condicion, warehouse_id, observacion, fecha = header_key
                 try:
                     # Armar order_lines
                     order_lines = []
@@ -201,8 +214,8 @@ class ProcessSales(CoreProcessor):
                         "state": lineas[0].get("estado", "draft"),
                         "order_line": order_lines,
                     }
-                    if almacen:
-                        payload["warehouse_id"] = int(almacen)
+                    if warehouse_id:
+                        payload["warehouse_id"] = warehouse_id
                     if zone_id:
                         payload["delivery_zone_id"] = zone_id
                     if observacion:

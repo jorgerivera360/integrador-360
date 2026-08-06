@@ -159,6 +159,11 @@ def resolve_missing_masters(
                             })
                 else:
                     logger.warning("Resolve Masters | ERP no retornó datos de productos")
+                    for ref in productos_faltantes:
+                        resumen["no_resueltos"].append({
+                            "tipo": "producto", "referencia": ref,
+                            "razon": "ERP no retornó datos"
+                        })
             except Exception as e:
                 logger.error(f"Resolve Masters | Error resolviendo productos: {e}")
 
@@ -201,6 +206,11 @@ def resolve_missing_masters(
                             })
                 else:
                     logger.warning("Resolve Masters | ERP no retornó datos de proveedores")
+                    for vat, suc in proveedores_faltantes:
+                        resumen["no_resueltos"].append({
+                            "tipo": "proveedor", "identificacion": vat, "sucursal": suc,
+                            "razon": "ERP no retornó datos"
+                        })
             except Exception as e:
                 logger.error(f"Resolve Masters | Error resolviendo proveedores: {e}")
 
@@ -243,6 +253,11 @@ def resolve_missing_masters(
                             })
                 else:
                     logger.warning("Resolve Masters | ERP no retornó datos de clientes")
+                    for vat, suc in clientes_faltantes:
+                        resumen["no_resueltos"].append({
+                            "tipo": "cliente", "identificacion": vat, "sucursal": suc,
+                            "razon": "ERP no retornó datos"
+                        })
             except Exception as e:
                 logger.error(f"Resolve Masters | Error resolviendo clientes: {e}")
 
