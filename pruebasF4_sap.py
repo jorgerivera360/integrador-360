@@ -328,10 +328,10 @@ FLOW_VENTAS = {
     "warehouse_mapping": {},
 }
 
-# --- RESOLVE (sin filtro de fecha para encontrar maestros antiguos) ---
-FLOW_ITEMS_RESOLVE = {**FLOW_ITEMS, "filter": "Valid eq 'tYES'"}
-FLOW_PROVEEDORES_RESOLVE = {**FLOW_PROVEEDORES, "filter": "CardType eq 'cSupplier'"}
-FLOW_CLIENTES_RESOLVE = {**FLOW_CLIENTES, "filter": "CardType eq 'cCustomer'"}
+# --- RESOLVE (filtro de 6 meses para no traer todo el historico) ---
+FLOW_ITEMS_RESOLVE = {**FLOW_ITEMS, "filter": "Valid eq 'tYES' and UpdateDate ge '2026-01-01'"}
+FLOW_PROVEEDORES_RESOLVE = {**FLOW_PROVEEDORES, "filter": "CardType eq 'cSupplier' and UpdateDate ge '2026-01-01'"}
+FLOW_CLIENTES_RESOLVE = {**FLOW_CLIENTES, "filter": "CardType eq 'cCustomer' and UpdateDate ge '2026-01-01'"}
 
 
 # ============================================================
