@@ -363,7 +363,7 @@ SQL_VENTAS = (
     ' WHERE t430.f430_id_cia = 1'
     '     AND t430.f430_ind_estado = 2'
     '     AND CAST(t430.f430_fecha_ts_creacion AS DATETIME) >= DATEADD(day, -30, GETDATE())'
-    ' ORDER BY t430.f430_consec_docto DESC;'
+    ' ORDER BY 1 DESC;'
     ' SET QUOTED_IDENTIFIER ON;'
 )
 
