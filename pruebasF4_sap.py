@@ -246,7 +246,7 @@ FLOW_COMPRAS = {
     "flow_name": "compras",
     "flow_type": "purchases",
     "endpoint": "PurchaseOrders",
-    "filter": "",
+    "filter": "DocDate ge '2025-01-01'",
     "mapping": {
         "CardCode": "proveedor",
         "DocDate": "fecha_entrega",
@@ -288,7 +288,7 @@ FLOW_VENTAS = {
     "flow_name": "ventas",
     "flow_type": "sales",
     "endpoint": "DeliveryNotes",
-    "filter": "DocDate ge '2026-08-01'",
+    "filter": "DocDate ge '2025-01-01'",
     "mapping": {
         "CardCode": "cliente",
         "ShipToCode": "sucursal_cliente",
