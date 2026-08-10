@@ -126,7 +126,7 @@ class ProcessSales(CoreProcessor):
 
             for row in data_nueva:
                 pedido = row.get("pedido", "")
-                ref_producto = row.get("producto", "")
+                ref_producto = str(row.get("producto", ""))
 
                 # Resolver cliente
                 customer_key = (row.get("cliente", ""), row.get("sucursal_cliente", ""))
