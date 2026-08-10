@@ -18,6 +18,7 @@ Uso:
 import os
 import sys
 import traceback
+from datetime import datetime, timedelta
 
 os.environ["ENV"] = "staging"
 
@@ -75,6 +76,14 @@ def header(titulo):
 # a canonicos. Hardcodes inyectan fijos. Conditionals evaluan reglas
 # (Maneja_lote -> tracking) y funciones del catalogo
 # (route_compra_manufactura_prefijo).
+#
+# TODOS los queries de Tito Pabon requieren parametros de fecha.
+
+_hoy = datetime.now()
+_hace_30 = _hoy - timedelta(days=30)
+_params_fecha = f"&parametros=FechaInicio = {_hace_30.strftime('%Y%m%d')}|FechaFin = {_hoy.strftime('%Y%m%d')}"
+_params_fecha_cli = f"&parametros=fecha_inicio = {_hace_30.strftime('%Y%m%d')}|fecha_fin = {_hoy.strftime('%Y%m%d')}"
+_params_fecha_oc = f"&parametros=fecha_inicio = 20260101|fecha_fin = {_hoy.strftime('%Y%m%d')}"
 
 # --- ITEMS ---
 # API retorna: Referencia_Item, name, barcode, precio, costo, peso,
@@ -83,7 +92,7 @@ def header(titulo):
 FLOW_ITEMS = {
     "flow_name": "items",
     "flow_type": "items",
-    "query_desc": "pinturastitopabon_producto_wms",
+    "query_desc": "pinturastitopabon_producto_wms" + _params_fecha,
     "paginacion": False,
     "mapping": {
         "Referencia_Item": "referencia",
@@ -160,7 +169,7 @@ FLOW_ITEMS_QUERY_ERROR = {
 FLOW_CLIENTES = {
     "flow_name": "partners",
     "flow_type": "customer",
-    "query_desc": "pinturastitopabon_Clientes",
+    "query_desc": "pinturastitopabon_Clientes" + _params_fecha_cli,
     "paginacion": False,
     "mapping": {
         "vat": "identificacion",
@@ -184,7 +193,7 @@ FLOW_CLIENTES_SIN_JERARQUIA = {
 FLOW_PROVEEDORES = {
     "flow_name": "partners",
     "flow_type": "supplier",
-    "query_desc": "pinturastitopabon_Proveedores",
+    "query_desc": "pinturastitopabon_Proveedores" + _params_fecha_cli,
     "paginacion": False,
     "mapping": {
         "vat": "identificacion",
@@ -204,7 +213,7 @@ FLOW_PROVEEDORES = {
 FLOW_COMPRAS = {
     "flow_name": "compras",
     "flow_type": "purchases",
-    "query_desc": "pinturastitopabon_OrdenDeCompra",
+    "query_desc": "pinturastitopabon_OrdenDeCompra" + _params_fecha_oc,
     "paginacion": False,
     "mapping": {
         "documento": "compra",
