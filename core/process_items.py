@@ -36,7 +36,7 @@ class ProcessItems(CoreProcessor):
                         row["unidad"] = uom_mapping.get(raw, uom_mapping.get(raw.lower(), raw))
 
             # ---- Fase 2: Bulk fetch existentes (con reintentos) ----
-            refs = list({row["referencia"] for row in data if row.get("referencia")})
+            refs = list({str(row["referencia"]) for row in data if row.get("referencia")})
             existing = {}
             if refs:
                 max_retries = 3
@@ -131,7 +131,7 @@ class ProcessItems(CoreProcessor):
             fallidos = []
 
             for row in data:
-                ref = row.get("referencia", "")
+                ref = str(row.get("referencia", ""))
                 try:
                     # Resolver UOM (obligatorio)
                     uom_id = uoms_resueltos.get(row.get("unidad"))
