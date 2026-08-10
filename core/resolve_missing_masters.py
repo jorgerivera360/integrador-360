@@ -47,13 +47,13 @@ def resolve_missing_masters(
 
         for row in (data_purchases or []):
             if row.get("producto"):
-                productos_refs.add(row["producto"])
+                productos_refs.add(str(row["producto"]))
             if row.get("proveedor"):
                 proveedores_keys.add((row["proveedor"], row.get("sucursal_proveedor", "")))
 
         for row in (data_sales or []):
             if row.get("producto"):
-                productos_refs.add(row["producto"])
+                productos_refs.add(str(row["producto"]))
             if row.get("cliente"):
                 clientes_keys.add((row["cliente"], row.get("sucursal_cliente", "")))
 
@@ -144,7 +144,7 @@ def resolve_missing_masters(
                         resumen["productos_resueltos"] = result.get("creados", 0)
 
                         no_encontrados = productos_faltantes - {
-                            row["referencia"] for row in missing_data
+                            str(row["referencia"]) for row in missing_data
                         }
                         for ref in no_encontrados:
                             resumen["no_resueltos"].append({
