@@ -13,6 +13,7 @@ from core.process_items import ProcessItems
 from core.process_partners import ProcessPartners
 
 
+
 def resolve_missing_masters(
     odoo, connector, transform,
     data_purchases, data_sales,
@@ -127,7 +128,9 @@ def resolve_missing_masters(
         if productos_faltantes and flow_configs.get("items"):
             try:
                 logger.info(f"Resolve Masters | Consultando ERP por {len(productos_faltantes)} productos faltantes")
-                items_flow_config = flow_configs["items"]
+                items_flow_config = _build_resolve_filter(
+                    flow_configs["items"], productos_faltantes, logger=logger
+                )
                 all_items = transform.get_flow(connector, "items", items_flow_config)
 
                 if all_items:
@@ -173,7 +176,9 @@ def resolve_missing_masters(
                 logger.info(
                     f"Resolve Masters | Consultando ERP por {len(proveedores_faltantes)} proveedores faltantes"
                 )
-                supplier_flow_config = flow_configs["supplier"]
+                supplier_flow_config = _build_resolve_filter(
+                    flow_configs["supplier"], {vat for vat, suc in proveedores_faltantes}, logger=logger
+                )
                 all_suppliers = transform.get_flow(connector, "partners", supplier_flow_config)
 
                 if all_suppliers:
@@ -220,7 +225,9 @@ def resolve_missing_masters(
                 logger.info(
                     f"Resolve Masters | Consultando ERP por {len(clientes_faltantes)} clientes faltantes"
                 )
-                customer_flow_config = flow_configs["customer"]
+                customer_flow_config = _build_resolve_filter(
+                    flow_configs["customer"], {vat for vat, suc in clientes_faltantes}, logger=logger
+                )
                 all_customers = transform.get_flow(connector, "partners", customer_flow_config)
 
                 if all_customers:
@@ -287,3 +294,30 @@ def resolve_missing_masters(
         logger.error(f"Resolve Masters | Error fatal: {e}")
         resumen["error"] = str(e)
         return resumen
+
+def _build_resolve_filter(flow_config, faltantes, logger=None):
+    """
+    Si flow_config tiene resolve_filter_field, arma un filtro dinámico
+    con los valores faltantes y lo agrega al filter existente.
+    Retorna el flow_config modificado (copia).
+    Si no tiene resolve_filter_field, retorna el flow_config original sin cambios.
+    """
+    resolve_field = flow_config.get("resolve_filter_field")
+    resolve_template = flow_config.get("resolve_filter_template")
+    if not resolve_field or not resolve_template or not faltantes:
+        return flow_config
+
+    parts = [resolve_template.replace("{ref}", str(ref)) for ref in faltantes]
+    dynamic_filter = "(" + " or ".join(parts) + ")"
+
+    new_config = {**flow_config}
+    base_filter = flow_config.get("filter", "")
+    if base_filter:
+        new_config["filter"] = f"{base_filter} and {dynamic_filter}"
+    else:
+        new_config["filter"] = dynamic_filter
+
+    if logger:
+        logger.info(f"Resolve Masters | Filtro dinámico: {len(faltantes)} valores → {dynamic_filter[:100]}...")
+
+    return new_config
