@@ -1,7 +1,7 @@
 """
 pruebasF4_connekta.py — Pruebas de integracion Fase 4 Core Layer (SIESA Connekta)
 Ejecutar en wms-servertest con ENV=staging
-Secret GCP: integrador-pruebackt (ERP OIT Connekta + Odoo pruebas)
+Secret GCP: integrador-pruebackt (ERP Tito Pabon Connekta + Odoo pruebas)
 
 Enfoque: Simula JSONs flow_config como vendrian del front.
 Cada escenario ejecuta el flujo completo: connector REST -> transform (mapping+hardcodes+conditionals) -> core -> Odoo.
@@ -70,27 +70,59 @@ def header(titulo):
 # ============================================================
 # FLOW CONFIGS — Simulan lo que vendria del front/BD
 # ============================================================
-# OIT Connekta: la API retorna campos con nombres del ERP.
-# El mapping los renombra a canonicos. Hardcodes inyectan fijos.
-# Conditionals evaluan reglas (lote -> tracking).
+# Tito Pabon Connekta (idCompania=7936):
+# La API retorna campos con nombres del ERP. El mapping los renombra
+# a canonicos. Hardcodes inyectan fijos. Conditionals evaluan reglas
+# (Maneja_lote -> tracking) y funciones del catalogo
+# (route_compra_manufactura_prefijo).
 
 # --- ITEMS ---
-# API OIT retorna: referencia, codigo_barras, descripcion, categoria, linea,
-#   precio, costo, unidad, peso, volumen, lote, vence
-# Mapping: casi todos ya son canonicos en OIT, solo lote -> tracking
+# API retorna: Referencia_Item, name, barcode, precio, costo, peso,
+#   volumen, unidad_venta, descripcion_inv_serv, Maneja_lote, Caducidad,
+#   vida_util, Compra, Venta, Manufactura
 FLOW_ITEMS = {
     "flow_name": "items",
     "flow_type": "items",
-    "query_desc": "productosysolucionesquimicas_items_wms",
-    "paginacion": True,
+    "query_desc": "pinturastitopabon_producto_wms",
+    "paginacion": False,
     "mapping": {
-        "lote": "tracking",
+        "Referencia_Item": "referencia",
+        "name": "descripcion",
+        "barcode": "codigo_barras",
+        "unidad_venta": "unidad",
+        "descripcion_inv_serv": "categoria",
+        "vida_util": "vence",
     },
     "hardcodes": {
         "impuesto": 19.0,
-        "ruta": "Comprar",
     },
-    "conditionals": [],
+    "conditionals": [
+        {
+            "tipo": "reglas",
+            "campo_destino": "tracking",
+            "campo_origen": "Maneja_lote",
+            "reglas": [{"si": "SI", "entonces": "lot"}],
+            "default": "none",
+        },
+        {
+            "tipo": "reglas",
+            "campo_destino": "use_expiration_date",
+            "campo_origen": "Caducidad",
+            "reglas": [{"si": "SI", "entonces": 1}],
+            "default": 0,
+        },
+        {
+            "tipo": "funcion",
+            "campo_destino": "ruta",
+            "funcion": "route_compra_manufactura_prefijo",
+            "params": {
+                "campo_compra": "Compra",
+                "campo_manufactura": "Manufactura",
+                "campo_referencia": "Referencia_Item",
+                "prefijo_manufactura": "PT",
+            },
+        },
+    ],
     "uom_mapping": {
         "UND": "Unidades",
         "und": "Unidades",
@@ -98,6 +130,7 @@ FLOW_ITEMS = {
         "KG": "kg",
         "kgs": "kg",
         "LT": "lt",
+        "GAL": "Galones",
     },
 }
 
@@ -122,42 +155,41 @@ FLOW_ITEMS_QUERY_ERROR = {
 }
 
 # --- CLIENTES ---
-# API OIT retorna: vat, sucursal, nombre, email, telefono, celular,
-#   direccion, codigo_postal, ciudad, deptos, pais, zona, tipo_cliente
+# API retorna: vat, sucursal, nombre_completo, correo, telefono,
+#   celular, direccion, codigo_postal, ciudad, departamento, pais, zona
 FLOW_CLIENTES = {
     "flow_name": "partners",
     "flow_type": "customer",
-    "query_desc": "productosysolucionesquimicas_clientes_wms",
-    "paginacion": True,
+    "query_desc": "pinturastitopabon_Clientes",
+    "paginacion": False,
     "mapping": {
         "vat": "identificacion",
-        "nombre": "nombre",
-        "deptos": "departamento",
+        "nombre_completo": "nombre",
+        "correo": "email",
     },
     "hardcodes": {},
     "conditionals": [],
-    "sucursal_hierarchy": False,
+    "sucursal_hierarchy": True,
+    "sucursal_padre": "001",
     "country_id": 49,
     "identification_type_id": 5,
 }
 
-FLOW_CLIENTES_JERARQUIA = {
+FLOW_CLIENTES_SIN_JERARQUIA = {
     **FLOW_CLIENTES,
-    "sucursal_hierarchy": True,
-    "sucursal_padre": "001",
+    "sucursal_hierarchy": False,
 }
 
 # --- PROVEEDORES ---
-# API OIT retorna mismos campos que clientes
 FLOW_PROVEEDORES = {
     "flow_name": "partners",
     "flow_type": "supplier",
-    "query_desc": "productosysolucionesquimicas_proveedores_wms",
-    "paginacion": True,
+    "query_desc": "pinturastitopabon_Proveedores",
+    "paginacion": False,
     "mapping": {
         "vat": "identificacion",
-        "nombre": "nombre",
-        "deptos": "departamento",
+        "nombre_completo": "nombre",
+        "correo": "email",
     },
     "hardcodes": {},
     "conditionals": [],
@@ -166,43 +198,65 @@ FLOW_PROVEEDORES = {
 }
 
 # --- COMPRAS ---
-# API OIT retorna campos ya canonicos: compra, proveedor, sucursal_proveedor,
-#   producto, cantidad, precio_unitario, bodega_siesa, estado, almacen, impuesto
+# API retorna: documento, id_tercero, id_sucursal_prov, fechaDocto,
+#   consec_docto, Bodega, Referencia, Cant_pendiente, Precio_unit,
+#   id_tercero_comprador, Desc_bodega, Fecha_entrega
 FLOW_COMPRAS = {
     "flow_name": "compras",
     "flow_type": "purchases",
-    "query_desc": "productosysolucionesquimicas_compras_wms",
-    "paginacion": True,
+    "query_desc": "pinturastitopabon_OrdenDeCompra",
+    "paginacion": False,
     "mapping": {
-        "nit_comprador": "comprador",
+        "documento": "compra",
+        "id_tercero": "proveedor",
+        "id_sucursal_prov": "sucursal_proveedor",
+        "consec_docto": "referencia_compra",
+        "Referencia": "producto",
+        "Cant_pendiente": "cantidad",
+        "Precio_unit": "precio_unitario",
+        "Desc_bodega": "bodega_siesa",
+        "id_tercero_comprador": "comprador",
+        "Fecha_entrega": "fecha_entrega",
     },
     "hardcodes": {
         "estado": "draft",
+        "impuesto": 19.0,
+        "almacen": 1,
     },
     "conditionals": [],
     "warehouse_mapping": {},
 }
 
 # --- VENTAS ---
-# API OIT retorna: pedido, nit_cliente, sucursal, referencia_item, cantidad_pedida,
-#   precio_unitario, fecha_pedido, zona, vendedor, condicion_pago, observacion, bodega
+# API retorna: documento, id_tercero, id_sucursal_cli, fecha,
+#   referencia_item, cant_pedida, Precio_unit, notas, bodega, co,
+#   unidad_medida, consec_docto, id_tipo_docto
 FLOW_VENTAS = {
     "flow_name": "ventas",
     "flow_type": "sales",
-    "query_desc": "productosysolucionesquimicas_pedidos_wms",
+    "query_desc": "pinturastitopabon_pedidospuntodeventa",
     "paginacion": False,
     "mapping": {
-        "nit_cliente": "cliente",
-        "sucursal": "sucursal_cliente",
+        "documento": "pedido",
+        "id_tercero": "cliente",
+        "id_sucursal_cli": "sucursal_cliente",
+        "fecha": "fecha_pedido",
         "referencia_item": "producto",
-        "bodega": "bodega_siesa",
+        "cant_pedida": "cantidad_pedida",
+        "Precio_unit": "precio_unitario",
+        "notas": "observacion",
+        "co": "zona",
     },
-    "hardcodes": {},
+    "hardcodes": {
+        "estado": "draft",
+        "impuesto": 19.0,
+        "almacen": 1,
+    },
     "conditionals": [],
     "warehouse_mapping": {},
 }
 
-# --- RESOLVE (sin limite de paginacion) ---
+# --- RESOLVE (mismos flows) ---
 FLOW_ITEMS_RESOLVE = {**FLOW_ITEMS}
 FLOW_PROVEEDORES_RESOLVE = {**FLOW_PROVEEDORES}
 FLOW_CLIENTES_RESOLVE = {**FLOW_CLIENTES}
@@ -249,10 +303,10 @@ def setup():
 # ITEMS
 # ============================================================
 def test_items():
-    header("FLOW: ITEMS")
+    header("FLOW: ITEMS (Tito Pabon)")
 
-    # CI1: Feliz — flujo completo con mapping + hardcodes
-    info("CI1: Items feliz - query_desc real con mapping + hardcodes")
+    # CI1: Feliz con mapping + hardcodes + conditionals
+    info("CI1: Items feliz - mapping + hardcodes + conditionals (reglas + funcion)")
     data = transform.get_flow(connector, FLOW_ITEMS["flow_name"], FLOW_ITEMS)
     info(f"Transform retorno {len(data)} registros")
     if not data:
@@ -262,19 +316,33 @@ def test_items():
     info(f"Muestra primer registro: {list(data[0].keys())}")
     info(f"  referencia={data[0].get('referencia')}, descripcion={str(data[0].get('descripcion', '?'))[:50]}")
 
-    # Verificar que mapping funciono (lote -> tracking)
-    if "tracking" in data[0]:
-        ok("CI2", f"Mapping funciono: lote -> tracking = {data[0].get('tracking')}")
+    # CI2: Verificar mapping (Referencia_Item -> referencia)
+    if "referencia" in data[0] and "Referencia_Item" not in data[0]:
+        ok("CI2", f"Mapping funciono: Referencia_Item -> referencia = {data[0].get('referencia')}")
+    elif "referencia" in data[0]:
+        ok("CI2", f"Mapping funciono (campo original conservado): referencia = {data[0].get('referencia')}")
     else:
         fail("CI2", f"Mapping no funciono: keys = {list(data[0].keys())}")
 
-    # Verificar que hardcodes funcionaron
+    # CI3: Verificar hardcodes
     if data[0].get("impuesto") == 19.0:
         ok("CI3", f"Hardcodes funciono: impuesto = {data[0].get('impuesto')}")
     else:
         fail("CI3", f"Hardcodes no funciono: impuesto = {data[0].get('impuesto')}")
 
-    # Procesar solo los primeros 10 para no sobrecargar
+    # CI4: Verificar conditionals reglas (Maneja_lote -> tracking)
+    if "tracking" in data[0]:
+        ok("CI4", f"Conditional reglas funciono: tracking = {data[0].get('tracking')}")
+    else:
+        fail("CI4", f"Conditional reglas no funciono: keys = {list(data[0].keys())}")
+
+    # CI5: Verificar conditional funcion (route_compra_manufactura_prefijo -> ruta)
+    if "ruta" in data[0]:
+        ok("CI5", f"Conditional funcion funciono: ruta = {data[0].get('ruta')}")
+    else:
+        fail("CI5", f"Conditional funcion no funciono: keys = {list(data[0].keys())}")
+
+    # Procesar primeros 10
     data_limitada = data[:10]
     processor = ProcessItems(odoo, config, FLOW_ITEMS)
     result = processor.process(data_limitada)
@@ -285,8 +353,8 @@ def test_items():
     else:
         fail("CI1", f"No se creo ni actualizo nada: {result}")
 
-    # CI6: Actualizacion — segunda corrida
-    info("CI6: Items actualizacion - mismos datos, segunda corrida")
+    # CI6: Actualizacion
+    info("CI6: Items actualizacion - segunda corrida")
     result2 = ProcessItems(odoo, config, FLOW_ITEMS).process(data_limitada)
     info(f"Resultado segunda corrida: {result2}")
 
@@ -318,11 +386,11 @@ def test_items():
 # CLIENTES
 # ============================================================
 def test_clientes():
-    header("FLOW: CLIENTES")
+    header("FLOW: CLIENTES (Tito Pabon)")
 
-    # CP1: Feliz
-    info("CP1: Clientes feliz - query_desc con mapping")
-    data = transform.get_flow(connector, FLOW_CLIENTES["flow_name"], FLOW_CLIENTES)
+    # CP1: Feliz sin jerarquia
+    info("CP1: Clientes feliz - query_desc con mapping (sin jerarquia)")
+    data = transform.get_flow(connector, FLOW_CLIENTES_SIN_JERARQUIA["flow_name"], FLOW_CLIENTES_SIN_JERARQUIA)
     info(f"Transform retorno {len(data)} registros")
     if not data:
         fail("CP1", "Transform retorno 0 registros")
@@ -330,14 +398,14 @@ def test_clientes():
 
     info(f"Muestra: identificacion={data[0].get('identificacion')}, nombre={str(data[0].get('nombre', '?'))[:40]}")
 
-    # Verificar mapping: vat -> identificacion, deptos -> departamento
+    # Verificar mapping: vat -> identificacion
     if "identificacion" in data[0]:
         ok("CP1-map", f"Mapping vat->identificacion funciono")
     else:
         fail("CP1-map", f"Mapping no funciono: keys = {list(data[0].keys())}")
 
     data_limitada = data[:5]
-    result = ProcessPartners(odoo, config, FLOW_CLIENTES).process(data_limitada)
+    result = ProcessPartners(odoo, config, FLOW_CLIENTES_SIN_JERARQUIA).process(data_limitada)
     info(f"Resultado: {result}")
 
     if result["creados"] + result["actualizados"] > 0:
@@ -347,7 +415,7 @@ def test_clientes():
 
     # CP2: Actualizacion
     info("CP2: Clientes actualizacion - segunda corrida")
-    result2 = ProcessPartners(odoo, config, FLOW_CLIENTES).process(data_limitada)
+    result2 = ProcessPartners(odoo, config, FLOW_CLIENTES_SIN_JERARQUIA).process(data_limitada)
     info(f"Resultado segunda corrida: {result2}")
 
     if result2["actualizados"] > 0 and result2["creados"] == 0:
@@ -357,23 +425,18 @@ def test_clientes():
     else:
         fail("CP2", f"Esperaba actualizados > 0: {result2}")
 
-    # CP3: Jerarquia
-    info("CP3: Clientes con jerarquia")
-    data_jer = transform.get_flow(connector, FLOW_CLIENTES_JERARQUIA["flow_name"], FLOW_CLIENTES_JERARQUIA)
-    if data_jer:
-        data_jer_limitada = data_jer[:5]
-        result3 = ProcessPartners(odoo, config, FLOW_CLIENTES_JERARQUIA).process(data_jer_limitada)
-        info(f"Resultado jerarquia: {result3}")
-        ok("CP3", f"Jerarquia ejecutada: {result3['creados']} creados, {result3['actualizados']} actualizados")
-    else:
-        info("CP3: Sin datos para jerarquia - skip")
+    # CP3: Jerarquia (Tito Pabon usa jerarquia en produccion)
+    info("CP3: Clientes con jerarquia (sucursal_hierarchy=true)")
+    result3 = ProcessPartners(odoo, config, FLOW_CLIENTES).process(data_limitada)
+    info(f"Resultado jerarquia: {result3}")
+    ok("CP3", f"Jerarquia ejecutada: {result3['creados']} creados, {result3['actualizados']} actualizados")
 
 
 # ============================================================
 # PROVEEDORES
 # ============================================================
 def test_proveedores():
-    header("FLOW: PROVEEDORES")
+    header("FLOW: PROVEEDORES (Tito Pabon)")
 
     # CP4: Feliz
     info("CP4: Proveedores feliz - query_desc con mapping")
@@ -410,10 +473,10 @@ def test_proveedores():
 # COMPRAS
 # ============================================================
 def test_compras():
-    header("FLOW: COMPRAS")
+    header("FLOW: COMPRAS (Tito Pabon)")
 
     # CC1: Compras feliz con resolve
-    info("CC1: Compras feliz - query_desc de OC reales")
+    info("CC1: Compras feliz - OC reales con mapping + resolve")
     data = transform.get_flow(connector, FLOW_COMPRAS["flow_name"], FLOW_COMPRAS)
     info(f"Transform retorno {len(data)} registros")
     if not data:
@@ -466,10 +529,10 @@ def test_compras():
 # VENTAS
 # ============================================================
 def test_ventas():
-    header("FLOW: VENTAS")
+    header("FLOW: VENTAS (Tito Pabon)")
 
     # CV1: Ventas feliz con resolve
-    info("CV1: Ventas feliz - query_desc de pedidos reales")
+    info("CV1: Ventas feliz - pedidos reales con mapping + resolve")
     data = transform.get_flow(connector, FLOW_VENTAS["flow_name"], FLOW_VENTAS)
     info(f"Transform retorno {len(data)} registros")
     if not data:
