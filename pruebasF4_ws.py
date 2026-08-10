@@ -416,6 +416,22 @@ FLOW_FACTURAS = {
     "warehouse_mapping": {},
 }
 
+# Flow configs SIN TOP para resolve_missing_masters (trae todos del ERP, filtra en Python)
+FLOW_ITEMS_RESOLVE = {
+    **FLOW_ITEMS,
+    "sql": SQL_ITEMS.replace(" TOP 10", ""),
+}
+
+FLOW_PROVEEDORES_RESOLVE = {
+    **FLOW_PROVEEDORES,
+    "sql": SQL_PROVEEDORES.replace(" TOP 5", ""),
+}
+
+FLOW_CLIENTES_RESOLVE = {
+    **FLOW_CLIENTES,
+    "sql": SQL_CLIENTES.replace(" TOP 5", ""),
+}
+
 
 # ============================================================
 # PARTE 0 — Setup
@@ -643,7 +659,7 @@ def test_compras():
         odoo, connector, transform,
         data_purchases=data,
         data_sales=[],
-        flow_configs={"items": FLOW_ITEMS, "supplier": FLOW_PROVEEDORES},
+        flow_configs={"items": FLOW_ITEMS_RESOLVE, "supplier": FLOW_PROVEEDORES_RESOLVE},
         config=config, logger=logger
     )
     info(f"Resolve: {resolve_result['productos_faltantes']} productos faltantes, "
@@ -747,7 +763,7 @@ def test_ventas():
         odoo, connector, transform,
         data_purchases=[],
         data_sales=data,
-        flow_configs={"items": FLOW_ITEMS, "customer": FLOW_CLIENTES},
+        flow_configs={"items": FLOW_ITEMS_RESOLVE, "customer": FLOW_CLIENTES_RESOLVE},
         config=config, logger=logger
     )
     info(f"Resolve: {resolve_result['productos_faltantes']} productos faltantes, "
