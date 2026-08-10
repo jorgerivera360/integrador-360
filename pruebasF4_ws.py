@@ -362,7 +362,6 @@ SQL_VENTAS = (
     '     ON v121.v121_id_cia = t431.f431_id_cia AND t431.f431_rowid_item_ext = v121.v121_rowid_item_ext'
     ' WHERE t430.f430_id_cia = 1'
     '     AND t430.f430_ind_estado = 2'
-    '     AND CAST(t430.f430_fecha_ts_creacion AS DATETIME) >= DATEADD(day, -30, GETDATE())'
     ' ORDER BY 1 DESC;'
     ' SET QUOTED_IDENTIFIER ON;'
 )
@@ -404,7 +403,6 @@ SQL_FACTURAS = (
     ' INNER JOIN t150_mc_bodegas ON (f470_rowid_bodega = f150_rowid)'
     ' WHERE f350_id_tipo_docto IN ("FAC", "FPZ")'
     '     AND f350_id_cia = 1'
-    '     AND CAST(f350_fecha_ts_creacion AS DATETIME) >= DATEADD(day, -30, GETDATE())'
     ' ORDER BY f350_consec_docto DESC;'
     ' SET QUOTED_IDENTIFIER ON;'
 )
