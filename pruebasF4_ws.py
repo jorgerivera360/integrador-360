@@ -331,7 +331,7 @@ FLOW_DEVOLUCION_IN = {
 
 SQL_VENTAS = (
     'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT DISTINCT TOP 10'
+    ' SELECT TOP 10'
     ' CONCAT(TRIM(t430.f430_id_co), TRIM(t430.f430_id_tipo_docto), t430.f430_consec_docto) AS pedido,'
     ' TRIM(t200.f200_nit) AS cliente,'
     ' TRIM(t201.f201_id_sucursal) AS sucursal_cliente,'
