@@ -71,272 +71,44 @@ def header(titulo):
 # ============================================================
 # FLOW CONFIGS — Simulan lo que vendria del front/BD
 # ============================================================
-# NOTA: SIESA WS con SET QUOTED_IDENTIFIER OFF usa "" para strings SQL.
-# En Python usamos '...' para el string, asi "" queda libre para SQL.
-
-SQL_ITEMS = (
-    'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT TOP 10'
-    ' ISNULL(f120_id, "") AS referencia,'
-    ' REPLACE(ISNULL(f120_descripcion, "SIN DESCRIPCION"), CHAR(39), "") AS descripcion,'
-    ' ISNULL((SELECT TOP 1 b.f131_id FROM t131_mc_items_barras b'
-    '         WHERE b.f131_rowid_item_ext = f121_rowid ORDER BY b.f131_ts DESC), "") AS codigo_barras,'
-    ' ISNULL(TRIM(f120_id_unidad_inventario), "UNID") AS unidad,'
-    ' ISNULL(CAST(f122_peso AS VARCHAR(12)), "0") AS peso,'
-    ' CAST(ISNULL(f122_volumen, "0") AS VARCHAR(10)) AS volumen,'
-    ' "0" AS costo,'
-    ' 0 AS precio,'
-    ' 0 AS iva,'
-    ' CASE f120_ind_lote WHEN 1 THEN "lot" WHEN 2 THEN "lot" ELSE "none" END AS tracking,'
-    ' ISNULL(f120_vida_util, 0) AS vence,'
-    ' ISNULL(TRIM(t_cat.f106_descripcion), "") AS categoria'
-    ' FROM t120_mc_items'
-    ' LEFT JOIN t121_mc_items_extensiones'
-    '     ON (f121_rowid_item = f120_rowid AND f121_id_cia = f120_id_cia)'
-    ' LEFT JOIN t122_mc_items_unidades'
-    '     ON (f120_rowid = f122_rowid_item AND f122_id_unidad = f120_id_unidad_inventario)'
-    ' LEFT JOIN t125_mc_items_criterios AS t_cat_link'
-    '     ON (f120_rowid = t_cat_link.f125_rowid_item AND t_cat_link.f125_id_plan = "001")'
-    ' LEFT JOIN t106_mc_criterios_item_mayores AS t_cat'
-    '     ON (t_cat_link.f125_id_criterio_mayor = t_cat.f106_id'
-    '         AND t_cat_link.f125_id_plan = t_cat.f106_id_plan'
-    '         AND t_cat_link.f125_id_cia = t_cat.f106_id_cia)'
-    ' WHERE f120_id_cia = 1'
-    ' ORDER BY f120_id ASC;'
-    ' SET QUOTED_IDENTIFIER ON;'
-)
-
-SQL_CLIENTES = (
-    'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT DISTINCT TOP 5'
-    ' TRIM(f200_nit) AS identificacion,'
-    ' f201_id_sucursal AS sucursal,'
-    ' CONCAT(f200_razon_social, " - ", f201_id_sucursal) AS nombre,'
-    ' TRIM(f015_email) AS email,'
-    ' TRIM(f015_telefono) AS telefono,'
-    ' TRIM(f015_direccion1) AS direccion,'
-    ' TRIM(f015_cod_postal) AS codigo_postal,'
-    ' TRIM(f013_descripcion) AS ciudad,'
-    ' TRIM(f012_descripcion) AS departamento,'
-    ' TRIM(f011_descripcion) AS pais'
-    ' FROM t201_mm_clientes'
-    ' INNER JOIN t200_mm_terceros'
-    '     ON (f200_rowid = f201_rowid_tercero AND f200_id_cia = f201_id_cia AND f200_ind_estado = 1)'
-    ' INNER JOIN t015_mm_contactos'
-    '     ON (f201_rowid_contacto = f015_rowid AND f201_id_cia = f015_id_cia)'
-    ' INNER JOIN t011_mm_paises ON (f011_id = f015_id_pais)'
-    ' INNER JOIN t012_mm_deptos ON (f012_id_pais = f015_id_pais AND f012_id = f015_id_depto)'
-    ' INNER JOIN t013_mm_ciudades'
-    '     ON (f013_id_pais = f015_id_pais AND f013_id_depto = f015_id_depto AND f013_id = f015_id_ciudad)'
-    ' WHERE f201_id_cia = 1'
-    ' ORDER BY f200_nit ASC;'
-    ' SET QUOTED_IDENTIFIER ON;'
-)
-
-SQL_PROVEEDORES = (
-    'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT TOP 5'
-    ' TRIM(f200_nit) AS identificacion,'
-    ' f202_id_sucursal AS sucursal,'
-    ' CONCAT(f200_razon_social, " - ", f202_id_sucursal) AS nombre,'
-    ' TRIM(f015_email) AS email,'
-    ' TRIM(f015_telefono) AS telefono,'
-    ' TRIM(f015_direccion1) AS direccion,'
-    ' TRIM(f015_cod_postal) AS codigo_postal,'
-    ' TRIM(f013_descripcion) AS ciudad,'
-    ' TRIM(f012_descripcion) AS departamento,'
-    ' TRIM(f011_descripcion) AS pais'
-    ' FROM t202_mm_proveedores'
-    ' INNER JOIN t200_mm_terceros'
-    '     ON (f200_rowid = f202_rowid_tercero AND f200_id_cia = f202_id_cia AND f200_ind_estado = 1)'
-    ' INNER JOIN t015_mm_contactos'
-    '     ON (f202_rowid_contacto = f015_rowid AND f202_id_cia = f015_id_cia)'
-    ' INNER JOIN t011_mm_paises ON (f011_id = f015_id_pais)'
-    ' INNER JOIN t012_mm_deptos ON (f012_id_pais = f015_id_pais AND f012_id = f015_id_depto)'
-    ' INNER JOIN t013_mm_ciudades'
-    '     ON (f013_id_pais = f015_id_pais AND f013_id_depto = f015_id_depto AND f013_id = f015_id_ciudad)'
-    ' WHERE f202_id_cia = 1'
-    ' ORDER BY f200_nit ASC;'
-    ' SET QUOTED_IDENTIFIER ON;'
-)
-
-SQL_COMPRAS = (
-    'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT TOP 10'
-    ' CONCAT(TRIM(f420_id_tipo_docto), f420_id_co, "-", f420_consec_docto) AS compra,'
-    ' TRIM(tercero.f200_nit) AS proveedor,'
-    ' TRIM(f202_id_sucursal) AS sucursal_proveedor,'
-    ' "" AS referencia_compra,'
-    ' CONVERT(VARCHAR, f420_fecha_ts_creacion, 23) AS fecha_entrega,'
-    ' "draft" AS estado,'
-    ' 1 AS almacen,'
-    ' f120_id AS producto,'
-    ' CAST(f421_precio_unitario AS DECIMAL(18, 2)) AS precio_unitario,'
-    ' CAST(f421_cant_pedida AS INTEGER) AS cantidad,'
-    ' ISNULL(CAST(f423_tasa AS DECIMAL(12,2)), 19) AS impuesto,'
-    ' f150_id AS bodega_siesa'
-    ' FROM t420_cm_oc_docto'
-    ' INNER JOIN t202_mm_proveedores'
-    '     ON (f420_rowid_tercero_facturar = f202_rowid_tercero'
-    '         AND f420_id_sucursal_facturar = f202_id_sucursal'
-    '         AND f420_id_cia = f202_id_cia)'
-    ' INNER JOIN t200_mm_terceros AS tercero'
-    '     ON (f420_rowid_tercero_facturar = tercero.f200_rowid'
-    '         AND tercero.f200_rowid = f202_rowid_tercero'
-    '         AND tercero.f200_id_cia = f202_id_cia)'
-    ' INNER JOIN t421_cm_oc_movto'
-    '     ON (f421_rowid_oc_docto = f420_rowid AND f421_id_cia = f420_id_cia)'
-    ' INNER JOIN t121_mc_items_extensiones'
-    '     ON (f121_rowid = f421_rowid_item_ext AND f121_id_cia = f421_id_cia)'
-    ' INNER JOIN t120_mc_items'
-    '     ON (f120_rowid = f121_rowid_item AND f120_id_cia = f121_id_cia)'
-    ' INNER JOIN t150_mc_bodegas'
-    '     ON (f421_rowid_bodega = f150_rowid)'
-    ' LEFT JOIN t423_cm_oc_movto_imp'
-    '     ON (f423_rowid_oc_movto = f421_rowid AND f423_id_cia = f421_id_cia'
-    '         AND f423_id_llave_impuesto_desc IS NOT NULL)'
-    ' WHERE f420_id_cia = 1'
-    '     AND f420_ind_estado IN ("1", "2")'
-    ' ORDER BY f420_consec_docto DESC;'
-    ' SET QUOTED_IDENTIFIER ON;'
-)
-
-SQL_TRANSFERENCIA_ENTRADA = (
-    'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT TOP 10'
-    ' CONCAT(TRIM(T350.f350_id_tipo_docto), TRIM(T350.f350_id_co), "-", T350.f350_consec_docto) AS compra,'
-    ' "123456789" AS proveedor,'
-    ' "001" AS sucursal_proveedor,'
-    ' "" AS referencia_compra,'
-    ' ISNULL(CONVERT(VARCHAR, t350.f350_fecha, 23), "") AS fecha_entrega,'
-    ' "draft" AS estado,'
-    ' 1 AS almacen,'
-    ' T120.f120_id AS producto,'
-    ' 0 AS precio_unitario,'
-    ' T470.f470_cant_base AS cantidad,'
-    ' 0 AS impuesto,'
-    ' "" AS bodega_siesa'
-    ' FROM t350_co_docto_contable T350'
-    ' INNER JOIN t450_cm_docto_invent T450 ON T350.f350_rowid = T450.f450_rowid_docto'
-    ' INNER JOIN t150_mc_bodegas T150E ON T150E.f150_rowid = T450.f450_rowid_bodega_entrada'
-    ' INNER JOIN t470_cm_movto_invent T470 ON T470.f470_rowid_docto = T350.f350_rowid'
-    ' INNER JOIN t121_mc_items_extensiones T121 ON T121.f121_rowid = T470.f470_rowid_item_ext'
-    ' INNER JOIN t120_mc_items T120 ON T120.f120_rowid = T121.f121_rowid_item'
-    ' WHERE t350.f350_id_tipo_docto = "TM"'
-    '     AND T350.f350_id_cia = 1'
-    '     AND T350.f350_fecha_ts_creacion > CONVERT(VARCHAR, DATEADD(day, -30, GETDATE()), 23)'
-    ' ORDER BY T350.f350_fecha_ts_creacion DESC;'
-    ' SET QUOTED_IDENTIFIER ON;'
-)
-
-SQL_DEVOLUCION_IN = (
-    'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT TOP 10'
-    ' CONCAT(TRIM(T350.f350_id_tipo_docto), TRIM(T350.f350_id_co), "-", T350.f350_consec_docto) AS compra,'
-    ' t200.f200_nit AS proveedor,'
-    ' ISNULL((SELECT TOP 1 f202_id_sucursal FROM t202_mm_proveedores'
-    '         WHERE f202_rowid_tercero = t200.f200_rowid ORDER BY f202_id_sucursal ASC), "001") AS sucursal_proveedor,'
-    ' "" AS referencia_compra,'
-    ' ISNULL(CONVERT(VARCHAR, t350.f350_fecha, 23), "") AS fecha_entrega,'
-    ' "draft" AS estado,'
-    ' 1 AS almacen,'
-    ' RTRIM(t120.f120_id) AS producto,'
-    ' 0 AS precio_unitario,'
-    ' t470.f470_cant_1 AS cantidad,'
-    ' 0 AS impuesto,'
-    ' t150.f150_id AS bodega_siesa'
-    ' FROM t350_co_docto_contable t350'
-    ' INNER JOIN t470_cm_movto_invent t470 ON t470.f470_rowid_docto = t350.f350_rowid'
-    ' INNER JOIN t121_mc_items_extensiones t121 ON t470.f470_rowid_item_ext = t121.f121_rowid'
-    ' INNER JOIN t120_mc_items t120 ON t120.f120_rowid = t121.f121_rowid_item'
-    ' INNER JOIN t150_mc_bodegas t150 ON t470.f470_rowid_bodega = t150.f150_rowid'
-    ' INNER JOIN t200_mm_terceros t200 ON t200.f200_rowid = t350.f350_rowid_tercero'
-    ' WHERE t350.f350_id_tipo_docto IN ("DEV")'
-    '     AND T350.f350_id_cia = 1'
-    '     AND T350.f350_fecha_ts_creacion > CONVERT(VARCHAR, DATEADD(day, -30, GETDATE()), 23)'
-    ' ORDER BY T350.f350_fecha_ts_creacion DESC;'
-    ' SET QUOTED_IDENTIFIER ON;'
-)
-
-SQL_VENTAS = (
-    'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT DISTINCT TOP 10'
-    ' CONCAT(TRIM(t430.f430_id_co), TRIM(t430.f430_id_tipo_docto), t430.f430_consec_docto) AS pedido,'
-    ' TRIM(t200.f200_nit) AS cliente,'
-    ' TRIM(t201.f201_id_sucursal) AS sucursal_cliente,'
-    ' ISNULL(CONVERT(VARCHAR, t430.f430_id_fecha, 23), "") AS fecha_pedido,'
-    ' "draft" AS estado,'
-    ' 1 AS almacen,'
-    ' TRIM(RTRIM(v121.v121_id_item)) AS producto,'
-    ' t431.f431_cant1_pedida AS cantidad_pedida,'
-    ' t431.f431_precio_unitario_base AS precio_unitario,'
-    ' "" AS impuesto,'
-    ' "" AS zona,'
-    ' "" AS vendedor,'
-    ' "" AS condicion_pago,'
-    ' TRIM(t430.f430_notas) AS observacion,'
-    ' TRIM(t431.f431_id_unidad_medida) AS unidad_medida,'
-    ' TRIM(t150.f150_id) AS bodega_siesa'
-    ' FROM t201_mm_clientes t201'
-    ' INNER JOIN t200_mm_terceros t200'
-    '     ON t201.f201_rowid_tercero = t200.f200_rowid AND t201.f201_id_cia = t200.f200_id_cia'
-    ' INNER JOIN t430_cm_pv_docto t430'
-    '     ON t200.f200_id_cia = t430.f430_id_cia AND t200.f200_rowid = t430.f430_rowid_tercero_fact'
-    '        AND t201.f201_id_sucursal = t430.f430_id_sucursal_fact'
-    ' INNER JOIN t431_cm_pv_movto t431'
-    '     ON t431.f431_rowid_pv_docto = t430.f430_rowid AND t430.f430_id_cia = t431.f431_id_cia'
-    ' INNER JOIN t150_mc_bodegas t150'
-    '     ON t150.f150_rowid = t431.f431_rowid_bodega'
-    ' INNER JOIN v121'
-    '     ON v121.v121_id_cia = t431.f431_id_cia AND t431.f431_rowid_item_ext = v121.v121_rowid_item_ext'
-    ' WHERE t430.f430_id_cia = 1'
-    '     AND t430.f430_ind_estado = 2'
-    '     AND CAST(t430.f430_fecha_ts_creacion AS DATETIME) >= DATEADD(day, -30, GETDATE())'
-    ' ORDER BY t430.f430_consec_docto DESC;'
-    ' SET QUOTED_IDENTIFIER ON;'
-)
-
-SQL_FACTURAS = (
-    'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT TOP 10'
-    ' CONCAT(TRIM(f350_id_tipo_docto), f350_id_co, "-", f350_consec_docto) AS pedido,'
-    ' LTRIM(RTRIM(cliente.f200_nit)) AS cliente,'
-    ' LTRIM(RTRIM(f201_id_sucursal)) AS sucursal_cliente,'
-    ' CONVERT(varchar, f350_fecha, 23) AS fecha_pedido,'
-    ' "draft" AS estado,'
-    ' 1 AS almacen,'
-    ' LTRIM(RTRIM(f120_id)) AS producto,'
-    ' CAST(f470_cant_1 AS INTEGER) AS cantidad_pedida,'
-    ' CAST(f470_precio_uni AS DECIMAL(18, 2)) AS precio_unitario,'
-    ' "" AS impuesto,'
-    ' "" AS zona,'
-    ' "" AS vendedor,'
-    ' LTRIM(RTRIM(f461_id_cond_pago)) AS condicion_pago,'
-    ' "" AS observacion,'
-    ' f470_id_unidad_medida AS unidad_medida,'
-    ' TRIM(f150_id) AS bodega_siesa'
-    ' FROM t350_co_docto_contable'
-    ' INNER JOIN t461_cm_docto_factura_venta ON (f461_rowid_docto = f350_rowid)'
-    ' INNER JOIN t470_cm_movto_invent ON (f470_rowid_docto_fact = f461_rowid_docto)'
-    ' INNER JOIN t200_mm_terceros AS cliente ON (f461_rowid_tercero_fact = f200_rowid)'
-    ' INNER JOIN t201_mm_clientes'
-    '     ON (cliente.f200_rowid = f201_rowid_tercero AND f201_id_sucursal = f461_id_sucursal_fact)'
-    ' INNER JOIN t121_mc_items_extensiones ON (f470_rowid_item_ext = f121_rowid)'
-    ' INNER JOIN t120_mc_items ON (f121_rowid_item = f120_rowid)'
-    ' INNER JOIN t150_mc_bodegas ON (f470_rowid_bodega = f150_rowid)'
-    ' WHERE f350_id_tipo_docto IN ("FAC", "FPZ")'
-    '     AND f350_id_cia = 1'
-    '     AND CAST(f350_fecha_ts_creacion AS DATETIME) >= DATEADD(day, -30, GETDATE())'
-    ' ORDER BY f350_consec_docto DESC;'
-    ' SET QUOTED_IDENTIFIER ON;'
-)
-
-# --- Flow configs que consumen los SQL ---
+# NOTA: Los SQL usan id_cia=1 (OrgComercia). Si no retorna datos,
+# ajustar el id_cia o los filtros segun el ERP del secret.
+# Los alias son CANONICOS (como debe configurarlos el front).
 
 FLOW_ITEMS = {
     "flow_name": "items",
     "flow_type": "items",
-    "sql": SQL_ITEMS,
+    "sql": """
+        SET QUOTED_IDENTIFIER OFF;
+        SELECT TOP 10
+            ISNULL(f120_id, '') AS referencia,
+            REPLACE(ISNULL(f120_descripcion, 'SIN DESCRIPCION'), CHAR(39), '') AS descripcion,
+            ISNULL((SELECT TOP 1 b.f131_id FROM t131_mc_items_barras b
+                    WHERE b.f131_rowid_item_ext = f121_rowid ORDER BY b.f131_ts DESC), '') AS codigo_barras,
+            ISNULL(TRIM(f120_id_unidad_inventario), 'UNID') AS unidad,
+            ISNULL(CAST(f122_peso AS VARCHAR(12)), '0') AS peso,
+            CAST(ISNULL(f122_volumen, '0') AS VARCHAR(10)) AS volumen,
+            '0' AS costo,
+            0 AS precio,
+            0 AS iva,
+            CASE f120_ind_lote WHEN 1 THEN 'lot' WHEN 2 THEN 'lot' ELSE 'none' END AS tracking,
+            ISNULL(f120_vida_util, 0) AS vence,
+            ISNULL(TRIM(t_cat.f106_descripcion), '') AS categoria
+        FROM t120_mc_items
+        LEFT JOIN t121_mc_items_extensiones
+            ON (f121_rowid_item = f120_rowid AND f121_id_cia = f120_id_cia)
+        LEFT JOIN t122_mc_items_unidades
+            ON (f120_rowid = f122_rowid_item AND f122_id_unidad = f120_id_unidad_inventario)
+        LEFT JOIN t125_mc_items_criterios AS t_cat_link
+            ON (f120_rowid = t_cat_link.f125_rowid_item AND t_cat_link.f125_id_plan = '001')
+        LEFT JOIN t106_mc_criterios_item_mayores AS t_cat
+            ON (t_cat_link.f125_id_criterio_mayor = t_cat.f106_id
+                AND t_cat_link.f125_id_plan = t_cat.f106_id_plan
+                AND t_cat_link.f125_id_cia = t_cat.f106_id_cia)
+        WHERE f120_id_cia = 1
+        ORDER BY f120_id ASC;
+        SET QUOTED_IDENTIFIER ON;
+    """,
     "uom_mapping": {
         "UND": "Unidades",
         "und": "Unidades",
@@ -350,7 +122,7 @@ FLOW_ITEMS = {
 FLOW_ITEMS_VACIO = {
     "flow_name": "items",
     "flow_type": "items",
-    "sql": 'SELECT TOP 0 "x" AS referencia, "x" AS descripcion, "x" AS unidad',
+    "sql": "SELECT TOP 0 'x' AS referencia, 'x' AS descripcion, 'x' AS unidad",
 }
 
 FLOW_ITEMS_SQL_ERROR = {
@@ -362,7 +134,32 @@ FLOW_ITEMS_SQL_ERROR = {
 FLOW_CLIENTES = {
     "flow_name": "partners",
     "flow_type": "customer",
-    "sql": SQL_CLIENTES,
+    "sql": """
+        SET QUOTED_IDENTIFIER OFF;
+        SELECT DISTINCT TOP 5
+            TRIM(f200_nit) AS identificacion,
+            f201_id_sucursal AS sucursal,
+            CONCAT(f200_razon_social, ' - ', f201_id_sucursal) AS nombre,
+            TRIM(f015_email) AS email,
+            TRIM(f015_telefono) AS telefono,
+            TRIM(f015_direccion1) AS direccion,
+            TRIM(f015_cod_postal) AS codigo_postal,
+            TRIM(f013_descripcion) AS ciudad,
+            TRIM(f012_descripcion) AS departamento,
+            TRIM(f011_descripcion) AS pais
+        FROM t201_mm_clientes
+        INNER JOIN t200_mm_terceros
+            ON (f200_rowid = f201_rowid_tercero AND f200_id_cia = f201_id_cia AND f200_ind_estado = 1)
+        INNER JOIN t015_mm_contactos
+            ON (f201_rowid_contacto = f015_rowid AND f201_id_cia = f015_id_cia)
+        INNER JOIN t011_mm_paises ON (f011_id = f015_id_pais)
+        INNER JOIN t012_mm_deptos ON (f012_id_pais = f015_id_pais AND f012_id = f015_id_depto)
+        INNER JOIN t013_mm_ciudades
+            ON (f013_id_pais = f015_id_pais AND f013_id_depto = f015_id_depto AND f013_id = f015_id_ciudad)
+        WHERE f201_id_cia = 1
+        ORDER BY identificacion ASC;
+        SET QUOTED_IDENTIFIER ON;
+    """,
     "sucursal_hierarchy": False,
     "country_id": 49,
     "identification_type_id": 5,
@@ -377,7 +174,32 @@ FLOW_CLIENTES_JERARQUIA = {
 FLOW_PROVEEDORES = {
     "flow_name": "partners",
     "flow_type": "supplier",
-    "sql": SQL_PROVEEDORES,
+    "sql": """
+        SET QUOTED_IDENTIFIER OFF;
+        SELECT TOP 5
+            TRIM(f200_nit) AS identificacion,
+            f202_id_sucursal AS sucursal,
+            CONCAT(f200_razon_social, ' - ', f202_id_sucursal) AS nombre,
+            TRIM(f015_email) AS email,
+            TRIM(f015_telefono) AS telefono,
+            TRIM(f015_direccion1) AS direccion,
+            TRIM(f015_cod_postal) AS codigo_postal,
+            TRIM(f013_descripcion) AS ciudad,
+            TRIM(f012_descripcion) AS departamento,
+            TRIM(f011_descripcion) AS pais
+        FROM t202_mm_proveedores
+        INNER JOIN t200_mm_terceros
+            ON (f200_rowid = f202_rowid_tercero AND f200_id_cia = f202_id_cia AND f200_ind_estado = 1)
+        INNER JOIN t015_mm_contactos
+            ON (f202_rowid_contacto = f015_rowid AND f202_id_cia = f015_id_cia)
+        INNER JOIN t011_mm_paises ON (f011_id = f015_id_pais)
+        INNER JOIN t012_mm_deptos ON (f012_id_pais = f015_id_pais AND f012_id = f015_id_depto)
+        INNER JOIN t013_mm_ciudades
+            ON (f013_id_pais = f015_id_pais AND f013_id_depto = f015_id_depto AND f013_id = f015_id_ciudad)
+        WHERE f202_id_cia = 1
+        ORDER BY f200_nit ASC;
+        SET QUOTED_IDENTIFIER ON;
+    """,
     "country_id": 49,
     "identification_type_id": 5,
 }
@@ -385,35 +207,196 @@ FLOW_PROVEEDORES = {
 FLOW_COMPRAS = {
     "flow_name": "compras",
     "flow_type": "purchases",
-    "sql": SQL_COMPRAS,
+    "sql": """
+        SET QUOTED_IDENTIFIER OFF;
+        SELECT TOP 10
+            CONCAT(TRIM(f420_id_tipo_docto), f420_id_co, '-', f420_consec_docto) AS compra,
+            TRIM(tercero.f200_nit) AS proveedor,
+            TRIM(f202_id_sucursal) AS sucursal_proveedor,
+            '' AS referencia_compra,
+            CONVERT(VARCHAR, f420_fecha_ts_creacion, 23) AS fecha_entrega,
+            'draft' AS estado,
+            1 AS almacen,
+            f120_id AS producto,
+            CAST(f421_precio_unitario AS DECIMAL(18, 2)) AS precio_unitario,
+            CAST(f421_cant_pedida AS INTEGER) AS cantidad,
+            ISNULL(CAST(f423_tasa AS DECIMAL(12,2)), 19) AS impuesto,
+            f150_id AS bodega_siesa
+        FROM t420_cm_oc_docto
+        INNER JOIN t202_mm_proveedores
+            ON (f420_rowid_tercero_facturar = f202_rowid_tercero
+                AND f420_id_sucursal_facturar = f202_id_sucursal
+                AND f420_id_cia = f202_id_cia)
+        INNER JOIN t200_mm_terceros AS tercero
+            ON (f420_rowid_tercero_facturar = tercero.f200_rowid
+                AND tercero.f200_rowid = f202_rowid_tercero
+                AND tercero.f200_id_cia = f202_id_cia)
+        INNER JOIN t421_cm_oc_movto
+            ON (f421_rowid_oc_docto = f420_rowid AND f421_id_cia = f420_id_cia)
+        INNER JOIN t121_mc_items_extensiones
+            ON (f121_rowid = f421_rowid_item_ext AND f121_id_cia = f421_id_cia)
+        INNER JOIN t120_mc_items
+            ON (f120_rowid = f121_rowid_item AND f120_id_cia = f121_id_cia)
+        INNER JOIN t150_mc_bodegas
+            ON (f421_rowid_bodega = f150_rowid)
+        LEFT JOIN t423_cm_oc_movto_imp
+            ON (f423_rowid_oc_movto = f421_rowid AND f423_id_cia = f421_id_cia
+                AND f423_id_llave_impuesto_desc IS NOT NULL)
+        WHERE f420_id_cia = 1
+            AND f420_ind_estado IN ('1', '2')
+        ORDER BY f420_consec_docto DESC;
+        SET QUOTED_IDENTIFIER ON;
+    """,
     "warehouse_mapping": {},
 }
 
 FLOW_TRANSFERENCIA_ENTRADA = {
     "flow_name": "transferencia_entrada",
     "flow_type": "purchases",
-    "sql": SQL_TRANSFERENCIA_ENTRADA,
+    "sql": """
+        SET QUOTED_IDENTIFIER OFF;
+        SELECT TOP 10
+            CONCAT(TRIM(T350.f350_id_tipo_docto), TRIM(T350.f350_id_co), '-', T350.f350_consec_docto) AS compra,
+            '123456789' AS proveedor,
+            '001' AS sucursal_proveedor,
+            '' AS referencia_compra,
+            ISNULL(CONVERT(VARCHAR, t350.f350_fecha, 23), '') AS fecha_entrega,
+            'draft' AS estado,
+            1 AS almacen,
+            T120.f120_id AS producto,
+            0 AS precio_unitario,
+            T470.f470_cant_base AS cantidad,
+            0 AS impuesto,
+            '' AS bodega_siesa
+        FROM t350_co_docto_contable T350
+        INNER JOIN t450_cm_docto_invent T450 ON T350.f350_rowid = T450.f450_rowid_docto
+        INNER JOIN t150_mc_bodegas T150E ON T150E.f150_rowid = T450.f450_rowid_bodega_entrada
+        INNER JOIN t470_cm_movto_invent T470 ON T470.f470_rowid_docto = T350.f350_rowid
+        INNER JOIN t121_mc_items_extensiones T121 ON T121.f121_rowid = T470.f470_rowid_item_ext
+        INNER JOIN t120_mc_items T120 ON T120.f120_rowid = T121.f121_rowid_item
+        WHERE t350.f350_id_tipo_docto = 'TM'
+            AND T350.f350_id_cia = 1
+            AND T350.f350_fecha_ts_creacion > CONVERT(VARCHAR, DATEADD(day, -30, GETDATE()), 23)
+        ORDER BY T350.f350_fecha_ts_creacion DESC;
+        SET QUOTED_IDENTIFIER ON;
+    """,
     "warehouse_mapping": {},
 }
 
 FLOW_DEVOLUCION_IN = {
     "flow_name": "devolucion_in",
     "flow_type": "purchases",
-    "sql": SQL_DEVOLUCION_IN,
+    "sql": """
+        SET QUOTED_IDENTIFIER OFF;
+        SELECT TOP 10
+            CONCAT(TRIM(T350.f350_id_tipo_docto), TRIM(T350.f350_id_co), '-', T350.f350_consec_docto) AS compra,
+            t200.f200_nit AS proveedor,
+            ISNULL((SELECT TOP 1 f202_id_sucursal FROM t202_mm_proveedores
+                    WHERE f202_rowid_tercero = t200.f200_rowid ORDER BY f202_id_sucursal ASC), '001') AS sucursal_proveedor,
+            '' AS referencia_compra,
+            ISNULL(CONVERT(VARCHAR, t350.f350_fecha, 23), '') AS fecha_entrega,
+            'draft' AS estado,
+            1 AS almacen,
+            RTRIM(t120.f120_id) AS producto,
+            0 AS precio_unitario,
+            t470.f470_cant_1 AS cantidad,
+            0 AS impuesto,
+            t150.f150_id AS bodega_siesa
+        FROM t350_co_docto_contable t350
+        INNER JOIN t470_cm_movto_invent t470 ON t470.f470_rowid_docto = t350.f350_rowid
+        INNER JOIN t121_mc_items_extensiones t121 ON t470.f470_rowid_item_ext = t121.f121_rowid
+        INNER JOIN t120_mc_items t120 ON t120.f120_rowid = t121.f121_rowid_item
+        INNER JOIN t150_mc_bodegas t150 ON t470.f470_rowid_bodega = t150.f150_rowid
+        INNER JOIN t200_mm_terceros t200 ON t200.f200_rowid = t350.f350_rowid_tercero
+        WHERE t350.f350_id_tipo_docto IN ('DEV')
+            AND T350.f350_id_cia = 1
+            AND T350.f350_fecha_ts_creacion > CONVERT(VARCHAR, DATEADD(day, -30, GETDATE()), 23)
+        ORDER BY T350.f350_fecha_ts_creacion DESC;
+        SET QUOTED_IDENTIFIER ON;
+    """,
     "warehouse_mapping": {},
 }
 
 FLOW_VENTAS = {
     "flow_name": "ventas",
     "flow_type": "sales",
-    "sql": SQL_VENTAS,
+    "sql": """
+        SET QUOTED_IDENTIFIER OFF;
+        SELECT DISTINCT TOP 10
+            CONCAT(TRIM(t430.f430_id_co), TRIM(t430.f430_id_tipo_docto), t430.f430_consec_docto) AS pedido,
+            TRIM(t200.f200_nit) AS cliente,
+            TRIM(t201.f201_id_sucursal) AS sucursal_cliente,
+            ISNULL(CONVERT(VARCHAR, t430.f430_id_fecha, 23), '') AS fecha_pedido,
+            'draft' AS estado,
+            1 AS almacen,
+            TRIM(RTRIM(v121.v121_id_item)) AS producto,
+            t431.f431_cant1_pedida AS cantidad_pedida,
+            t431.f431_precio_unitario_base AS precio_unitario,
+            '' AS impuesto,
+            '' AS zona,
+            '' AS vendedor,
+            '' AS condicion_pago,
+            TRIM(t430.f430_notas) AS observacion,
+            TRIM(t431.f431_id_unidad_medida) AS unidad_medida,
+            TRIM(t150.f150_id) AS bodega_siesa
+        FROM t201_mm_clientes t201
+        INNER JOIN t200_mm_terceros t200
+            ON t201.f201_rowid_tercero = t200.f200_rowid AND t201.f201_id_cia = t200.f200_id_cia
+        INNER JOIN t430_cm_pv_docto t430
+            ON t200.f200_id_cia = t430.f430_id_cia AND t200.f200_rowid = t430.f430_rowid_tercero_fact
+               AND t201.f201_id_sucursal = t430.f430_id_sucursal_fact
+        INNER JOIN t431_cm_pv_movto t431
+            ON t431.f431_rowid_pv_docto = t430.f430_rowid AND t430.f430_id_cia = t431.f431_id_cia
+        INNER JOIN t150_mc_bodegas t150
+            ON t150.f150_rowid = t431.f431_rowid_bodega
+        INNER JOIN v121
+            ON v121.v121_id_cia = t431.f431_id_cia AND t431.f431_rowid_item_ext = v121.v121_rowid_item_ext
+        WHERE t430.f430_id_cia = 1
+            AND t430.f430_ind_estado = 2
+            AND CAST(t430.f430_fecha_ts_creacion AS DATETIME) >= DATEADD(day, -30, GETDATE())
+        ORDER BY t430.f430_consec_docto DESC;
+        SET QUOTED_IDENTIFIER ON;
+    """,
     "warehouse_mapping": {},
 }
 
 FLOW_FACTURAS = {
     "flow_name": "facturas",
     "flow_type": "sales",
-    "sql": SQL_FACTURAS,
+    "sql": """
+        SET QUOTED_IDENTIFIER OFF;
+        SELECT TOP 10
+            CONCAT(TRIM(f350_id_tipo_docto), f350_id_co, '-', f350_consec_docto) AS pedido,
+            LTRIM(RTRIM(cliente.f200_nit)) AS cliente,
+            LTRIM(RTRIM(f201_id_sucursal)) AS sucursal_cliente,
+            CONVERT(varchar, f350_fecha, 23) AS fecha_pedido,
+            'draft' AS estado,
+            1 AS almacen,
+            LTRIM(RTRIM(f120_id)) AS producto,
+            CAST(f470_cant_1 AS INTEGER) AS cantidad_pedida,
+            CAST(f470_precio_uni AS DECIMAL(18, 2)) AS precio_unitario,
+            '' AS impuesto,
+            '' AS zona,
+            '' AS vendedor,
+            LTRIM(RTRIM(f461_id_cond_pago)) AS condicion_pago,
+            '' AS observacion,
+            f470_id_unidad_medida AS unidad_medida,
+            TRIM(f150_id) AS bodega_siesa
+        FROM t350_co_docto_contable
+        INNER JOIN t461_cm_docto_factura_venta ON (f461_rowid_docto = f350_rowid)
+        INNER JOIN t470_cm_movto_invent ON (f470_rowid_docto_fact = f461_rowid_docto)
+        INNER JOIN t200_mm_terceros AS cliente ON (f461_rowid_tercero_fact = f200_rowid)
+        INNER JOIN t201_mm_clientes
+            ON (cliente.f200_rowid = f201_rowid_tercero AND f201_id_sucursal = f461_id_sucursal_fact)
+        INNER JOIN t121_mc_items_extensiones ON (f470_rowid_item_ext = f121_rowid)
+        INNER JOIN t120_mc_items ON (f121_rowid_item = f120_rowid)
+        INNER JOIN t150_mc_bodegas ON (f470_rowid_bodega = f150_rowid)
+        WHERE f350_id_tipo_docto IN ('FAC', 'FPZ')
+            AND f350_id_cia = 1
+            AND CAST(f350_fecha_ts_creacion AS DATETIME) >= DATEADD(day, -30, GETDATE())
+        ORDER BY f350_consec_docto DESC;
+        SET QUOTED_IDENTIFIER ON;
+    """,
     "warehouse_mapping": {},
 }
 
@@ -460,7 +443,7 @@ def setup():
 def test_items():
     header("FLOW: ITEMS")
 
-    # I1: Feliz
+    # I1: Feliz — flujo completo E2E
     info("I1: Items feliz - SQL trae TOP 10 productos del ERP")
     data = transform.get_flow(connector, FLOW_ITEMS["flow_name"], FLOW_ITEMS)
     info(f"Transform retorno {len(data)} registros")
@@ -468,8 +451,9 @@ def test_items():
         fail("I1", "Transform retorno 0 registros - verificar SQL e id_cia")
         return
 
+    # Mostrar muestra del primer registro
     info(f"Muestra primer registro: {list(data[0].keys())}")
-    info(f"  referencia={data[0].get('referencia')}, descripcion={str(data[0].get('descripcion', '?'))[:50]}")
+    info(f"  referencia={data[0].get('referencia')}, descripcion={data[0].get('descripcion')[:50] if data[0].get('descripcion') else '?'}")
 
     processor = ProcessItems(odoo, config, FLOW_ITEMS)
     result = processor.process(data)
@@ -480,7 +464,7 @@ def test_items():
     else:
         fail("I1", f"No se creo ni actualizo nada: {result}")
 
-    # I3: Actualizacion
+    # I3: Actualizacion — correr el mismo flow otra vez
     info("I3: Items actualizacion - mismos datos, segunda corrida")
     result2 = ProcessItems(odoo, config, FLOW_ITEMS).process(data)
     info(f"Resultado segunda corrida: {result2}")
@@ -488,18 +472,18 @@ def test_items():
     if result2["actualizados"] > 0 and result2["creados"] == 0:
         ok("I3", f"Actualizacion correcta: {result2['actualizados']} actualizados, 0 creados")
     elif result2["actualizados"] > 0:
-        ok("I3", f"Parcial: {result2['actualizados']} actualizados, {result2['creados']} creados")
+        ok("I3", f"Parcial: {result2['actualizados']} actualizados, {result2['creados']} creados (puede haber fallado en I1)")
     else:
         fail("I3", f"Esperaba actualizados > 0: {result2}")
 
-    # Verificar en Odoo
+    # Verificar en Odoo que tracking no cambio
     ref_check = data[0].get("referencia", "")
     if ref_check:
         ok_v, prods = odoo.search_read(
             "product.template", [["default_code", "=", ref_check]], ["tracking", "name"]
         )
         if ok_v and prods:
-            info(f"Verificacion Odoo: {ref_check} -> tracking={prods[0].get('tracking')}, name={str(prods[0].get('name', ''))[:40]}")
+            info(f"Verificacion Odoo: {ref_check} -> tracking={prods[0].get('tracking')}, name={prods[0].get('name')[:40]}")
 
     # I5: SQL vacio
     info("I5: Items SQL vacio - query retorna 0 registros")
@@ -539,7 +523,7 @@ def test_clientes():
         fail("P1", "Transform retorno 0 registros")
         return
 
-    info(f"Muestra: identificacion={data[0].get('identificacion')}, nombre={str(data[0].get('nombre', '?'))[:40]}")
+    info(f"Muestra: identificacion={data[0].get('identificacion')}, nombre={data[0].get('nombre')[:40] if data[0].get('nombre') else '?'}")
 
     result = ProcessPartners(odoo, config, FLOW_CLIENTES).process(data)
     info(f"Resultado: {result}")
@@ -559,7 +543,7 @@ def test_clientes():
             if ok_v and parts:
                 info(f"Verificacion: {vat_check} -> customer_rank={parts[0].get('customer_rank')}, supplier_rank={parts[0].get('supplier_rank')}")
 
-    # P2: Actualizacion
+    # P2: Actualizacion — segunda corrida
     info("P2: Clientes actualizacion - segunda corrida")
     result2 = ProcessPartners(odoo, config, FLOW_CLIENTES).process(data)
     info(f"Resultado segunda corrida: {result2}")
@@ -571,7 +555,7 @@ def test_clientes():
     else:
         fail("P2", f"Esperaba actualizados > 0: {result2}")
 
-    # P3: Jerarquia
+    # P3: Jerarquia (solo si hay datos con misma identificacion y distintas sucursales)
     info("P3: Clientes con jerarquia")
     data_jer = transform.get_flow(connector, FLOW_CLIENTES_JERARQUIA["flow_name"], FLOW_CLIENTES_JERARQUIA)
     if data_jer:
@@ -629,7 +613,7 @@ def test_compras():
     data = transform.get_flow(connector, FLOW_COMPRAS["flow_name"], FLOW_COMPRAS)
     info(f"Transform retorno {len(data)} registros")
     if not data:
-        fail("C1", "Transform retorno 0 registros - sin OCs en el ERP")
+        fail("C1", "Transform retorno 0 registros - sin OCs recientes en el ERP")
         info("Probando con datos sinteticos para validar el core...")
         data = _datos_sinteticos_compras()
         if not data:
@@ -649,7 +633,7 @@ def test_compras():
     else:
         fail("C1", f"Resultado inesperado: {result}")
 
-    # C3: Duplicadas
+    # C3: Duplicadas — segunda corrida
     info("C3: Compras duplicadas - segunda corrida")
     result2 = ProcessPurchases(odoo, config, FLOW_COMPRAS).process(data)
     info(f"Resultado segunda corrida: {result2}")
@@ -659,7 +643,7 @@ def test_compras():
     else:
         fail("C3", f"Esperaba descartados > 0, creados = 0: {result2}")
 
-    # C9: Transferencia entrada
+    # C9: Transferencia entrada — SQL distinto, mismo flow_type
     info("C9: Transferencia entrada - flow_name distinto, mismo ProcessPurchases")
     data_transf = transform.get_flow(connector, FLOW_TRANSFERENCIA_ENTRADA["flow_name"], FLOW_TRANSFERENCIA_ENTRADA)
     info(f"Transform retorno {len(data_transf)} registros")
@@ -683,6 +667,8 @@ def test_compras():
 
 
 def _datos_sinteticos_compras():
+    """Genera datos sinteticos si el ERP no tiene OCs recientes."""
+    # Buscar un producto y proveedor que existan en Odoo
     ok_p, prods = odoo.search_read("product.product", [], ["default_code"], limit=1)
     ok_s, supps = odoo.search_read("res.partner", [["supplier_rank", ">", 0]], ["vat", "sucursal"], limit=1)
     if not (ok_p and prods and ok_s and supps):
@@ -751,7 +737,7 @@ def test_ventas():
         if ok_v and orders:
             info(f"Verificacion Odoo: pedido={data[0]['pedido']} -> zone={orders[0].get('delivery_zone_id')}, note={str(orders[0].get('note', ''))[:50]}")
 
-    # V9: Facturas
+    # V9: Facturas — SQL distinto
     info("V9: Facturas - flow_name distinto, mismo ProcessSales")
     data_fac = transform.get_flow(connector, FLOW_FACTURAS["flow_name"], FLOW_FACTURAS)
     info(f"Transform retorno {len(data_fac)} registros")
@@ -764,6 +750,7 @@ def test_ventas():
 
 
 def _datos_sinteticos_ventas():
+    """Genera datos sinteticos si el ERP no tiene pedidos recientes."""
     ok_p, prods = odoo.search_read("product.product", [], ["default_code"], limit=1)
     ok_c, clis = odoo.search_read("res.partner", [["customer_rank", ">", 0]], ["vat", "sucursal"], limit=1)
     if not (ok_p and prods and ok_c and clis):
@@ -796,6 +783,7 @@ def test_resolve():
 
     # R1: Todo existe
     info("R1: Todo existe - maestros ya cargados")
+    # Buscar un producto y proveedor que ya esten en Odoo
     ok_p, prods = odoo.search_read("product.product", [], ["default_code"], limit=1)
     ok_s, supps = odoo.search_read("res.partner", [["supplier_rank", ">", 0]], ["vat", "sucursal"], limit=1)
 
@@ -930,3 +918,4 @@ if __name__ == "__main__":
     else:
         print(f"Parte '{parte}' no reconocida.")
         print(f"Opciones: all, {', '.join(partes.keys())}")
+ 
