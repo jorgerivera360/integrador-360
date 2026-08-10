@@ -81,9 +81,13 @@ def header(titulo):
 
 _hoy = datetime.now()
 _hace_30 = _hoy - timedelta(days=30)
+_hace_365 = _hoy - timedelta(days=365)
 PARAMS_FECHA = f"FechaInicio = {_hace_30.strftime('%Y%m%d')}|FechaFin = {_hoy.strftime('%Y%m%d')}"
 PARAMS_FECHA_CLI = f"fecha_inicio = {_hace_30.strftime('%Y%m%d')}|fecha_fin = {_hoy.strftime('%Y%m%d')}"
 PARAMS_FECHA_OC = f"fecha_inicio = 20260101|fecha_fin = {_hoy.strftime('%Y%m%d')}"
+# Rango amplio para resolve (365 dias, para encontrar maestros antiguos)
+PARAMS_FECHA_RESOLVE = f"FechaInicio = {_hace_365.strftime('%Y%m%d')}|FechaFin = {_hoy.strftime('%Y%m%d')}"
+PARAMS_FECHA_CLI_RESOLVE = f"fecha_inicio = {_hace_365.strftime('%Y%m%d')}|fecha_fin = {_hoy.strftime('%Y%m%d')}"
 
 # --- ITEMS ---
 # API retorna: Referencia_Item, name, barcode, precio, costo, peso,
@@ -269,10 +273,10 @@ FLOW_VENTAS = {
     "warehouse_mapping": {},
 }
 
-# --- RESOLVE (mismos flows) ---
-FLOW_ITEMS_RESOLVE = {**FLOW_ITEMS}
-FLOW_PROVEEDORES_RESOLVE = {**FLOW_PROVEEDORES}
-FLOW_CLIENTES_RESOLVE = {**FLOW_CLIENTES}
+# --- RESOLVE (rango amplio de fecha para encontrar maestros antiguos) ---
+FLOW_ITEMS_RESOLVE = {**FLOW_ITEMS, "parametros": PARAMS_FECHA_RESOLVE}
+FLOW_PROVEEDORES_RESOLVE = {**FLOW_PROVEEDORES, "parametros": PARAMS_FECHA_CLI_RESOLVE}
+FLOW_CLIENTES_RESOLVE = {**FLOW_CLIENTES, "parametros": PARAMS_FECHA_CLI_RESOLVE}
 
 
 # ============================================================
