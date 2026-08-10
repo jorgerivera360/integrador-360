@@ -246,7 +246,7 @@ FLOW_COMPRAS = {
     "flow_name": "compras",
     "flow_type": "purchases",
     "endpoint": "PurchaseOrders",
-    "filter": "DocDate ge '2026-01-01'",
+    "filter": "",
     "mapping": {
         "CardCode": "proveedor",
         "DocDate": "fecha_entrega",
@@ -283,12 +283,12 @@ FLOW_COMPRAS = {
 }
 
 # --- VENTAS ---
-# SAP retorna Orders con DocumentLines anidado
+# Faber Castell usa DeliveryNotes (no Orders)
 FLOW_VENTAS = {
     "flow_name": "ventas",
     "flow_type": "sales",
-    "endpoint": "Orders",
-    "filter": "DocumentStatus eq 'bost_Open'",
+    "endpoint": "DeliveryNotes",
+    "filter": "DocDate ge '2026-08-01'",
     "mapping": {
         "CardCode": "cliente",
         "ShipToCode": "sucursal_cliente",
