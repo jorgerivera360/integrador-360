@@ -92,7 +92,7 @@ FLOW_ITEMS = {
     "flow_name": "items",
     "flow_type": "items",
     "endpoint": "Items",
-    "filter": "Valid eq 'tYES'",
+    "filter": "Valid eq 'tYES' and UpdateDate ge '2026-07-01'",
     "mapping": {
         "ItemCode": "referencia",
         "ItemName": "descripcion",
@@ -181,7 +181,7 @@ FLOW_CLIENTES = {
     "flow_name": "partners",
     "flow_type": "customer",
     "endpoint": "BusinessPartners",
-    "filter": "CardType eq 'cCustomer'",
+    "filter": "CardType eq 'cCustomer' and UpdateDate ge '2026-07-01'",
     "mapping": {
         "CardCode": "identificacion",
         "CardName": "nombre",
@@ -214,7 +214,7 @@ FLOW_PROVEEDORES = {
     "flow_name": "partners",
     "flow_type": "supplier",
     "endpoint": "BusinessPartners",
-    "filter": "CardType eq 'cSupplier'",
+    "filter": "CardType eq 'cSupplier' and UpdateDate ge '2026-07-01'",
     "mapping": {
         "CardCode": "identificacion",
         "CardName": "nombre",
@@ -328,10 +328,10 @@ FLOW_VENTAS = {
     "warehouse_mapping": {},
 }
 
-# --- RESOLVE ---
+# --- RESOLVE (sin filtro de fecha para encontrar maestros antiguos) ---
 FLOW_ITEMS_RESOLVE = {**FLOW_ITEMS, "filter": "Valid eq 'tYES'"}
-FLOW_PROVEEDORES_RESOLVE = {**FLOW_PROVEEDORES}
-FLOW_CLIENTES_RESOLVE = {**FLOW_CLIENTES}
+FLOW_PROVEEDORES_RESOLVE = {**FLOW_PROVEEDORES, "filter": "CardType eq 'cSupplier'"}
+FLOW_CLIENTES_RESOLVE = {**FLOW_CLIENTES, "filter": "CardType eq 'cCustomer'"}
 
 
 # ============================================================
