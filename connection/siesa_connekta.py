@@ -63,7 +63,7 @@ class SiesaConnekta(ERPConnector):
                 json_response = response.json()
 
                 if json_response.get("codigo") == 0:
-                    detalle = json_response.get("detalle", {})
+                    detalle = json_response.get("detalle") or {}
                     
                     # Detección automática formato Datos vs Table
                     items = detalle.get("Datos")
