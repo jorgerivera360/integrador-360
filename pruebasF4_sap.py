@@ -328,10 +328,25 @@ FLOW_VENTAS = {
     "warehouse_mapping": {},
 }
 
-# --- RESOLVE (filtro de 6 meses para no traer todo el historico) ---
-FLOW_ITEMS_RESOLVE = {**FLOW_ITEMS, "filter": "Valid eq 'tYES' and UpdateDate ge '2026-01-01'"}
-FLOW_PROVEEDORES_RESOLVE = {**FLOW_PROVEEDORES, "filter": "CardType eq 'cSupplier' and UpdateDate ge '2026-01-01'"}
-FLOW_CLIENTES_RESOLVE = {**FLOW_CLIENTES, "filter": "CardType eq 'cCustomer' and UpdateDate ge '2026-01-01'"}
+# --- RESOLVE (filtro dinamico por faltantes — solo SAP) ---
+FLOW_ITEMS_RESOLVE = {
+    **FLOW_ITEMS,
+    "filter": "Valid eq 'tYES'",
+    "resolve_filter_field": "ItemCode",
+    "resolve_filter_template": "ItemCode eq '{ref}'",
+}
+FLOW_PROVEEDORES_RESOLVE = {
+    **FLOW_PROVEEDORES,
+    "filter": "CardType eq 'cSupplier'",
+    "resolve_filter_field": "CardCode",
+    "resolve_filter_template": "CardCode eq '{ref}'",
+}
+FLOW_CLIENTES_RESOLVE = {
+    **FLOW_CLIENTES,
+    "filter": "CardType eq 'cCustomer'",
+    "resolve_filter_field": "CardCode",
+    "resolve_filter_template": "CardCode eq '{ref}'",
+}
 
 
 # ============================================================
