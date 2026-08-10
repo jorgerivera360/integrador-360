@@ -10,7 +10,7 @@ connector = SiesaEnterprise(config)
 
 sql = (
     'SET QUOTED_IDENTIFIER OFF;'
-    ' SELECT TOP 1'
+    ' SELECT TOP 5'
     ' CONCAT(TRIM(t430.f430_id_co), TRIM(t430.f430_id_tipo_docto), t430.f430_consec_docto) AS pedido,'
     ' TRIM(t200.f200_nit) AS cliente,'
     ' TRIM(t201.f201_id_sucursal) AS sucursal_cliente,'
@@ -45,7 +45,9 @@ sql = (
 
 status, data = connector.get(endpoint="EjecutarConsultaXML", params={"sql": sql})
 print("Status:", status)
-if status and data:
-    print("Data:", data[0])
+if status:
+    print(f"Registros: {len(data)}")
+    for i, row in enumerate(data):
+        print(f"  [{i}] {row}")
 else:
     print("Error:", data)
