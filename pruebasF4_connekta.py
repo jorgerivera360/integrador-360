@@ -81,9 +81,9 @@ def header(titulo):
 
 _hoy = datetime.now()
 _hace_30 = _hoy - timedelta(days=30)
-_params_fecha = f"&parametros=FechaInicio = {_hace_30.strftime('%Y%m%d')}|FechaFin = {_hoy.strftime('%Y%m%d')}"
-_params_fecha_cli = f"&parametros=fecha_inicio = {_hace_30.strftime('%Y%m%d')}|fecha_fin = {_hoy.strftime('%Y%m%d')}"
-_params_fecha_oc = f"&parametros=fecha_inicio = 20260101|fecha_fin = {_hoy.strftime('%Y%m%d')}"
+PARAMS_FECHA = f"FechaInicio = {_hace_30.strftime('%Y%m%d')}|FechaFin = {_hoy.strftime('%Y%m%d')}"
+PARAMS_FECHA_CLI = f"fecha_inicio = {_hace_30.strftime('%Y%m%d')}|fecha_fin = {_hoy.strftime('%Y%m%d')}"
+PARAMS_FECHA_OC = f"fecha_inicio = 20260101|fecha_fin = {_hoy.strftime('%Y%m%d')}"
 
 # --- ITEMS ---
 # API retorna: Referencia_Item, name, barcode, precio, costo, peso,
@@ -92,7 +92,8 @@ _params_fecha_oc = f"&parametros=fecha_inicio = 20260101|fecha_fin = {_hoy.strft
 FLOW_ITEMS = {
     "flow_name": "items",
     "flow_type": "items",
-    "query_desc": "pinturastitopabon_producto_wms" + _params_fecha,
+    "query_desc": "pinturastitopabon_producto_wms",
+    "parametros": PARAMS_FECHA,
     "paginacion": False,
     "mapping": {
         "Referencia_Item": "referencia",
@@ -169,7 +170,8 @@ FLOW_ITEMS_QUERY_ERROR = {
 FLOW_CLIENTES = {
     "flow_name": "partners",
     "flow_type": "customer",
-    "query_desc": "pinturastitopabon_Clientes" + _params_fecha_cli,
+    "query_desc": "pinturastitopabon_Clientes",
+    "parametros": PARAMS_FECHA_CLI,
     "paginacion": False,
     "mapping": {
         "vat": "identificacion",
@@ -193,7 +195,8 @@ FLOW_CLIENTES_SIN_JERARQUIA = {
 FLOW_PROVEEDORES = {
     "flow_name": "partners",
     "flow_type": "supplier",
-    "query_desc": "pinturastitopabon_Proveedores" + _params_fecha_cli,
+    "query_desc": "pinturastitopabon_Proveedores",
+    "parametros": PARAMS_FECHA_CLI,
     "paginacion": False,
     "mapping": {
         "vat": "identificacion",
@@ -213,7 +216,8 @@ FLOW_PROVEEDORES = {
 FLOW_COMPRAS = {
     "flow_name": "compras",
     "flow_type": "purchases",
-    "query_desc": "pinturastitopabon_OrdenDeCompra" + _params_fecha_oc,
+    "query_desc": "pinturastitopabon_OrdenDeCompra",
+    "parametros": PARAMS_FECHA_OC,
     "paginacion": False,
     "mapping": {
         "documento": "compra",
