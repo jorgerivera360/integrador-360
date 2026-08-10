@@ -52,6 +52,10 @@ class SiesaConnekta(ERPConnector):
                 if not no_paginar:
                     url += f"&paginacion=numPag={num_pag}|tamPag={tam_pag}"
 
+                parametros = params.get("parametros", "")
+                if parametros:
+                    url += f"&parametros={parametros}"
+
                 self.logger.info(f"Consumiendo consulta Siesa Connekta: {query_desc} - Página: {num_pag}")
                 response = requests.get(url, headers=self._get_headers(), verify=True)
                 response.raise_for_status()
