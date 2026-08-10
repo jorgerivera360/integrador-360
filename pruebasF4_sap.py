@@ -246,7 +246,7 @@ FLOW_COMPRAS = {
     "flow_name": "compras",
     "flow_type": "purchases",
     "endpoint": "PurchaseOrders",
-    "filter": "DocumentStatus eq 'bost_Open'",
+    "filter": "DocDate ge '2026-07-01'",
     "mapping": {
         "CardCode": "proveedor",
         "DocDate": "fecha_entrega",
