@@ -8,22 +8,37 @@ config = ConfigLoader("pruebaws").load_config()
 config["client_id"] = "pruebaws"
 connector = SiesaEnterprise(config)
 
-# SQL minimo de ventas - solo 2 campos
 sql = (
     'SET QUOTED_IDENTIFIER OFF;'
     ' SELECT TOP 1'
     ' t430.f430_consec_docto AS pedido,'
-    ' t200.f200_nit AS cliente'
+    ' t200.f200_nit AS cliente,'
+    ' t201.f201_id_sucursal AS sucursal_cliente,'
+    ' t430.f430_id_fecha AS fecha_pedido,'
+    ' t431.f431_cant1_pedida AS cantidad_pedida,'
+    ' t431.f431_precio_unitario_base AS precio_unitario,'
+    ' v121.v121_id_item AS producto,'
+    ' t150.f150_id AS bodega_siesa,'
+    ' t430.f430_notas AS observacion'
     ' FROM t201_mm_clientes t201'
     ' INNER JOIN t200_mm_terceros t200'
     '     ON t201.f201_rowid_tercero = t200.f200_rowid AND t201.f201_id_cia = t200.f200_id_cia'
     ' INNER JOIN t430_cm_pv_docto t430'
     '     ON t200.f200_id_cia = t430.f430_id_cia AND t200.f200_rowid = t430.f430_rowid_tercero_fact'
     '        AND t201.f201_id_sucursal = t430.f430_id_sucursal_fact'
+    ' INNER JOIN t431_cm_pv_movto t431'
+    '     ON t431.f431_rowid_pv_docto = t430.f430_rowid AND t430.f430_id_cia = t431.f431_id_cia'
+    ' INNER JOIN t150_mc_bodegas t150'
+    '     ON t150.f150_rowid = t431.f431_rowid_bodega'
+    ' INNER JOIN v121'
+    '     ON v121.v121_id_cia = t431.f431_id_cia AND t431.f431_rowid_item_ext = v121.v121_rowid_item_ext'
     ' WHERE t430.f430_id_cia = 1;'
     ' SET QUOTED_IDENTIFIER ON;'
 )
 
 status, data = connector.get(endpoint="EjecutarConsultaXML", params={"sql": sql})
 print("Status:", status)
-print("Data:", data)
+if status and data:
+    print("Data:", data[0])
+else:
+    print("Error:", data)
