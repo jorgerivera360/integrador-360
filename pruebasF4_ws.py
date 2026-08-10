@@ -637,6 +637,22 @@ def test_compras():
 
     info(f"Muestra: compra={data[0].get('compra')}, producto={data[0].get('producto')}, proveedor={data[0].get('proveedor')}")
 
+    # Resolve missing masters antes de procesar compras (como en produccion)
+    info("Resolviendo maestros faltantes antes de crear compras...")
+    resolve_result = resolve_missing_masters(
+        odoo, connector, transform,
+        data_purchases=data,
+        data_sales=[],
+        flow_configs={"items": FLOW_ITEMS, "supplier": FLOW_PROVEEDORES},
+        config=config, logger=logger
+    )
+    info(f"Resolve: {resolve_result['productos_faltantes']} productos faltantes, "
+         f"{resolve_result['productos_resueltos']} resueltos, "
+         f"{resolve_result['proveedores_faltantes']} proveedores faltantes, "
+         f"{resolve_result['proveedores_resueltos']} resueltos")
+    if resolve_result.get("no_resueltos"):
+        info(f"No resueltos: {len(resolve_result['no_resueltos'])}")
+
     result = ProcessPurchases(odoo, config, FLOW_COMPRAS).process(data)
     info(f"Resultado: {result}")
 
@@ -724,6 +740,22 @@ def test_ventas():
             return
 
     info(f"Muestra: pedido={data[0].get('pedido')}, producto={data[0].get('producto')}, cliente={data[0].get('cliente')}")
+
+    # Resolve missing masters antes de procesar ventas (como en produccion)
+    info("Resolviendo maestros faltantes antes de crear ventas...")
+    resolve_result = resolve_missing_masters(
+        odoo, connector, transform,
+        data_purchases=[],
+        data_sales=data,
+        flow_configs={"items": FLOW_ITEMS, "customer": FLOW_CLIENTES},
+        config=config, logger=logger
+    )
+    info(f"Resolve: {resolve_result['productos_faltantes']} productos faltantes, "
+         f"{resolve_result['productos_resueltos']} resueltos, "
+         f"{resolve_result['clientes_faltantes']} clientes faltantes, "
+         f"{resolve_result['clientes_resueltos']} resueltos")
+    if resolve_result.get("no_resueltos"):
+        info(f"No resueltos: {len(resolve_result['no_resueltos'])}")
 
     result = ProcessSales(odoo, config, FLOW_VENTAS).process(data)
     info(f"Resultado: {result}")
