@@ -30,7 +30,7 @@ class ProcessSales(CoreProcessor):
 
         try:
             # ---- Fase 1: Filtrar órdenes existentes (con reintentos) ----
-            pedidos_unicos = list({row["pedido"] for row in data if row.get("pedido")})
+            pedidos_unicos = list({str(row["pedido"]) for row in data if row.get("pedido")})
             existentes = set()
             if pedidos_unicos:
                 max_retries = 3
@@ -99,7 +99,7 @@ class ProcessSales(CoreProcessor):
             # ---- Fase 3: Pre-resolver productos ----
             cache_product = {}
             productos_resueltos = {}
-            for code in {row["producto"] for row in data_nueva if row.get("producto")}:
+            for code in {str(row["producto"]) for row in data_nueva if row.get("producto")}:
                 producto = lookup_product(self.odoo, code, cache=cache_product, logger=self.logger)
                 if producto:
                     productos_resueltos[code] = producto
