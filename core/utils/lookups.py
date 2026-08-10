@@ -196,7 +196,7 @@ def lookup_product(odoo, default_code, cache=None, logger=None):
 
     ok, result = odoo.search_read(
         "product.product",
-        [["default_code", "=", default_code]],
+        [["default_code", "=", str(default_code)]],
         ["id", "uom_id"], limit=1
     )
     if not ok:

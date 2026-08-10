@@ -30,7 +30,7 @@ class ProcessPurchases(CoreProcessor):
 
         try:
             # ---- Fase 1: Filtrar órdenes existentes (con reintentos) ----
-            compras_unicas = list({row["compra"] for row in data if row.get("compra")})
+            compras_unicas = list({str(row["compra"]) for row in data if row.get("compra")})
             existentes = set()
             if compras_unicas:
                 max_retries = 3
@@ -96,7 +96,7 @@ class ProcessPurchases(CoreProcessor):
             # ---- Fase 3: Pre-resolver productos ----
             cache_product = {}
             productos_resueltos = {}
-            for code in {row["producto"] for row in data_nueva if row.get("producto")}:
+            for code in {str(row["producto"]) for row in data_nueva if row.get("producto")}:
                 producto = lookup_product(self.odoo, code, cache=cache_product, logger=self.logger)
                 if producto:
                     productos_resueltos[code] = producto
