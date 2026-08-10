@@ -133,7 +133,7 @@ def resolve_missing_masters(
                 if all_items:
                     missing_data = [
                         row for row in all_items
-                        if row.get("referencia") in productos_faltantes
+                        if str(row.get("referencia", "")) in productos_faltantes
                     ]
                     if missing_data:
                         logger.info(
