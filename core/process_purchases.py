@@ -115,7 +115,7 @@ class ProcessPurchases(CoreProcessor):
 
             for row in data_nueva:
                 compra = row.get("compra", "")
-                ref_producto = row.get("producto", "")
+                ref_producto = str(row.get("producto", ""))
 
                 # Resolver proveedor
                 supplier_key = (row.get("proveedor", ""), row.get("sucursal_proveedor", ""))
