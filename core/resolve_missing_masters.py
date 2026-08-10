@@ -182,9 +182,10 @@ def resolve_missing_masters(
                 all_suppliers = transform.get_flow(connector, "partners", supplier_flow_config)
 
                 if all_suppliers:
+                    vats_faltantes = {vat for vat, suc in proveedores_faltantes}
                     missing_data = [
                         row for row in all_suppliers
-                        if (row.get("identificacion"), row.get("sucursal", "")) in proveedores_faltantes
+                        if row.get("identificacion") in vats_faltantes
                     ]
                     if missing_data:
                         logger.info(
@@ -231,9 +232,10 @@ def resolve_missing_masters(
                 all_customers = transform.get_flow(connector, "partners", customer_flow_config)
 
                 if all_customers:
+                    vats_faltantes = {vat for vat, suc in clientes_faltantes}
                     missing_data = [
                         row for row in all_customers
-                        if (row.get("identificacion"), row.get("sucursal", "")) in clientes_faltantes
+                        if row.get("identificacion") in vats_faltantes
                     ]
                     if missing_data:
                         logger.info(
