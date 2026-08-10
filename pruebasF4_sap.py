@@ -273,7 +273,7 @@ FLOW_COMPRAS = {
             "campo_destino": "compra",
             "funcion": "doc_name_por_rango",
             "params": {
-                "campo_origen": "DocNum",
+                "campo_origen": "referencia_compra",
                 "rangos": {"1-10000000": "OCNAL"},
                 "separador": "-",
             },
