@@ -268,7 +268,6 @@ FLOW_VENTAS = {
         "estado": "draft",
         "impuesto": 19.0,
         "almacen": 1,
-        "precio_unitario": 0,
     },
     "conditionals": [],
     "warehouse_mapping": {},

@@ -190,7 +190,6 @@ def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str
                     f"en compra '{compra}' — datos recibidos: {row}"
                 )
             return False, "almacen vacío"
-        precio_unitario = row.get("precio_unitario")
         if row.get("precio_unitario") is None or str(row.get("precio_unitario", "")).strip() == "":
             row["precio_unitario"] = 0
         cantidad = row.get("cantidad")
@@ -275,14 +274,8 @@ def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str
                     f"en pedido '{pedido}' — datos recibidos: {row}"
                 )
             return False, "almacen vacío"
-        precio_unitario = row.get("precio_unitario")
-        if precio_unitario is None or str(precio_unitario).strip() == "":
-            if logger:
-                logger.warning(
-                    f"validate_record: línea descartada — precio_unitario ausente "
-                    f"en pedido '{pedido}' — datos recibidos: {row}"
-                )
-            return False, "precio_unitario ausente"
+        if row.get("precio_unitario") is None or str(row.get("precio_unitario", "")).strip() == "":
+            row["precio_unitario"] = 0
         cantidad = row.get("cantidad_pedida")
         if cantidad is None or str(cantidad).strip() == "":
             if logger:
