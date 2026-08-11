@@ -1,27 +1,26 @@
-# Integrador ERP ↔ WMS
-### 360 Software — Medellín, Colombia
+# Integrador ERP - WMS
+### 360 Software - Medellin, Colombia
 
-Sistema de integración entre múltiples ERPs y Odoo WMS.
-Conecta SIESA WS, SIESA Connekta, SAP B1 y KubApp con Odoo.
+Sistema de integracion entre multiples ERPs y Odoo WMS.
+Conecta SIESA WS, SIESA Connekta, SAP B1 y Excel (fallback) con Odoo.
 
 ---
 
 ## Arquitectura
 
-El sistema está organizado en capas. Cada capa tiene una
-responsabilidad clara y no conoce los detalles de las demás.
-
 ```
-ERP (SIESA / SAP / KubApp)
-    ↓ dato crudo
+ERP (SIESA WS / Connekta / SAP B1)
+    | dato crudo
 connection/
-    ↓ lista de dicts crudos
+    | lista de dicts crudos
 transform/
-    ↓ lista de dicts normalizados
+    | lista de dicts normalizados (alias canonicos)
 core/
-    ↓ create() / write() via jsonrpc
+    | create() / write() via JSON-RPC
 Odoo WMS
 ```
+
+Cada capa tiene una responsabilidad clara y no conoce los detalles de las demas.
 
 ---
 
@@ -29,249 +28,168 @@ Odoo WMS
 
 ```
 integrador-360/
-│
-├── main.py
-│   Orquestador del sistema. Instancia el conector y el transform
-│   correctos según el tipo de ERP, autentica en Odoo, llama
-│   get_flow() y despacha al core. Maneja 3 modos de operación
-│   según la variable ENV — prod, api o CLI.
-│
-├── connection/
-│   Conectores que hablan el protocolo de cada ERP.
-│   Todos heredan ERPConnector y deben implementar get()
-│   y test_connection(). Cada conector maneja su propia
-│   paginación — no existe _paginate() centralizado.
-│   │
-│   ├── base.py
-│   │   Clase abstracta ERPConnector. Define el contrato
-│   │   que todos los conectores deben cumplir.
-│   │
-│   ├── siesa_enterprise.py
-│   │   Conector SIESA WS. Usa SOAP con zeep.
-│   │   Limpia caracteres de control del XML.
-│   │   Serializa objetos zeep con helpers.serialize_object().
-│   │   Clientes: Fénix · Faizan · Surtinegocios · Papis
-│   │
-│   ├── siesa_connekta.py
-│   │   Conector SIESA Connekta. Usa REST/JSON.
-│   │   Detecta automáticamente formato Datos vs Table.
-│   │   Construye URL dinámica con idCompania y query_desc.
-│   │   Clientes: Tito Pabón · OIT · R.P. Simón Bolívar
-│   │
-│   ├── sap.py
-│   │   Conector SAP Business One. Usa OData.
-│   │   Maneja SessionId con patrón Singleton.
-│   │   Clientes: BYCSA · Faber Castell
-│   │
-│   ├── excel_connector.py
-│   │   Conector fallback de emergencia. Lee archivos xlsx
-│   │   con dtype=str y convierte NaN a None.
-│   │   Se activa para cualquier cliente cuando su ERP falla.
-│   │
-│   └── jsonrpc.py
-│       Base de conexión con Odoo. No hereda ERPConnector.
-│       Usa requests.Session() para manejo automático de cookies.
-│       Provee authenticate(), search_read(), create() y write()
-│       que heredan todos los archivos del core.
-│
-├── transform/
-│   Normaliza el dato crudo del ERP al formato interno.
-│   El core nunca sabe de dónde vienen los datos.
-│   │
-│   ├── base.py
-│   │   Clase abstracta TransformBase. Contiene todos los
-│   │   métodos compartidos — _clean_string(), _parse_date(),
-│   │   _normalize_uom(), validate*(), _apply_field_mapping()
-│   │   y _apply_filters(). Define get_flow() como abstracto.
-│   │
-│   ├── transform_ws.py
-│   │   Transform SIESA WS. Construye el SQL interpolando
-│   │   sql_params y siesa_mapping desde client_config.
-│   │   Clientes: Fénix · Faizan · Surtinegocios · Papis
-│   │
-│   ├── transform_connekta.py
-│   │   Transform SIESA Connekta. Organiza los parámetros
-│   │   de la consulta. No construye SQL.
-│   │   Clientes: Tito Pabón · OIT · R.P. Simón Bolívar
-│   │
-│   └── transform_sap.py
-│       Transform SAP B1. Traduce códigos de categoría,
-│       construye nombres de documento y filtra almacenes.
-│       Clientes: BYCSA · Faber Castell
-│
-├── core/
-│   Escribe los datos normalizados en Odoo.
-│   Hace lookups en lote, anti-duplicado y upsert.
-│   │
-│   ├── base.py
-│   │   Clase ProcessBase. Hereda JsonRPC. Contiene los
-│   │   lookups en lote comunes — UOMs, impuestos,
-│   │   departamentos y países.
-│   │
-│   ├── process_partners.py
-│   │   Carga clientes y proveedores en res.partner.
-│   │   Anti-duplicado por vat + sucursal.
-│   │
-│   ├── process_items.py
-│   │   Carga productos en product.template.
-│   │   Anti-duplicado por default_code.
-│   │   tracking solo se escribe en create — nunca en write.
-│   │
-│   ├── process_purchases.py
-│   │   Carga órdenes de compra en purchase.order.
-│   │   Agrupa líneas por documento.
-│   │   Anti-duplicado por name.
-│   │
-│   └── process_sales.py
-│       Carga pedidos de venta en sale.order y stock.picking.
-│       7 métodos según el tipo de movimiento.
-│       Anti-duplicado por name.
-│
-├── scheduler/
-│   │
-│   └── runner.py
-│       IntegradorScheduler. Arranca los maestros primero
-│       en secuencia, registra los flujos en APScheduler
-│       con triggers de interval y cron, y envuelve run()
-│       con backoff exponencial — 60s, 120s, 240s.
-│
-├── config/
-│   │
-│   ├── loader.py
-│   │   ConfigLoader. Único punto de acceso a la configuración.
-│   │   Lee credenciales desde GCP Secret Manager. Si GCP falla
-│   │   carga desde credenciales locales en el servidor.
-│   │
-│   └── logger.py
-│       IntegradorLogger. Maneja los logs del sistema.
-│       En dev imprime en consola. En staging y prod
-│       escribe en archivo con rotación automática (10 MB, 5 backups).
-│
-├── db/
-│   │
-│   ├── schema.sql
-│   │   Definición completa de las 9 tablas — clients, users,
-│   │   user_permissions, client_config, sql_templates,
-│   │   scheduler_state, flow_execution_logs, flow_record_errors,
-│   │   client_notes y client_attachments.
-│   │
-│   └── logger.py
-│       DBLogger. Escribe logs en la BD — log_flow_execution(),
-│       log_record_error(), get_scheduler_state() y
-│       set_scheduler_state(). Separado de ConfigLoader
-│       por responsabilidad única.
-│
-├── api/
-│   │
-│   └── app.py
-│       API REST con FastAPI. Expone todos los endpoints
-│       que consume el frontend — configuración, ejecución,
-│       monitoreo, usuarios, notas y adjuntos.
-│       Autenticación SSO con Google Workspace.
-│
-├── frontend/
-│   Panel web construido en React + Vite.
-│   Consume la API de FastAPI.
-│   │
-│   └── src/
-│       ├── components/     Componentes reutilizables
-│       ├── pages/          Secciones del panel
-│       ├── services/       Llamadas a la API
-│       ├── context/        Estado global — AppContext
-│       └── App.jsx         Router principal
-│
-├── test/
-│   Pruebas unitarias por capa. Carpeta sin 's'.
-│   │
-│   ├── test_loader.py      Pruebas de config/loader.py
-│   ├── test_connection.py  77/77 pruebas — completo ✅
-│   ├── test_transform.py   Pendiente
-│   ├── test_core.py        Pendiente
-│   ├── test_main.py        Pendiente
-│   ├── test_scheduler.py   Pendiente
-│   └── test_api.py         Pendiente
-│
-├── docs/
-│   │
-│   ├── instalacion.md      Pasos para instalar en servidor nuevo
-│   ├── arquitectura.md     Descripción de capas y patrones
-│   └── clientes.md         Cómo agregar un cliente nuevo
-│
-├── pruebasF2.py            Script de integración en servidor
-├── .env.example            Variables de entorno sin valores reales
-├── .gitignore              Python · .env · credenciales · node_modules
-├── requirements.txt        Dependencias Python del proyecto
-└── README.md               Este archivo
+|
+|-- config/
+|   |-- loader.py           ConfigLoader — credenciales GCP + fallback local
+|   +-- logger.py           IntegradorLogger — print (dev) / archivo rotativo (staging/prod)
+|
+|-- connection/
+|   |-- base.py             ERPConnector (ABC) — contrato get() + test_connection()
+|   |-- siesa_enterprise.py SIESA WS via SOAP (zeep) — Fenix, Faizan, Surtinegocios, Papis
+|   |-- siesa_connekta.py   SIESA Connekta via REST — Tito Pabon, OIT, R.P. Simon Bolivar
+|   |-- sap.py              SAP B1 via OData — BYCSA, Faber Castell
+|   |-- excel_connector.py  Fallback Excel — cualquier cliente en emergencia
+|   +-- jsonrpc.py          JSON-RPC Odoo — base del core (no hereda ERPConnector)
+|
+|-- transform/
+|   |-- base.py             Transform (ABC) — contrato get_flow()
+|   |-- transform_ws.py     TransformWS — pass-through, SQL ya trae alias canonicos
+|   |-- transform_connekta.py TransformConnekta — mapping + hardcodes + conditionals
+|   |-- transform_sap.py    TransformSAP — prefetch categorias + flatten + mapping
+|   +-- utils/
+|       |-- helpers.py      parse_fecha, clean_string, to_float, to_int, validate_record
+|       +-- determination_functions.py  Catalogo cerrado de 7 funciones de determinacion
+|
+|-- core/
+|   |-- base.py             CoreProcessor (ABC) — contrato process()
+|   |-- process_items.py    Productos — bulk fetch + pre-resolver UOM/categoria/tax/route
+|   |-- process_partners.py Clientes/proveedores — jerarquia sucursal + ranks
+|   |-- process_purchases.py Ordenes de compra — groupby + purchase.order
+|   |-- process_sales.py    Pedidos de venta — groupby + sale.order + zonas
+|   |-- resolve_missing_masters.py  Orquestacion maestros faltantes (entre maestros y transacciones)
+|   +-- utils/
+|       +-- lookups.py      9 funciones de lookup con cache (uom, category, tax, route, etc.)
+|
+|-- db/
+|   |-- schema.sql          DDL PostgreSQL — 5 tablas, triggers, indices, datos iniciales
+|   +-- writer.py           DBWriter — escritura en executions (pendiente Fase 6)
+|
+|-- scheduler/
+|   +-- runner.py            IntegradorScheduler (pendiente Fase 7)
+|
+|-- api/
+|   +-- app.py               API FastAPI (pendiente Fase 8)
+|
+|-- frontend/                React + Vite (pendiente Fase 9-10)
+|
+|-- test/
+|   |-- test_loader.py       15 tests
+|   |-- test_connection.py   77 tests
+|   |-- test_transform.py    140 tests
+|   +-- test_core.py         313 tests
+|
+|-- main.py                  Orquestador del sistema (pendiente Fase 6)
++-- requirements.txt         42 dependencias
 ```
 
 ---
 
-## Patrones de diseño
+## Patrones de diseno
 
-| Patrón | Ubicación | Descripción |
+| Patron | Ubicacion | Descripcion |
 |--------|-----------|-------------|
-| Strategy | `connection/` y `transform/` | Conectores y transforms son intercambiables |
-| Factory | `main.py` y `config/loader.py` | Decide qué instanciar según el tipo de ERP |
-| Template Method | `connection/base.py` y `transform/base.py` | Lógica compartida en la base, detalles en subclases |
-| Singleton | `connection/sap.py` | SessionId se obtiene una vez y se reutiliza |
-| Observer | `scheduler/runner.py` | APScheduler observa el tiempo y notifica |
+| Strategy | `connection/` y `transform/` | Conectores y transforms intercambiables por ERP |
+| Factory | `main.py` | `build_connector()` y `build_transform()` instancian segun `erp_type` |
+| Singleton | `connection/sap.py` | SessionId SAP se obtiene una vez y se reutiliza |
+| Observer | `scheduler/runner.py` | APScheduler notifica cuando ejecutar |
+
+---
+
+## Clientes activos
+
+| Cliente | ERP | Tipo |
+|---------|-----|------|
+| Fenix, Faizan, Surtinegocios, Papis | SIESA WS | `ws` |
+| Tito Pabon, OIT, R.P. Simon Bolivar | SIESA Connekta | `connekta` |
+| BYCSA, Faber Castell | SAP B1 | `sap` |
+
+---
+
+## Base de datos
+
+PostgreSQL 16. 5 tablas:
+
+| Tabla | Proposito |
+|-------|-----------|
+| `users` | Administradores del front (SSO Google Workspace) |
+| `clients` | Empresas clientes (client_id, erp_type) |
+| `flows` | Configuracion de flujos (flow_config JSONB, schedule_cron) |
+| `executions` | Log de cada ejecucion (status, result, errores) |
+| `change_history` | Historico de cambios para rollback |
+
+DDL completo en `db/schema.sql`.
+
+---
+
+## Infraestructura Docker
+
+```
+docker-compose.yml
+|-- postgres              BD compartida
+|-- api                   FastAPI
+|-- frontend              React + Vite
++-- integrador-{cliente}  1 contenedor por cliente (misma imagen, distinto CLIENT_ID)
+```
+
+Todos los datos persistentes viven en el servidor host via volumenes:
+
+| Que | Ruta en el host |
+|-----|-----------------|
+| Datos PostgreSQL | `/var/lib/integrador/postgres` |
+| Logs | `/var/log/integrador/` |
+| GCP key | `/etc/integrador/gcp-key.json` |
+| Credenciales fallback | `/etc/integrador/credentials/` |
+| Excel fallback | `/etc/integrador/excel/` |
 
 ---
 
 ## Variables de entorno
 
-Copia `.env.example` a `.env` y completa los valores:
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `ENV` | Entorno de ejecucion | `dev`, `staging`, `prod` |
+| `CLIENT_ID` | Slug del cliente (contenedores) | `fenix`, `titopabon` |
+| `GCP_PROJECT_ID` | Proyecto de GCP | `hale-treat-398215` |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Ruta a la key de GCP | `/etc/integrador/gcp-key.json` |
+| `DATABASE_URL` | Conexion a PostgreSQL | `postgresql://integrador:pass@postgres:5432/integrador` |
+
+---
+
+## Tests
 
 ```bash
-cp .env.example .env
+pytest test/
 ```
 
-```env
-ENV=staging
-GOOGLE_APPLICATION_CREDENTIALS=/etc/integrador/gcp-key.json
-GCP_PROJECT_ID=hale-treat-398215
-```
+| Archivo | Tests | Estado |
+|---------|-------|--------|
+| `test/test_loader.py` | 15 | Implementado |
+| `test/test_connection.py` | 77 | Implementado |
+| `test/test_transform.py` | 140 | Implementado |
+| `test/test_core.py` | 313 | Implementado |
+| `test/test_main.py` | — | Pendiente Fase 6 |
+| `test/test_scheduler.py` | — | Pendiente Fase 7 |
+| `test/test_api.py` | — | Pendiente Fase 8 |
 
-> En producción, systemd inyecta estas variables — no se necesita `.env`.
-
----
-
-## Ubicación de archivos en el servidor
-
-| Recurso | Ruta |
-|---------|------|
-| Proyecto | `/app/integrador-360/` |
-| Credenciales | `/etc/integrador/credentials/integrador-{client_id}.json` |
-| Logs | `/var/log/integrador/integrador-{client_id}.log` |
-| GCP key | `/etc/integrador/gcp-key.json` |
-| Excel fallback | `/etc/integrador/excel/{client_id}/{client_id}-{proceso}.xlsx` |
-| Entorno | `/app/integrador-360/.env` |
-
----
-
-## Comportamiento por entorno
-
-| `ENV` | Logs |
-|-------|------|
-| `dev` | Consola con `print()` |
-| `staging` | Archivo rotativo en `/var/log/integrador/` |
-| `prod` | Archivo rotativo en `/var/log/integrador/` |
+Total: **545 tests pasando**.
 
 ---
 
 ## Estado del proyecto
 
-| Fase | Módulo | Estado |
+| Fase | Nombre | Estado |
 |------|--------|--------|
-| 0 | Setup inicial | ✅ Completado |
-| 1 | Config Layer GCP | ✅ Completado |
-| 2 | Connection Layer | ✅ Completado y validado en servidor |
-| 3 | Transform Layer | ⬜ Pendiente |
-| 4 | Core Layer | ⬜ Pendiente |
-| 5 | BD del integrador | ⬜ Pendiente |
-| 6 | Config Layer BD | ⬜ Pendiente |
-| 7 | Main | ⬜ Pendiente |
-| 8 | Scheduler | ⬜ Pendiente |
-| 9 | API | ⬜ Pendiente |
-| 10 | Frontend | ⬜ Pendiente |
-| 11 | End-to-end | ⬜ Pendiente |
+| 0 | Setup inicial | Completado |
+| 1 | Config Layer GCP | Completado |
+| 2 | Connection Layer | Completado y validado en servidor |
+| 3 | Transform Layer | Completado — 140 tests |
+| 4 | Core Layer | Completado — 313 tests, 91+ E2E en servidor |
+| 5 | BD + Docker | Completado — schema, servidor GCP, docker-compose |
+| 6 | Conexion BD + Main | En desarrollo |
+| 7 | Scheduler | Pendiente |
+| 8 | API FastAPI | Pendiente |
+| 9-10 | Frontend | Pendiente |
+| Final | Docker + Deploy | Pendiente |
+
+---
+
