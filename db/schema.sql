@@ -10,6 +10,9 @@
 --   flows           — configuracion de flujos (flow_config JSONB)
 --   executions      — log de cada corrida
 --   change_history  — historico de cambios para rollback
+--
+-- Nota: PRIMARY KEY y UNIQUE ya crean indices automaticos.
+-- Solo se crean indices adicionales para queries frecuentes.
 -- ============================================================
 
 -- ============================================================
@@ -26,6 +29,7 @@ CREATE TABLE users (
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+-- Indices automaticos: id (PK), email (UNIQUE)
 
 -- ============================================================
 -- 2. CLIENTS
@@ -41,6 +45,12 @@ CREATE TABLE clients (
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+-- Indices automaticos: id (PK), client_id (UNIQUE)
+
+CREATE INDEX idx_clients_erp_type ON clients (erp_type);
+CREATE INDEX idx_clients_active ON clients (is_active) WHERE is_active = true;
+CREATE INDEX idx_clients_created_by ON clients (created_by);
+CREATE INDEX idx_clients_updated_by ON clients (updated_by);
 
 -- ============================================================
 -- 3. FLOWS
@@ -61,6 +71,12 @@ CREATE TABLE flows (
 
     UNIQUE (client_id, flow_name)
 );
+-- Indices automaticos: id (PK), (client_id, flow_name) (UNIQUE)
+
+CREATE INDEX idx_flows_client_active ON flows (client_id, is_active) WHERE is_active = true;
+CREATE INDEX idx_flows_flow_type ON flows (flow_type);
+CREATE INDEX idx_flows_created_by ON flows (created_by);
+CREATE INDEX idx_flows_updated_by ON flows (updated_by);
 
 -- ============================================================
 -- 4. EXECUTIONS
@@ -78,13 +94,12 @@ CREATE TABLE executions (
                     CHECK (triggered_by IN ('scheduler', 'manual', 'api')),
     triggered_user  INTEGER      REFERENCES users(id)
 );
+-- Indice automatico: id (PK)
 
-CREATE INDEX idx_executions_flow_started
-    ON executions (flow_id, started_at DESC);
-
-CREATE INDEX idx_executions_status
-    ON executions (status)
-    WHERE status IN ('error', 'partial');
+CREATE INDEX idx_executions_flow_started ON executions (flow_id, started_at DESC);
+CREATE INDEX idx_executions_status ON executions (status) WHERE status IN ('error', 'partial');
+CREATE INDEX idx_executions_started ON executions (started_at DESC);
+CREATE INDEX idx_executions_triggered_user ON executions (triggered_user) WHERE triggered_user IS NOT NULL;
 
 -- ============================================================
 -- 5. CHANGE_HISTORY
@@ -100,9 +115,11 @@ CREATE TABLE change_history (
     changed_by      INTEGER      REFERENCES users(id),
     changed_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+-- Indice automatico: id (PK)
 
-CREATE INDEX idx_change_history_record
-    ON change_history (table_name, record_id, changed_at DESC);
+CREATE INDEX idx_change_history_record ON change_history (table_name, record_id, changed_at DESC);
+CREATE INDEX idx_change_history_changed_by ON change_history (changed_by);
+CREATE INDEX idx_change_history_changed_at ON change_history (changed_at DESC);
 
 -- ============================================================
 -- TRIGGER: updated_at automatico
@@ -147,4 +164,4 @@ INSERT INTO clients (client_id, name, erp_type, created_by) VALUES
     ('oit',             'OIT',                  'connekta', 1),
     ('simonbolivar',    'R.P. Simon Bolivar',   'connekta', 1),
     ('bycsa',           'BYCSA',                'sap',      1),
-    ('fabercastell',    'Faber Castell',        'sap',      1);
+    ('fabercastell',    'Faber Castell',         'sap',      1);
