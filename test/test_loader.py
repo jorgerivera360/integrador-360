@@ -220,3 +220,285 @@ def test_load_credentials_mensaje_error_incluye_client_id(tmp_path):
         with pytest.raises(RuntimeError) as exc_info:
             loader.load_credentials()
         assert 'cliente_prueba' in str(exc_info.value)
+
+# ============================================================
+# Tests de BD — _get_db_connection(), constructor y load_db_config()
+# Fase 6
+# ============================================================
+
+# -- _get_db_connection() -- #
+
+def test_get_db_connection_sin_database_url_lanza_runtime_error():
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = None
+        with pytest.raises(RuntimeError, match="DATABASE_URL"):
+            loader._get_db_connection()
+
+
+@patch("config.loader.psycopg2")
+def test_get_db_connection_error_conexion_lanza_operational_error(mock_psycopg2):
+    mock_psycopg2.OperationalError = Exception
+    mock_psycopg2.connect.side_effect = mock_psycopg2.OperationalError("Connection refused")
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        with pytest.raises(Exception, match="Connection refused"):
+            loader._get_db_connection()
+
+
+@patch("config.loader.psycopg2")
+def test_get_db_connection_exitosa_retorna_conexion(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        conn = loader._get_db_connection()
+        assert conn == mock_conn
+        mock_psycopg2.connect.assert_called_once_with("postgresql://test:test@localhost/test")
+
+
+# -- Constructor — database_url -- #
+
+def test_constructor_database_url_desde_env():
+    with patch.dict(os.environ, {
+        "ENV": "dev",
+        "DATABASE_URL": "postgresql://user:pass@host/db"
+    }):
+        loader = ConfigLoader(client_id="fenix")
+        assert loader.database_url == "postgresql://user:pass@host/db"
+
+
+def test_constructor_database_url_none_si_no_existe():
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        assert loader.database_url is None
+
+
+# -- load_db_config() -- #
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_retorna_erp_type_y_flows(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    mock_cur.fetchone.return_value = ("ws",)
+    mock_cur.fetchall.return_value = [
+        (1, "items", "items", {"sql": "SELECT 1"}, "0 */2 * * *")
+    ]
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        result = loader.load_db_config()
+
+    assert result["erp_type"] == "ws"
+    assert len(result["flows"]) == 1
+    assert result["flows"][0]["flow_name"] == "items"
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_cliente_no_encontrado(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    mock_cur.fetchone.return_value = None
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="inexistente")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        result = loader.load_db_config()
+
+    assert result["erp_type"] is None
+    assert result["flows"] == []
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_sin_flows_activos(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    mock_cur.fetchone.return_value = ("ws",)
+    mock_cur.fetchall.return_value = []
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        result = loader.load_db_config()
+
+    assert result["erp_type"] == "ws"
+    assert result["flows"] == []
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_multiples_flows(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    mock_cur.fetchone.return_value = ("connekta",)
+    mock_cur.fetchall.return_value = [
+        (1, "items", "items", {"mapping": {}}, "0 6 * * *"),
+        (2, "partners", "customer", {"mapping": {}}, "5 6 * * *"),
+        (3, "compras", "purchases", {"mapping": {}}, "30 6 * * *"),
+    ]
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="titopabon")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        result = loader.load_db_config()
+
+    assert result["erp_type"] == "connekta"
+    assert len(result["flows"]) == 3
+    assert result["flows"][0]["flow_type"] == "items"
+    assert result["flows"][1]["flow_type"] == "customer"
+    assert result["flows"][2]["flow_type"] == "purchases"
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_columns_correctos(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    mock_cur.fetchone.return_value = ("sap",)
+    mock_cur.fetchall.return_value = [
+        (7, "items", "items", {"endpoint": "Items"}, None)
+    ]
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fabercastell")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        result = loader.load_db_config()
+
+    flow = result["flows"][0]
+    assert "flow_id" in flow
+    assert "flow_name" in flow
+    assert "flow_type" in flow
+    assert "flow_config" in flow
+    assert "schedule_cron" in flow
+    assert flow["flow_id"] == 7
+    assert flow["schedule_cron"] is None
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_flow_config_es_dict(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    flow_config_esperado = {
+        "sql": "SELECT referencia FROM tabla",
+        "uom_mapping": {"UND": "Unidades"}
+    }
+    mock_cur.fetchone.return_value = ("ws",)
+    mock_cur.fetchall.return_value = [
+        (1, "items", "items", flow_config_esperado, "0 */2 * * *")
+    ]
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        result = loader.load_db_config()
+
+    assert result["flows"][0]["flow_config"] == flow_config_esperado
+    assert isinstance(result["flows"][0]["flow_config"], dict)
+
+
+def test_load_db_config_database_url_no_configurada():
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = None
+        result = loader.load_db_config()
+
+    assert result["erp_type"] is None
+    assert result["flows"] == []
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_error_psycopg2(mock_psycopg2):
+    mock_psycopg2.connect.side_effect = Exception("BD caida")
+    mock_psycopg2.Error = Exception
+    mock_psycopg2.OperationalError = Exception
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        result = loader.load_db_config()
+
+    assert result["erp_type"] is None
+    assert result["flows"] == []
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_cierra_conexion_en_exito(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    mock_cur.fetchone.return_value = ("ws",)
+    mock_cur.fetchall.return_value = []
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        loader.load_db_config()
+
+    mock_conn.close.assert_called_once()
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_cierra_conexion_en_error(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    mock_cur.fetchone.side_effect = Exception("query fallo")
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fenix")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        loader.load_db_config()
+
+    mock_conn.close.assert_called_once()
+
+
+@patch("config.loader.psycopg2")
+def test_load_db_config_loguea_error_cliente_no_encontrado(mock_psycopg2):
+    mock_conn = MagicMock()
+    mock_cur = MagicMock()
+    mock_psycopg2.connect.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cur
+    mock_psycopg2.Error = Exception
+
+    mock_cur.fetchone.return_value = None
+
+    with patch.dict(os.environ, {"ENV": "dev"}, clear=True):
+        loader = ConfigLoader(client_id="fantasma")
+        loader.database_url = "postgresql://test:test@localhost/test"
+        with patch.object(loader.logger, "error") as mock_error:
+            loader.load_db_config()
+            mock_error.assert_called_once()
+            assert "fantasma" in mock_error.call_args[0][0]
