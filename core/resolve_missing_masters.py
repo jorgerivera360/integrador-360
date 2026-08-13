@@ -315,11 +315,7 @@ def _build_resolve_filter(flow_config, faltantes, logger=None):
         dynamic_filter = "(" + " or ".join(parts) + ")"
 
         new_config = {**flow_config}
-        base_filter = flow_config.get("filter", "")
-        if base_filter:
-            new_config["filter"] = f"{base_filter} and {dynamic_filter}"
-        else:
-            new_config["filter"] = dynamic_filter
+        new_config["filter"] = dynamic_filter
 
         if logger:
             logger.info(f"Resolve Masters | Filtro OData dinámico: {len(faltantes)} valores")
