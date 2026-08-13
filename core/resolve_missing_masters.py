@@ -299,27 +299,55 @@ def resolve_missing_masters(
 
 def _build_resolve_filter(flow_config, faltantes, logger=None):
     """
-    Si flow_config tiene resolve_filter_field, arma un filtro dinámico
-    con los valores faltantes y lo agrega al filter existente.
-    Retorna el flow_config modificado (copia).
-    Si no tiene resolve_filter_field, retorna el flow_config original sin cambios.
+    Arma un filtro dinámico con los valores faltantes según el tipo de config:
+    - SAP (OData): resolve_filter_field + resolve_filter_template → modifica 'filter'
+    - WS (SQL):    resolve_sql_inject → inyecta cláusula IN en 'sql' antes del ORDER BY
+    - Sin campos:  retorna flow_config sin cambios (Connekta, etc.)
     """
-    resolve_field = flow_config.get("resolve_filter_field")
-    resolve_template = flow_config.get("resolve_filter_template")
-    if not resolve_field or not resolve_template or not faltantes:
+    if not faltantes:
         return flow_config
 
-    parts = [resolve_template.replace("{ref}", str(ref)) for ref in faltantes]
-    dynamic_filter = "(" + " or ".join(parts) + ")"
+    # --- Caso SAP: filtro OData dinámico ---
+    resolve_field = flow_config.get("resolve_filter_field")
+    resolve_template = flow_config.get("resolve_filter_template")
+    if resolve_field and resolve_template:
+        parts = [resolve_template.replace("{ref}", str(ref)) for ref in faltantes]
+        dynamic_filter = "(" + " or ".join(parts) + ")"
 
-    new_config = {**flow_config}
-    base_filter = flow_config.get("filter", "")
-    if base_filter:
-        new_config["filter"] = f"{base_filter} and {dynamic_filter}"
-    else:
-        new_config["filter"] = dynamic_filter
+        new_config = {**flow_config}
+        base_filter = flow_config.get("filter", "")
+        if base_filter:
+            new_config["filter"] = f"{base_filter} and {dynamic_filter}"
+        else:
+            new_config["filter"] = dynamic_filter
 
-    if logger:
-        logger.info(f"Resolve Masters | Filtro dinámico: {len(faltantes)} valores → {dynamic_filter[:100]}...")
+        if logger:
+            logger.info(f"Resolve Masters | Filtro OData dinámico: {len(faltantes)} valores")
+        return new_config
 
-    return new_config
+    # --- Caso WS: inyección SQL dinámica ---
+    resolve_sql = flow_config.get("resolve_sql_inject")
+    if resolve_sql and flow_config.get("sql"):
+        refs_quoted = ",".join(f'"{str(ref)}"' for ref in faltantes)
+        inject_clause = resolve_sql.replace("{refs}", refs_quoted)
+
+        sql = flow_config["sql"]
+        order_idx = sql.upper().rfind("ORDER BY")
+        if order_idx != -1:
+            new_sql = sql[:order_idx] + inject_clause + " " + sql[order_idx:]
+        else:
+            last_semi = sql.rfind(";")
+            if last_semi != -1:
+                new_sql = sql[:last_semi] + " " + inject_clause + sql[last_semi:]
+            else:
+                new_sql = sql + " " + inject_clause
+
+        new_config = {**flow_config}
+        new_config["sql"] = new_sql
+
+        if logger:
+            logger.info(f"Resolve Masters | Filtro SQL dinámico: {len(faltantes)} valores")
+        return new_config
+
+    # --- Sin resolve: retorna sin cambios ---
+    return flow_config
