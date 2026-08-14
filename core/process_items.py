@@ -31,9 +31,9 @@ class ProcessItems(CoreProcessor):
             uom_mapping = self.flow_config.get("uom_mapping", {})
             if uom_mapping:
                 for row in data:
-                    raw = row.get("unidad", "")
-                    if raw:
-                        row["unidad"] = uom_mapping.get(raw, uom_mapping.get(raw.lower(), raw))
+                    raw = row.get("unidad")
+                    raw_str = str(raw) if raw is not None else "None"
+                    row["unidad"] = uom_mapping.get(raw_str, uom_mapping.get(raw_str.lower(), raw_str))
 
             # ---- Fase 2: Bulk fetch existentes (con reintentos) ----
             refs = list({str(row["referencia"]) for row in data if row.get("referencia")})
