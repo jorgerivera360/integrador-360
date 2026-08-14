@@ -49,10 +49,15 @@ class TransformWS(Transform):
 
         try:
             sql = flow_config.get("sql", "")
-            if not sql:
-                self.logger.error(f"No hay SQL configurado para flow '{flow_name}'")
+            endpoint = flow_config.get("endpoint", "")
+
+            if endpoint:
+                status, raw = connector.get(endpoint=endpoint, params={})
+            elif sql:
+                status, raw = connector.get(endpoint="EjecutarConsultaXML", params={"sql": sql})
+            else:
+                self.logger.error(f"No hay SQL ni endpoint configurado para flow '{flow_name}'")
                 return []
-            status, raw = connector.get(endpoint="EjecutarConsultaXML", params={"sql": sql})
             if not status:
                 self.logger.error(f"Error obteniendo datos para '{flow_name}': {raw}")
                 return []
