@@ -1,14 +1,14 @@
 """
 IntegradorScheduler — Scheduler del sistema
 Responsabilidades:
-  - __init__()          — carga config GCP, flows BD, inicializa APScheduler
-  - _reload_flow()      — re-lee un flow de BD (config fresco + is_active)
-  - _load_flow_configs() — lee flow_configs de maestros para resolve
-  - _run_flow()         — verifica is_active, ejecuta main.run()
-  - _run_with_retry()   — backoff exponencial (3 intentos: 30s, 60s, 120s)
-  - _arranque_ordenado() — maestros primero (items → customer → supplier), luego transacciones
-  - _register_flows()   — registra crons en APScheduler
-  - start()             — arranque ordenado → register → loop infinito
+- __init__()           — carga config GCP, flows BD, inicializa APScheduler
+- _reload_flow()       — re-lee un flow de BD (config fresco + is_active)
+- _load_flow_configs() — lee flow_configs de maestros para resolve
+- _run_flow()          — verifica is_active, ejecuta main.run()
+- _run_with_retry()    — backoff exponencial (3 intentos: 30s, 60s, 120s)
+- _arranque_ordenado() — ejecuta todos los flows en orden de execution_order
+- _register_flows()    — registra crons en APScheduler
+- start()              — arranque ordenado → register → loop infinito
 Patrones: Observer · BlockingScheduler
 Librería: APScheduler · ThreadPoolExecutor
 Fase: 7 — Scheduler
@@ -67,7 +67,7 @@ class IntegradorScheduler:
 
         # APScheduler
         self.scheduler = BlockingScheduler(
-            executors={"default": ThreadPoolExecutor(max_workers=5)},
+            executors={"default": ThreadPoolExecutor(max_workers=6)},
             job_defaults={"max_instances": 1, "coalesce": True}
         )
 
@@ -184,23 +184,13 @@ class IntegradorScheduler:
                 time.sleep(delay)
 
     def _arranque_ordenado(self):
-        """Ejecuta maestros en orden (items → customer → supplier), luego transacciones."""
-        orden = {"items": 0, "customer": 1, "supplier": 2}
-        maestros = sorted(
-            [f for f in self.flows if f["flow_type"] in orden],
-            key=lambda f: orden[f["flow_type"]]
-        )
-        transacciones = [f for f in self.flows if f["flow_type"] not in orden]
-
+        """Ejecuta todos los flows en orden de execution_order.
+        self.flows ya viene ordenado por execution_order desde load_db_config()."""
         self.logger.info(
-            f"Scheduler | Arranque ordenado: {len(maestros)} maestros, "
-            f"{len(transacciones)} transacciones"
+            f"Scheduler | Arranque ordenado: {len(self.flows)} flows"
         )
 
-        for flow in maestros:
-            self._run_with_retry(flow)
-
-        for flow in transacciones:
+        for flow in self.flows:
             self._run_with_retry(flow)
 
         self.logger.info("Scheduler | Arranque ordenado completado")
