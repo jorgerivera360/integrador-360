@@ -13,23 +13,11 @@ from core.process_items import ProcessItems
 from core.process_partners import ProcessPartners
 
 
+BATCH_SIZE = 30
 
-def resolve_missing_masters(
-    odoo, connector, transform,
-    data_purchases, data_sales,
-    flow_configs, config, logger
-):
-    """
-    Identifica maestros faltantes en Odoo y los crea consultando al ERP.
 
-    flow_configs: {
-        "items": flow_config para productos,
-        "customer": flow_config para clientes,
-        "supplier": flow_config para proveedores
-    }
+def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sales, flow_configs, config, logger):
 
-    Retorna dict con resumen de lo resuelto.
-    """
     resumen = {
         "productos_faltantes": 0,
         "productos_resueltos": 0,
@@ -41,7 +29,7 @@ def resolve_missing_masters(
     }
 
     try:
-        # ---- Fase 1: Extraer dependencias únicas de las transacciones ----
+        # Fase 1: Extraer dependencias únicas de las transacciones
         productos_refs = set()
         proveedores_keys = set()
         clientes_keys = set()
@@ -67,7 +55,7 @@ def resolve_missing_masters(
             f"{len(proveedores_keys)} proveedores, {len(clientes_keys)} clientes"
         )
 
-        # ---- Fase 2: Verificar cuáles existen en Odoo ----
+        # Fase 2: Verificar cuáles existen en Odoo
         productos_faltantes = set()
         if productos_refs:
             ok, result = odoo.search_read(
@@ -122,27 +110,26 @@ def resolve_missing_masters(
             f"{len(proveedores_faltantes)} proveedores, {len(clientes_faltantes)} clientes"
         )
 
-        # ---- Fase 3: Consultar al ERP y crear faltantes ----
+        # Fase 3: Consultar al ERP y crear faltantes
 
-        # --- Productos faltantes ---
+        # Productos faltantes
         if productos_faltantes and flow_configs.get("items"):
             try:
                 logger.info(f"Resolve Masters | Consultando ERP por {len(productos_faltantes)} productos faltantes")
-                items_flow_config = _build_resolve_filter(
-                    flow_configs["items"], productos_faltantes, logger=logger
+                all_items = _query_erp_batched(
+                    transform, connector, "items",
+                    flow_configs["items"], productos_faltantes, logger
                 )
-                all_items = transform.get_flow(connector, "items", items_flow_config)
 
                 if all_items:
                     missing_data = [
-                        row for row in all_items
-                        if str(row.get("referencia", "")) in productos_faltantes
+                        row for row in all_items if str(row.get("referencia", "")) in productos_faltantes
                     ]
                     if missing_data:
                         logger.info(
                             f"Resolve Masters | {len(missing_data)} productos encontrados en ERP, creando en Odoo"
                         )
-                        processor = ProcessItems(odoo, config, items_flow_config)
+                        processor = ProcessItems(odoo, config, flow_configs["items"])
                         result = processor.process(missing_data)
                         resumen["productos_resueltos"] = result.get("creados", 0)
 
@@ -170,16 +157,16 @@ def resolve_missing_masters(
             except Exception as e:
                 logger.error(f"Resolve Masters | Error resolviendo productos: {e}")
 
-        # --- Proveedores faltantes ---
+        # Proveedores faltantes
         if proveedores_faltantes and flow_configs.get("supplier"):
             try:
                 logger.info(
                     f"Resolve Masters | Consultando ERP por {len(proveedores_faltantes)} proveedores faltantes"
                 )
-                supplier_flow_config = _build_resolve_filter(
-                    flow_configs["supplier"], {vat for vat, suc in proveedores_faltantes}, logger=logger
+                all_suppliers = _query_erp_batched(
+                    transform, connector, "partners",
+                    flow_configs["supplier"], {vat for vat, suc in proveedores_faltantes}, logger
                 )
-                all_suppliers = transform.get_flow(connector, "partners", supplier_flow_config)
 
                 if all_suppliers:
                     vats_faltantes = {vat for vat, suc in proveedores_faltantes}
@@ -191,7 +178,7 @@ def resolve_missing_masters(
                         logger.info(
                             f"Resolve Masters | {len(missing_data)} proveedores encontrados en ERP, creando en Odoo"
                         )
-                        processor = ProcessPartners(odoo, config, supplier_flow_config)
+                        processor = ProcessPartners(odoo, config, flow_configs["supplier"])
                         result = processor.process(missing_data)
                         resumen["proveedores_resueltos"] = result.get("creados", 0)
 
@@ -220,16 +207,16 @@ def resolve_missing_masters(
             except Exception as e:
                 logger.error(f"Resolve Masters | Error resolviendo proveedores: {e}")
 
-        # --- Clientes faltantes ---
+        # Clientes faltantes
         if clientes_faltantes and flow_configs.get("customer"):
             try:
                 logger.info(
                     f"Resolve Masters | Consultando ERP por {len(clientes_faltantes)} clientes faltantes"
                 )
-                customer_flow_config = _build_resolve_filter(
-                    flow_configs["customer"], {vat for vat, suc in clientes_faltantes}, logger=logger
+                all_customers = _query_erp_batched(
+                    transform, connector, "partners",
+                    flow_configs["customer"], {vat for vat, suc in clientes_faltantes}, logger
                 )
-                all_customers = transform.get_flow(connector, "partners", customer_flow_config)
 
                 if all_customers:
                     vats_faltantes = {vat for vat, suc in clientes_faltantes}
@@ -241,7 +228,7 @@ def resolve_missing_masters(
                         logger.info(
                             f"Resolve Masters | {len(missing_data)} clientes encontrados en ERP, creando en Odoo"
                         )
-                        processor = ProcessPartners(odoo, config, customer_flow_config)
+                        processor = ProcessPartners(odoo, config, flow_configs["customer"])
                         result = processor.process(missing_data)
                         resumen["clientes_resueltos"] = result.get("creados", 0)
 
@@ -270,7 +257,7 @@ def resolve_missing_masters(
             except Exception as e:
                 logger.error(f"Resolve Masters | Error resolviendo clientes: {e}")
 
-        # ---- Fase 4: Resumen ----
+        # Fase 4: Resumen
         logger.info(
             f"Resolve Masters | Resultado: "
             f"{resumen['productos_resueltos']}/{resumen['productos_faltantes']} productos, "
@@ -297,17 +284,44 @@ def resolve_missing_masters(
         resumen["error"] = str(e)
         return resumen
 
+
+def _query_erp_batched(transform, connector, flow_name, flow_config, faltantes, logger):
+
+    needs_batching = (
+        flow_config.get("resolve_filter_field")
+        and len(faltantes) > BATCH_SIZE
+    )
+
+    if not needs_batching:
+        resolved_config = _build_resolve_filter(flow_config, faltantes, logger=logger)
+        return transform.get_flow(connector, flow_name, resolved_config)
+
+    faltantes_list = list(faltantes)
+    all_results = []
+    total_batches = (len(faltantes_list) + BATCH_SIZE - 1) // BATCH_SIZE
+
+    for i in range(0, len(faltantes_list), BATCH_SIZE):
+        batch = set(faltantes_list[i:i + BATCH_SIZE])
+        batch_num = (i // BATCH_SIZE) + 1
+        logger.info(
+            f"Resolve Masters | Batch {batch_num}/{total_batches}: {len(batch)} valores"
+        )
+
+        resolved_config = _build_resolve_filter(flow_config, batch, logger=logger)
+        batch_results = transform.get_flow(connector, flow_name, resolved_config)
+
+        if batch_results:
+            all_results.extend(batch_results)
+
+    return all_results if all_results else []
+
+
 def _build_resolve_filter(flow_config, faltantes, logger=None):
-    """
-    Arma un filtro dinámico con los valores faltantes según el tipo de config:
-    - SAP (OData): resolve_filter_field + resolve_filter_template → modifica 'filter'
-    - WS (SQL):    resolve_sql_inject → inyecta cláusula IN en 'sql' antes del ORDER BY
-    - Sin campos:  retorna flow_config sin cambios (Connekta, etc.)
-    """
+
     if not faltantes:
         return flow_config
 
-    # --- Caso SAP: filtro OData dinámico ---
+    # Caso SAP: filtro OData dinámico
     resolve_field = flow_config.get("resolve_filter_field")
     resolve_template = flow_config.get("resolve_filter_template")
     if resolve_field and resolve_template:
@@ -321,7 +335,7 @@ def _build_resolve_filter(flow_config, faltantes, logger=None):
             logger.info(f"Resolve Masters | Filtro OData dinámico: {len(faltantes)} valores")
         return new_config
 
-    # --- Caso WS: inyección SQL dinámica ---
+    # Caso WS: inyección SQL dinámica
     resolve_sql = flow_config.get("resolve_sql_inject")
     if resolve_sql and flow_config.get("sql"):
         refs_quoted = ",".join(f'"{str(ref)}"' for ref in faltantes)
@@ -345,5 +359,5 @@ def _build_resolve_filter(flow_config, faltantes, logger=None):
             logger.info(f"Resolve Masters | Filtro SQL dinámico: {len(faltantes)} valores")
         return new_config
 
-    # --- Sin resolve: retorna sin cambios ---
+    # Sin resolve: retorna sin cambios
     return flow_config
