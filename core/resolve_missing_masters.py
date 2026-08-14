@@ -78,8 +78,8 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
                 ["vat", "sucursal"]
             )
             if ok:
-                existentes = {(p["vat"], p.get("sucursal", "")) for p in (result or [])}
-                proveedores_faltantes = proveedores_keys - existentes
+                existentes_vats = {p["vat"] for p in (result or [])}
+                proveedores_faltantes = {(vat, suc) for vat, suc in proveedores_keys if vat not in existentes_vats}
             else:
                 logger.error(f"Resolve Masters | Error verificando proveedores: {result}")
 
@@ -92,8 +92,8 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
                 ["vat", "sucursal"]
             )
             if ok:
-                existentes = {(p["vat"], p.get("sucursal", "")) for p in (result or [])}
-                clientes_faltantes = clientes_keys - existentes
+                existentes_vats = {p["vat"] for p in (result or [])}
+                clientes_faltantes = {(vat, suc) for vat, suc in clientes_keys if vat not in existentes_vats}
             else:
                 logger.error(f"Resolve Masters | Error verificando clientes: {result}")
 
