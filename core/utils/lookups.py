@@ -7,7 +7,6 @@ Fase: 4 — Core Layer
 
 
 def lookup_uom(odoo, name, cache=None, logger=None):
-    """Busca UOM por nombre, crea si no existe. Retorna id o None."""
     if not name:
         return None
     if cache is not None and name in cache:
@@ -37,12 +36,7 @@ def lookup_uom(odoo, name, cache=None, logger=None):
     return uom_id
 
 def lookup_category(odoo, name, parent_id=None, cache=None, logger=None):
-    """
-    Busca categoría por nombre, crea si no existe. Retorna id o None.
-    parent_id=None  → sin filtro de padre (1 nivel)
-    parent_id=False → solo raíz (2 niveles, buscar padre)
-    parent_id=<int> → hijo de esa categoría (2 niveles, buscar marca)
-    """
+
     if not name:
         return None
     key = (name, parent_id)
@@ -78,8 +72,6 @@ def lookup_category(odoo, name, parent_id=None, cache=None, logger=None):
     return categ_id
 
 def lookup_state(odoo, name, country_id=49, cache=None, logger=None):
-    """Busca departamento por nombre, crea si no existe. Retorna id o None.
-    country_id=49 → Colombia (default todos los clientes actuales)."""
     if not name:
         return None
     if cache is not None and name in cache:
@@ -110,7 +102,6 @@ def lookup_state(odoo, name, country_id=49, cache=None, logger=None):
     return state_id
 
 def lookup_zone(odoo, name, cache=None, logger=None):
-    """Busca zona de entrega por nombre, crea si no existe. Retorna id o None."""
     if not name:
         return None
     if cache is not None and name in cache:
@@ -139,7 +130,6 @@ def lookup_zone(odoo, name, cache=None, logger=None):
 
 
 def lookup_tax(odoo, amount, type_use, cache=None, logger=None):
-    """Busca impuesto por amount + type_tax_use. No crea. Retorna id o None."""
     try:
         amount = float(amount)
     except (TypeError, ValueError):
@@ -166,7 +156,6 @@ def lookup_tax(odoo, amount, type_use, cache=None, logger=None):
     return tax_id
 
 def lookup_route(odoo, name, cache=None, logger=None):
-    """Busca ruta por nombre exacto. No crea. Retorna id o None."""
     if not name:
         return None
     if cache is not None and name in cache:
@@ -188,7 +177,6 @@ def lookup_route(odoo, name, cache=None, logger=None):
 
 
 def lookup_product(odoo, default_code, cache=None, logger=None):
-    """Busca producto por default_code. Retorna dict {id, uom_id} o None."""
     if not default_code:
         return None
     if cache is not None and default_code in cache:
@@ -215,18 +203,27 @@ def lookup_product(odoo, default_code, cache=None, logger=None):
 
 
 def lookup_partner(odoo, vat, sucursal, cache=None, logger=None):
-    """Busca partner por vat + sucursal. Retorna dict {id, customer_rank, supplier_rank} o None."""
     if not vat:
         return None
     key = (vat, sucursal or "")
     if cache is not None and key in cache:
         return cache[key]
 
+    # Intento 1: buscar por vat + sucursal exacta
     ok, result = odoo.search_read(
         "res.partner",
         [["vat", "=", vat], ["sucursal", "=", sucursal or ""]],
         ["id", "customer_rank", "supplier_rank"], limit=1
     )
+
+    # Intento 2: fallback solo por vat si no se encontró por sucursal
+    if ok and not result:
+        ok, result = odoo.search_read(
+            "res.partner",
+            [["vat", "=", vat]],
+            ["id", "customer_rank", "supplier_rank"], limit=1
+        )
+
     if not ok:
         if logger:
             logger.error(f"lookup_partner: error buscando vat={vat} suc={sucursal}: {result}")
@@ -240,7 +237,6 @@ def lookup_partner(odoo, vat, sucursal, cache=None, logger=None):
 
 
 def resolve_warehouse(bodega_erp, warehouse_mapping, logger=None):
-    """Resuelve bodega ERP → ID almacén Odoo via dict de flow_config. Retorna id o None."""
     if not warehouse_mapping or not bodega_erp:
         return None
 
