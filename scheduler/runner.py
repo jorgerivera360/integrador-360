@@ -108,7 +108,12 @@ class IntegradorScheduler:
                 AND flow_type IN ('items', 'customer', 'supplier')
                 AND is_active = true
             """, (self.client_id,))
-            flow_configs = {row[0]: row[1] for row in cur.fetchall()}
+            flow_configs = {}
+            for row in cur.fetchall():
+                flow_type, flow_config = row
+                if flow_type not in flow_configs:
+                    flow_configs[flow_type] = []
+                flow_configs[flow_type].append(flow_config)
             cur.close()
             conn.close()
             return flow_configs
