@@ -96,7 +96,7 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
         transform = build_transform(erp_type, config)
 
         # 2. Obtener datos del ERP
-        data = transform.get_flow(connector, flow_name, flow_config)
+        data = transform.get_flow(connector, flow_name, flow_type, flow_config)
 
         if not data:
             logger.info(f"Main | Flow '{flow_name}' no retornó datos")
