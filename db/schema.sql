@@ -61,13 +61,14 @@ CREATE TABLE flows (
     flow_name     VARCHAR(50)  NOT NULL,
     flow_type     VARCHAR(20)  NOT NULL
                   CHECK (flow_type IN ('items', 'customer', 'supplier', 'purchases', 'sales')),
-    flow_config   JSONB        NOT NULL DEFAULT '{}',
-    schedule_cron VARCHAR(50),
-    is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_by    INTEGER      REFERENCES users(id),
-    updated_by    INTEGER      REFERENCES users(id),
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    flow_config      JSONB        NOT NULL DEFAULT '{}',
+    schedule_cron    VARCHAR(50),
+    is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
+    execution_order  INTEGER      NOT NULL DEFAULT 99,
+    created_by       INTEGER      REFERENCES users(id),
+    updated_by       INTEGER      REFERENCES users(id),
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
     UNIQUE (client_id, flow_name)
 );
