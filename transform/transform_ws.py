@@ -17,34 +17,18 @@ class TransformWS(Transform):
         self.client_id = config["client_id"]
         self.logger    = IntegradorLogger(client_id=self.client_id)
 
-    def get_flow(self, connector, flow_name: str, flow_config: dict) -> list:
+    def get_flow(self, connector, flow_name: str, flow_type: str, flow_config: dict) -> list:
         normalize_map = {
-            # Maestros
             "items": self._normalize_items,
-            "partners": self._normalize_partners,
-            # Transacciones entrada
-            "compras": self._normalize_purchases,
-            "compras_importacion": self._normalize_purchases,
-            "transferencia_entrada": self._normalize_purchases,
-            "traslados_entrada": self._normalize_purchases,
-            "entrada_mercancia": self._normalize_purchases,
-            "entrada_directa": self._normalize_purchases,
-            "devolucion_in": self._normalize_purchases,
-            "nota_credito": self._normalize_purchases,
-            # Transacciones salida
-            "ventas": self._normalize_sales,
-            "facturas": self._normalize_sales,
-            "transferencia_salida": self._normalize_sales,
-            "transferencia_interna": self._normalize_sales,
-            "salida_mercancia": self._normalize_sales,
-            "salida_directa": self._normalize_sales,
-            "devolucion_out": self._normalize_sales,
-            "requisiciones": self._normalize_sales,
+            "customer": self._normalize_partners,
+            "supplier": self._normalize_partners,
+            "purchases": self._normalize_purchases,
+            "sales": self._normalize_sales,
         }
 
-        normalize_fn = normalize_map.get(flow_name)
+        normalize_fn = normalize_map.get(flow_type)
         if not normalize_fn:
-            self.logger.error(f"Flujo no soportado en TransformWS: '{flow_name}'")
+            self.logger.error(f"flow_type no soportado en TransformWS: '{flow_type}'")
             return []
 
         try:

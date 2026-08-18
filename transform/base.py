@@ -7,6 +7,6 @@ from abc import ABC, abstractmethod
 
 class Transform(ABC):
     @abstractmethod
-    def get_flow(self, connector, flow_name: str, flow_config: dict) -> list:
+    def get_flow(self, connector, flow_name: str, flow_type: str, flow_config: dict) -> list:
         """Orquesta el flujo completo: llama al conector, normaliza y retorna lista de dicts listos para el core"""
         pass

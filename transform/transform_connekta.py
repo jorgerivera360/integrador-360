@@ -19,36 +19,18 @@ class TransformConnekta(Transform):
         self.client_id = config["client_id"]
         self.logger = IntegradorLogger(client_id=self.client_id)
 
-    def get_flow(self, connector, flow_name: str, flow_config: dict) -> list:
+    def get_flow(self, connector, flow_name: str, flow_type: str, flow_config: dict) -> list:
         normalize_map = {
-          # Maestros
-          "items": self._normalize_items,
-          "partners": self._normalize_partners,
-          #Transacciones entrada
-          "compras": self._normalize_purchases,
-          "devoluciones_cliente": self._normalize_purchases,
-          "entrada_calidad_recepcion": self._normalize_purchases,
-          "traslados_entradas": self._normalize_purchases,
-          "entrada_inventario_oc": self._normalize_purchases,
-          "entrada_ensamble": self._normalize_purchases,
-          "entrada_desensamble": self._normalize_purchases,
-          "traslados_transito_entrada": self._normalize_purchases,
-          # Transacciones salidas
-          "ventas": self._normalize_sales,
-          "devoluciones_proveedores": self._normalize_sales,
-          "traslados_salidas": self._normalize_sales,
-          "traslados_preproduccion": self._normalize_sales,
-          "salidas_ensamble": self._normalize_sales,
-          "salida_desensamble": self._normalize_sales,
-          "salidas_consumo_interno": self._normalize_sales,
-          "salida_requisiciones": self._normalize_sales,
-          "traslados_transito_salida": self._normalize_sales,
-          "facturas": self._normalize_sales,
+            "items": self._normalize_items,
+            "customer": self._normalize_partners,
+            "supplier": self._normalize_partners,
+            "purchases": self._normalize_purchases,
+            "sales": self._normalize_sales,
         }
 
-        normalize_fn = normalize_map.get(flow_name)
+        normalize_fn = normalize_map.get(flow_type)
         if not normalize_fn:
-            self.logger.error(f"Flujo no soportado en TransformConnekta: '{flow_name}' ")
+            self.logger.error(f"flow_type no soportado en TransformConnekta: '{flow_type}'")
             return []
 
         try:
