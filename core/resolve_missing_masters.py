@@ -129,7 +129,7 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
                         logger.info(f"Resolve Masters | Items config {cfg_idx + 1}/{len(items_configs)}")
 
                     all_items = _query_erp_batched(
-                        transform, connector, "items",
+                        transform, connector, "items", "items",
                         item_cfg, productos_faltantes, logger
                     )
 
@@ -176,7 +176,7 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
                         logger.info(f"Resolve Masters | Supplier config {cfg_idx + 1}/{len(supplier_configs)}")
 
                     all_suppliers = _query_erp_batched(
-                        transform, connector, "partners",
+                        transform, connector, "partners", "supplier",
                         sup_cfg, {vat for vat, suc in proveedores_faltantes}, logger
                     )
 
@@ -226,7 +226,7 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
                         logger.info(f"Resolve Masters | Customer config {cfg_idx + 1}/{len(customer_configs)}")
 
                     all_customers = _query_erp_batched(
-                        transform, connector, "partners",
+                        transform, connector, "partners", "customer",
                         cust_cfg, {vat for vat, suc in clientes_faltantes}, logger
                     )
 
@@ -285,7 +285,7 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
         return resumen
 
 
-def _query_erp_batched(transform, connector, flow_name, flow_config, faltantes, logger):
+def _query_erp_batched(transform, connector, flow_name, flow_type, flow_config, faltantes, logger):
 
     needs_batching = (
         flow_config.get("resolve_filter_field")
@@ -294,7 +294,7 @@ def _query_erp_batched(transform, connector, flow_name, flow_config, faltantes, 
 
     if not needs_batching:
         resolved_config = _build_resolve_filter(flow_config, faltantes, logger=logger)
-        return transform.get_flow(connector, flow_name, resolved_config)
+        return transform.get_flow(connector, flow_name, flow_type, resolved_config)
 
     faltantes_list = list(faltantes)
     all_results = []
@@ -308,7 +308,7 @@ def _query_erp_batched(transform, connector, flow_name, flow_config, faltantes, 
         )
 
         resolved_config = _build_resolve_filter(flow_config, batch, logger=logger)
-        batch_results = transform.get_flow(connector, flow_name, resolved_config)
+        batch_results = transform.get_flow(connector, flow_name, flow_type, resolved_config)
 
         if batch_results:
             all_results.extend(batch_results)
