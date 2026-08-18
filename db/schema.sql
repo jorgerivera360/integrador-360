@@ -70,7 +70,7 @@ CREATE TABLE flows (
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
 
-    UNIQUE (client_id, flow_name)
+    UNIQUE (client_id, flow_name, flow_type)
 );
 -- Indices automaticos: id (PK), (client_id, flow_name) (UNIQUE)
 
