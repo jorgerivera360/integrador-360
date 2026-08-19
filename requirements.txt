@@ -41,3 +41,7 @@ typing_extensions==4.16.0
 tzdata==2026.3
 urllib3==2.7.0
 zeep==4.3.3
+fastapi==0.115.12
+uvicorn==0.34.3
+python-jose==3.5.0
+pydantic[email]==2.11.7
