@@ -36,6 +36,7 @@ def test_erp_connection(
                 "success": False,
                 "msg": "No se pudieron cargar las credenciales de GCP"
             }
+        config["client_id"] = client["client_id"]
 
         # Instanciar conector y probar
         connector = build_connector(client["erp_type"], config)
@@ -86,6 +87,7 @@ def test_odoo_connection(
                 "success": False,
                 "msg": "No se pudieron cargar las credenciales de GCP"
             }
+        config["client_id"] = client["client_id"]
 
         # Instanciar JsonRPC y probar
         odoo = JsonRPC(config)
