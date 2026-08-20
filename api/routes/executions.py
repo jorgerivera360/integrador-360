@@ -141,6 +141,7 @@ def _execute_flow_background(client_slug, flow_id, user_id):
     try:
         loader = ConfigLoader(client_id=client_slug)
         config = loader.load_config()
+        config["client_id"] = client_slug
         db_config = loader.load_db_config()
         erp_type = db_config["erp_type"]
 
