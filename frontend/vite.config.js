@@ -13,7 +13,7 @@ server: {
     port: 5173,
     proxy: {
     '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://35.239.61.102:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
     },
