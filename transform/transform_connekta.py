@@ -11,7 +11,7 @@ Fase: 3 — Transform Layer
 from config.logger import IntegradorLogger
 from transform.base import Transform
 from transform.utils.determination_functions import get_determination_function
-from transform.utils.helpers import (clean_row, validate_record, to_float, to_int, parse_fecha)
+from transform.utils.helpers import (clean_row, validate_record, to_float, to_int, parse_fecha, resolve_parametros)
 
 
 class TransformConnekta(Transform):
@@ -47,6 +47,7 @@ class TransformConnekta(Transform):
                 "no_paginar": not paginacion,
             }
             if parametros:
+                parametros = resolve_parametros(parametros, logger=self.logger)
                 params["parametros"] = parametros
 
             status, raw = connector.get(endpoint=query_desc, params=params)

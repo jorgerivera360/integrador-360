@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from typing import Optional, Tuple
+import calendar
 
 
 def parse_fecha(fecha_str: str, formato: str = "%Y%m%d", logger=None) -> str:
@@ -302,3 +303,54 @@ def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str
                 )
             return False, f"cantidad_pedida no numérica: {cantidad}"
     return True, ""
+
+def resolve_parametros(parametros_str, logger=None):
+    if not parametros_str or "{" not in parametros_str:
+        return parametros_str
+
+    from datetime import timedelta
+
+    hoy = datetime.now()
+
+    def _resolver_placeholder(match):
+        placeholder = match.group(1)
+
+        if placeholder == "hoy":
+            return hoy.strftime("%Y%m%d")
+        if placeholder.startswith("hoy-"):
+            dias = int(placeholder.split("-")[1])
+            return (hoy - timedelta(days=dias)).strftime("%Y%m%d")
+        if placeholder.startswith("hoy+"):
+            dias = int(placeholder.split("+")[1])
+            return (hoy + timedelta(days=dias)).strftime("%Y%m%d")
+
+        if placeholder == "inicio_mes":
+            return hoy.replace(day=1).strftime("%Y%m%d")
+        if placeholder.startswith("inicio_mes-"):
+            n = int(placeholder.split("-")[1])
+            mes = hoy.month - n
+            anio = hoy.year
+            while mes <= 0:
+                mes += 12
+                anio -= 1
+            return datetime(anio, mes, 1).strftime("%Y%m%d")
+
+        if placeholder == "fin_mes":
+            ultimo_dia = calendar.monthrange(hoy.year, hoy.month)[1]
+            return hoy.replace(day=ultimo_dia).strftime("%Y%m%d")
+        if placeholder.startswith("fin_mes-"):
+            n = int(placeholder.split("-")[1])
+            mes = hoy.month - n
+            anio = hoy.year
+            while mes <= 0:
+                mes += 12
+                anio -= 1
+            ultimo_dia = calendar.monthrange(anio, mes)[1]
+            return datetime(anio, mes, ultimo_dia).strftime("%Y%m%d")
+
+        if logger:
+            logger.warning(f"Placeholder no reconocido: {{{placeholder}}}")
+        return match.group(0)
+
+    resultado = re.sub(r"\{([^}]+)\}", _resolver_placeholder, parametros_str)
+    return resultado
