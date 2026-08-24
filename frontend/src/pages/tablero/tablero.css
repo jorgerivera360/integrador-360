@@ -1,0 +1,173 @@
+/** Estilos del tablero — tomados del mockup tablero.html */
+
+.tablero {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.tablero__grid-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.tablero__grid-mini {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.tarjeta {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 21, 41, 0.06);
+}
+
+/* Aclara que los contadores en cero son ausencia de datos, no una falla. */
+.tablero__sin-datos {
+    margin: -4px 2px 0;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Tarjeta de estadística ---------- */
+
+.stat {
+    padding: 20px 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.stat__icono {
+    flex: 0 0 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat__icono--azul { background: #e6f7ff; }
+.stat__icono--indigo { background: #f0f5ff; }
+.stat__icono--morado { background: #f9f0ff; }
+.stat__icono--verde { background: #f6ffed; }
+
+.stat__etiqueta {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.45);
+    margin-bottom: 4px;
+}
+
+.stat__valor {
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat__valor--verde { color: #389e0d; }
+
+/* ---------- Mini contador ---------- */
+
+.mini {
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mini__punto {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.mini__punto--verde { background: #52c41a; }
+.mini__punto--naranja { background: #fa8c16; }
+.mini__punto--rojo { background: #f5222d; }
+
+.mini__punto--azul {
+    background: #1890ff;
+    animation: pulsoAzul 1.6s ease-in-out infinite;
+}
+
+.mini__etiqueta {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.mini__valor {
+    margin-left: auto;
+    font-size: 18px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulsoAzul {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.35);
+    }
+    50% {
+        opacity: 0.55;
+        box-shadow: 0 0 0 6px rgba(24, 144, 255, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mini__punto--azul { animation: none; }
+}
+
+/* ---------- Panel con tabla ---------- */
+
+.panel-tabla {
+    overflow: hidden;
+}
+
+.panel-tabla__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.panel-tabla__titulo {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.panel-tabla__filtros {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.panel-tabla__conteo {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.45);
+    white-space: nowrap;
+}
+
+/* La tabla ya trae el borde del panel; quitamos el suyo. */
+.panel-tabla .ant-table-wrapper .ant-table {
+    border-radius: 0;
+}
+
+.panel-tabla .ant-table-thead > tr > th {
+    background: #fafafa;
+    font-weight: 500;
+}
+
+.panel-tabla .celda-num {
+    font-variant-numeric: tabular-nums;
+}

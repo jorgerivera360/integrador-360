@@ -1,0 +1,250 @@
+/**
+ * Estilos de Clientes — tomados del mockup clientes.html
+ * La cabecera de página, la tarjeta y las celdas viven en styles/pagina.css.
+ */
+
+/* ---------- Cabecera del detalle ---------- */
+
+.cliente-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.cliente-head__linea {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.cliente-head__nombre {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: -0.02em;
+}
+
+.cliente-head__meta {
+    margin: 0;
+    font-size: 13.5px;
+    color: #8b93a1;
+}
+
+/* ---------- Filtros ---------- */
+
+.clientes-filtros {
+    margin-bottom: 16px;
+    row-gap: 8px;
+}
+
+.clientes-filtros__buscador {
+    width: 300px;
+    max-width: 100%;
+}
+
+.clientes-filtros__select {
+    min-width: 190px;
+}
+
+.clientes-filtros__select--corto {
+    min-width: 140px;
+}
+
+/* ---------- Secciones del formulario ---------- */
+
+.seccion {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 21, 41, 0.06);
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.seccion__titulo {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.seccion__sub {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #8b93a1;
+    line-height: 1.55;
+    max-width: 720px;
+}
+
+.seccion__linea {
+    border-bottom: 1px solid #f0f0f0;
+    margin: 16px 0 24px;
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+.columna {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Etiquetas de campo con el ícono de ayuda al lado */
+.campo-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #434343;
+}
+
+.campo-mono input,
+.campo-mono .ant-input {
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 13px;
+}
+
+.campo-ancho {
+    max-width: 320px;
+}
+
+/* ---------- Test de conexiones ---------- */
+
+.test {
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 22px;
+}
+
+.test__icono {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.test__icono--azul { background: #e6f4ff; }
+.test__icono--verde { background: #f6ffed; }
+
+.test__titulo {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+}
+
+.test__sub {
+    margin: 0 0 18px;
+    font-size: 13px;
+    color: #8b93a1;
+    line-height: 1.5;
+}
+
+.resultado {
+    margin-top: 18px;
+    border-radius: 8px;
+    overflow: hidden;
+    animation: resultadoEntrar 0.25s ease both;
+}
+
+.resultado--ok { border: 1px solid #b7eb8f; }
+.resultado--error { border: 1px solid #ffccc7; }
+
+.resultado__head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.resultado--ok .resultado__head { background: #f6ffed; color: #237804; }
+.resultado--error .resultado__head { background: #fff2f0; color: #a8071a; }
+
+.resultado__cuerpo {
+    padding: 12px 14px;
+    background: #fff;
+}
+
+.resultado__detalle {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.55);
+    line-height: 1.5;
+    margin-bottom: 10px;
+    word-break: break-word;
+}
+
+.resultado__tag {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: #595959;
+    background: #fafafa;
+    border: 1px solid #d9d9d9;
+    font-family: 'Fira Code', Consolas, monospace;
+}
+
+@keyframes resultadoEntrar {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .resultado { animation: none; }
+}
+
+/* ---------- Modal de eliminación ---------- */
+
+.borrar__cascada {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 18px 0;
+}
+
+.borrar__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 13.5px;
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.borrar__item span {
+    color: #ff4d4f;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.borrar__aviso {
+    margin: 0 0 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #434343;
+    line-height: 1.5;
+}
+
+@media (max-width: 1000px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,208 @@
+/**
+ * layout.css — Ajustes del shell (sidebar + header).
+ *
+ * Los colores base van por tokens de tema en main.jsx. Aquí queda solo
+ * lo que los tokens de antd no cubren: la marca, el borde de acento del
+ * ítem activo y el pie de colapsar.
+ */
+
+/* La ventana no scrollea: solo lo hace el área de contenido. Así el
+   sidebar y el header quedan siempre a la vista, sin importar qué tan
+   larga sea la página. */
+.app-layout {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+}
+
+/* Columna derecha: header fijo + contenido con scroll propio.
+   min-width evita que una tabla ancha empuje el layout. */
+.app-layout > .ant-layout {
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ---------- Sidebar ---------- */
+
+.app-sider {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100%;
+}
+
+.app-sider .ant-layout-sider-children {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.sidebar__marca {
+    flex: 0 0 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar__marca img {
+    height: 34px;
+    width: auto;
+    max-width: none;
+}
+
+/* Si el menú creciera más que la pantalla, scrollea él solo:
+   la marca arriba y el botón de colapsar abajo se quedan fijos.
+   min-height:0 es lo que permite encoger dentro del flex. */
+.sidebar__menu {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-inline-end: 0 !important;
+}
+
+/* Borde de acento a la izquierda del ítem activo (el mockup lo pide;
+   antd no lo trae de fábrica). El transparente en todos evita el salto
+   de 3px al seleccionar. */
+.sidebar__menu .ant-menu-item,
+.sidebar__menu .ant-menu-submenu-title {
+    border-left: 3px solid transparent;
+    border-radius: 0 !important;
+    margin-inline: 0 !important;
+    margin-block: 0 !important;
+    width: 100% !important;
+}
+
+.sidebar__menu .ant-menu-item-selected {
+    border-left-color: #1890ff;
+}
+
+.sidebar__colapsar {
+    flex: 0 0 48px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 22px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.6);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 22px;
+    line-height: 1;
+    user-select: none;
+    background: transparent;
+    border-inline: 0;
+    border-bottom: 0;
+    width: 100%;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.sidebar__colapsar:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.app-sider.ant-layout-sider-collapsed .sidebar__colapsar {
+    justify-content: center;
+    padding: 0;
+}
+
+/* ---------- Header ---------- */
+
+.app-header {
+    flex: 0 0 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 24px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+    position: relative;
+    z-index: 5;
+    line-height: normal;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+.breadcrumb__sep {
+    color: rgba(0, 0, 0, 0.25);
+}
+
+.breadcrumb__actual {
+    color: rgba(0, 0, 0, 0.85);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---------- Menú de usuario ---------- */
+
+.usuario {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.usuario__nombre {
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.usuario__rueda {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: rgba(0, 0, 0, 0.55);
+    background: transparent;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.usuario__rueda:hover,
+.usuario__rueda[aria-expanded='true'] {
+    background: #f0f5ff;
+    color: #1890ff;
+}
+
+.dropdown__correo {
+    padding: 4px 12px 8px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 4px;
+}
+
+/* ---------- Contenido ---------- */
+
+/* Único elemento con scroll de la aplicación. */
+.app-contenido {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 24px;
+    background: #f0f2f5;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+@media (max-width: 820px) {
+    .usuario__nombre {
+        display: none;
+    }
+}

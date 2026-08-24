@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { message } from 'antd'
 import { loginWithGoogle } from '@/services/auth'
 import useAuthStore from '@/store/authStore'
+import { RUTA_INICIAL } from '@/config/navigation'
 import logo from '@/assets/logo-360.png'
 import './login.css'
 
 const LoginPage = () => {
     const navigate = useNavigate()
+    const location = useLocation()
     const setAuth = useAuthStore((state) => state.setAuth)
     const token = useAuthStore((state) => state.token)
+
+    // Si llegamos aquí desde una ruta protegida, volvemos a ella al entrar.
+    const destino = location.state?.desde || RUTA_INICIAL
 
     const [docs, setDocs] = useState('1.284')
     const [integraciones, setIntegraciones] = useState(6)
@@ -18,9 +23,9 @@ const LoginPage = () => {
 
     useEffect(() => {
         if (token) {
-            navigate('/tablero', { replace: true })
+            navigate(destino, { replace: true })
         }
-    }, [token, navigate])
+    }, [token, destino, navigate])
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -37,7 +42,7 @@ const LoginPage = () => {
             const { access_token, user } = response.data
             setAuth(user, access_token)
             message.success(`Bienvenido, ${user.name}`)
-            navigate('/tablero')
+            navigate(destino, { replace: true })
         } catch (error) {
             const msg = error.response?.data?.detail || 'Error al iniciar sesión'
             message.error(msg)

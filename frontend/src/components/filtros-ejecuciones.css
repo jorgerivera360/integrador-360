@@ -1,0 +1,24 @@
+.filtros-ejecuciones {
+    row-gap: 8px;
+}
+
+.filtros-ejecuciones__campo {
+    min-width: 168px;
+}
+
+.filtros-ejecuciones__campo--corto {
+    min-width: 132px;
+}
+
+@media (max-width: 640px) {
+    .filtros-ejecuciones,
+    .filtros-ejecuciones .ant-space-item {
+        width: 100%;
+    }
+
+    .filtros-ejecuciones__campo,
+    .filtros-ejecuciones__campo--corto,
+    .filtros-ejecuciones .ant-picker {
+        width: 100%;
+    }
+}

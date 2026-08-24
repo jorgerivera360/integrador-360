@@ -1,0 +1,90 @@
+/**
+ * Estilos de Usuarios — tomados del mockup usuarios.html
+ * La cabecera de página, la tarjeta y las celdas viven en styles/pagina.css.
+ */
+
+.usuarios-filtros {
+    margin-bottom: 16px;
+    row-gap: 8px;
+}
+
+.usuarios-filtros__select {
+    min-width: 170px;
+}
+
+/* Nombre clickeable que abre la edición */
+.usuario-link {
+    font-weight: 500;
+    color: #1677ff;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.usuario-link:hover {
+    text-decoration: underline;
+}
+
+/* Estado con punto de color, sin borde (a diferencia de las etiquetas) */
+.estado-punto {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+.estado-punto__marca {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+.estado-punto--activo { color: #389e0d; }
+.estado-punto--activo .estado-punto__marca { background: #52c41a; }
+.estado-punto--inactivo { color: #595959; }
+.estado-punto--inactivo .estado-punto__marca { background: #bfbfbf; }
+
+.celda-nunca {
+    font-style: italic;
+    color: rgba(0, 0, 0, 0.45);
+}
+
+/* Descripción del rol bajo el selector, en los modales */
+.rol-info {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 10px;
+}
+
+.rol-info__desc {
+    font-size: 12.5px;
+    color: #8b93a1;
+    line-height: 1.45;
+}
+
+/* Tarjeta con los datos del usuario en el modal de borrado */
+.borrar-usuario__card {
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    background: #fafafa;
+    padding: 14px 16px;
+    margin: 18px 0 16px;
+}
+
+.borrar-usuario__nombre {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 3px;
+}
+
+.borrar-usuario__email {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.45);
+    margin-bottom: 10px;
+}
