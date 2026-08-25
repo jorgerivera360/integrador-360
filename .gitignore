@@ -12,6 +12,8 @@ venv/
 # Credenciales GCP
 *.json
 service_account*.json
+!frontend/package.json
+!frontend/package-lock.json
 
 # Frontend
 node_modules/
