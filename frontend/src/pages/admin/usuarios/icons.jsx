@@ -32,6 +32,13 @@ export const IconPapelera = (props) => (
     </svg>
 )
 
+export const IconInfo = (props) => (
+    <svg {...base} width={17} height={17} strokeWidth={1.9} {...props}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5M12 8h.01" />
+    </svg>
+)
+
 export const IconAdvertencia = (props) => (
     <svg {...base} width={22} height={22} strokeWidth={1.9} {...props}>
         <path d="M12 3l9 16H3z" />

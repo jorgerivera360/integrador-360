@@ -8,6 +8,11 @@
     row-gap: 8px;
 }
 
+.usuarios-filtros__buscador {
+    width: 280px;
+    max-width: 100%;
+}
+
 .usuarios-filtros__select {
     min-width: 170px;
 }

@@ -7,8 +7,7 @@ import { getUsers, getUser, createUser, updateUser, deleteUser } from '@/service
  * Toda la sección es superadmin: los cinco endpoints de /users llevan
  * require_role("superadmin") en api/routes/users.py.
  *
- * GET /users/ solo acepta `is_active`; no hay búsqueda por texto en el
- * servidor, por eso la pantalla no tiene buscador.
+ * GET /users/ acepta search, role e is_active como filtros server-side.
  */
 
 export const CLAVES_USUARIOS = {
@@ -19,6 +18,8 @@ export const CLAVES_USUARIOS = {
 
 export function useUsuarios(filtros = {}) {
     const params = {}
+    if (filtros.search?.trim()) params.search = filtros.search.trim()
+    if (filtros.role) params.role = filtros.role
     if (filtros.isActive !== null && filtros.isActive !== undefined) {
         params.is_active = filtros.isActive
     }

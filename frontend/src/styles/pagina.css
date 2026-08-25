@@ -17,17 +17,25 @@
 }
 
 .pagina-head__titulo {
-    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
     font-size: 24px;
     font-weight: 700;
     color: #1a1a2e;
     letter-spacing: -0.02em;
 }
 
-.pagina-head__sub {
-    margin: 0;
-    font-size: 14px;
-    color: #8b93a1;
+.pagina-head__info {
+    color: rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: color 0.15s;
+    flex-shrink: 0;
+}
+
+.pagina-head__info:hover {
+    color: #1677ff;
 }
 
 /* ---------- Contenedor de tabla ---------- */

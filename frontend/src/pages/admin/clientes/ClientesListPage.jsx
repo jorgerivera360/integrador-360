@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Alert, App, Button, Table } from 'antd'
+import { Alert, App, Button, Table, Tooltip } from 'antd'
 import ActivoTag from '@/components/ActivoTag'
 import ErpTag from '@/components/ErpTag'
+import { etiquetaErp } from '@/config/erp'
 import useHasRole from '@/hooks/useHasRole'
 import useDebounce from '@/hooks/useDebounce'
 import { useClientes, mensajeDeError } from '@/hooks/useClientes'
@@ -10,16 +11,16 @@ import { ROLES } from '@/config/navigation'
 import { formatFecha } from '@/utils/format'
 import FiltrosClientes, { FILTROS_VACIOS } from './components/FiltrosClientes'
 import ModalCrearCliente from './components/ModalCrearCliente'
-import { IconFlecha, IconMas } from './icons'
+import { IconFlecha, IconInfo, IconMas } from './icons'
 import '@/styles/pagina.css'
 import './clientes.css'
 
 const columnas = [
     {
-        title: 'ID del cliente',
+        title: 'ID Cliente',
         dataIndex: 'client_id',
         key: 'client_id',
-        className: 'celda-id',
+        className: 'celda-nombre',
         sorter: (a, b) => a.client_id.localeCompare(b.client_id, 'es'),
     },
     {
@@ -34,6 +35,7 @@ const columnas = [
         dataIndex: 'erp_type',
         key: 'erp_type',
         align: 'center',
+        sorter: (a, b) => etiquetaErp(a.erp_type).localeCompare(etiquetaErp(b.erp_type), 'es'),
         render: (erpType) => <ErpTag erpType={erpType} />,
     },
     {
@@ -41,10 +43,11 @@ const columnas = [
         dataIndex: 'is_active',
         key: 'is_active',
         align: 'center',
+        sorter: (a, b) => Number(b.is_active) - Number(a.is_active),
         render: (activo) => <ActivoTag activo={activo} />,
     },
     {
-        title: 'Creado',
+        title: 'Fecha Creación',
         dataIndex: 'created_at',
         key: 'created_at',
         className: 'celda-fecha',
@@ -96,10 +99,12 @@ const ClientesListPage = () => {
         <>
             <div className="pagina-head">
                 <div>
-                    <h1 className="pagina-head__titulo">Clientes</h1>
-                    <p className="pagina-head__sub">
-                        Gestión de empresas clientes conectadas al integrador
-                    </p>
+                    <h1 className="pagina-head__titulo">
+                        Clientes
+                        <Tooltip title="Gestión de empresas clientes conectadas al integrador">
+                            <IconInfo className="pagina-head__info" />
+                        </Tooltip>
+                    </h1>
                 </div>
 
                 {puedeCrear && (
