@@ -8,15 +8,32 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("/", response_model=list[UserResponse])
 def get_users(
+    search: str = None,
+    role: str = None,
     is_active: bool = None,
     db=Depends(get_db),
     current_user=Depends(require_role("superadmin"))
 ):
     cursor = db.cursor()
+    query = "SELECT * FROM users WHERE 1=1"
+    params = []
+
+    if search:
+          query += " AND (name ILIKE %s OR email ILIKE %s)"
+          params.extend([f"%{search}%", f"%{search}%"])
+
+    if role:
+        if role not in ("superadmin", "admin", "viewer"):
+            raise HTTPException(status_code=400, detail="Rol inválido. Opciones: superadmin, admin, viewer")
+        query += " AND role = %s"
+        params.append(role)
+
     if is_active is not None:
-        cursor.execute("SELECT * FROM users WHERE is_active = %s ORDER BY id", (is_active,))
-    else:
-        cursor.execute("SELECT * FROM users ORDER BY id")
+        query += " AND is_active = %s"
+        params.append(is_active)
+
+    query += " ORDER BY id"
+    cursor.execute(query, params)
     return cursor.fetchall()
 
 
