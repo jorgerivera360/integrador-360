@@ -1,0 +1,20 @@
+/* Base compartida por ErpTag y ActivoTag (mockup clientes.html, .tag) */
+
+.tag-base {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 22px;
+    padding: 0 9px;
+    border: 1px solid;
+    border-radius: 4px;
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.tag-base__punto {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}

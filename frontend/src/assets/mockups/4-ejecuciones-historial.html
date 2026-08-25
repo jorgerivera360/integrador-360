@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Integrador 360 — Ejecuciones · compras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --sidebar: #001529;
+    --sidebar-sub: #000c17;
+    --azul: #1890ff;
+    --contenido: #f0f2f5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: Inter, "Segoe UI", system-ui, sans-serif;
+    color: rgba(0,0,0,.85);
+    background: var(--contenido);
+  }
+  a { color: var(--azul); text-decoration: none; }
+  a:hover { color: #40a9ff; }
+
+  .layout { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    flex: 0 0 auto;
+    width: 240px;
+    background: var(--sidebar);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width .22s cubic-bezier(.2,.8,.3,1);
+  }
+  .sidebar.is-collapsed { width: 80px; }
+
+  .sidebar__marca {
+    flex: 0 0 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .sidebar__marca img { height: 34px; width: auto; max-width: none; }
+  .sidebar.is-collapsed .logo-completo { display: none; }
+  .logo-marca { display: none; }
+  .sidebar.is-collapsed .logo-marca { display: block; }
+
+  .menu { flex: 1 1 auto; padding: 8px 0; display: flex; flex-direction: column; }
+
+  .menu__item,
+  .menu__subitem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    cursor: pointer;
+    color: rgba(255,255,255,.72);
+    background: transparent;
+    border-left: 3px solid transparent;
+    font-size: 14px;
+    user-select: none;
+    transition: background .16s ease, color .16s ease;
+  }
+  .menu__item { height: 44px; }
+  .menu__subitem { height: 40px; padding: 0 20px 0 44px; }
+  .menu__item:hover,
+  .menu__subitem:hover { background: rgba(255,255,255,.10); color: #fff; }
+  .menu__item.is-active,
+  .menu__subitem.is-active {
+    color: #fff;
+    background: rgba(24,144,255,.20);
+    border-left-color: var(--azul);
+  }
+  .menu__item svg,
+  .menu__subitem svg { flex: 0 0 16px; }
+  .menu__item.is-active svg,
+  .menu__subitem.is-active svg { stroke: #fff; }
+
+  .menu__texto { white-space: nowrap; }
+  .menu__caret { margin-left: auto; font-size: 10px; transition: transform .2s ease; }
+  .menu__item.is-open .menu__caret { transform: rotate(90deg); }
+
+  .submenu { background: var(--sidebar-sub); display: none; flex-direction: column; padding: 4px 0; }
+  .menu__item.is-open + .submenu { display: flex; }
+
+  .sidebar.is-collapsed .menu__texto,
+  .sidebar.is-collapsed .menu__caret { display: none; }
+  .sidebar.is-collapsed .menu__item,
+  .sidebar.is-collapsed .menu__subitem { justify-content: center; padding: 0; }
+
+  .colapsar {
+    flex: 0 0 48px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 22px;
+    cursor: pointer;
+    color: rgba(255,255,255,.6);
+    border-top: 1px solid rgba(255,255,255,.06);
+    font-size: 22px;
+    line-height: 1;
+    user-select: none;
+    transition: background .16s ease, color .16s ease;
+  }
+  .colapsar:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+  /* ---------- Cuerpo ---------- */
+  .cuerpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+  .header {
+    flex: 0 0 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 24px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,21,41,.08);
+    position: relative;
+    z-index: 5;
+  }
+  .breadcrumb { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; color: rgba(0,0,0,.45); }
+  .breadcrumb__sep { color: rgba(0,0,0,.25); }
+  .breadcrumb__actual { color: rgba(0,0,0,.85); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .usuario { display: flex; align-items: center; gap: 14px; }
+  .usuario__nombre { font-size: 14px; white-space: nowrap; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge--superadmin { color: #cf1322; background: #fff1f0; border: 1px solid #ffa39e; }
+  .badge--admin      { color: #096dd9; background: #e6f7ff; border: 1px solid #91d5ff; }
+  .badge--viewer     { color: #389e0d; background: #f6ffed; border: 1px solid #b7eb8f; }
+
+  .rueda-wrap { position: relative; }
+  .rueda {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: rgba(0,0,0,.55);
+    background: transparent;
+    transition: background .16s ease, color .16s ease;
+  }
+  .rueda:hover,
+  .rueda-wrap.is-open .rueda { background: #f0f5ff; color: var(--azul); }
+
+  .dropdown {
+    display: none;
+    position: absolute;
+    top: 40px; right: 0;
+    min-width: 168px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), 0 3px 6px rgba(0,0,0,.06);
+    padding: 4px;
+    z-index: 10;
+  }
+  .rueda-wrap.is-open .dropdown { display: block; }
+  .dropdown__correo { padding: 8px 12px; font-size: 12px; color: rgba(0,0,0,.45); border-bottom: 1px solid #f0f0f0; }
+  .dropdown__accion {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background .14s ease;
+  }
+  .dropdown__accion:hover { background: #f5f5f5; }
+
+  .contenido { flex: 1 1 auto; padding: 24px; background: var(--contenido); }
+  .contenido__placeholder {
+    min-height: 320px;
+    height: 100%;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px dashed #d9d9d9;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(0,0,0,.35);
+    font-size: 15px;
+  }
+
+  /* ---------- Filtros ---------- */
+  .filtros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .buscador { position: relative; width: 300px; max-width: 100%; }
+  .buscador svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: rgba(0,0,0,.3); pointer-events: none; }
+  .buscador input {
+    width: 100%; height: 36px; padding: 0 12px 0 34px;
+    border: 1px solid #d9d9d9; border-radius: 6px; background: #fff;
+    font-family: inherit; font-size: 14px; color: rgba(0,0,0,.85);
+    outline: none; transition: border-color .16s ease, box-shadow .16s ease;
+  }
+  .buscador input:hover { border-color: #40a9ff; }
+  .buscador input:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.14); }
+
+  .filtro {
+    display: inline-flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 12px;
+    border: 1px solid #d9d9d9; border-radius: 6px; background: #fff;
+    font-size: 14px; color: rgba(0,0,0,.65); cursor: pointer;
+    transition: border-color .16s ease;
+  }
+  .filtro:hover { border-color: #40a9ff; }
+  .filtro select { border: none; outline: none; background: transparent; font-family: inherit; font-size: 14px; color: rgba(0,0,0,.85); cursor: pointer; }
+
+  /* ---------- Card + tablas ---------- */
+  .card { background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,21,41,.06); overflow: hidden; }
+  .tabla-scroll { overflow-x: auto; }
+  .tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tabla--clientes { min-width: 900px; }
+  .tabla--flows { min-width: 620px; }
+  .tabla--historial { min-width: 900px; }
+  .tabla th {
+    padding: 12px 20px; text-align: left;
+    font-size: 13px; font-weight: 500; color: #595959;
+    text-transform: uppercase; letter-spacing: .5px;
+    background: #fafafa; border-bottom: 1px solid #f0f0f0; white-space: nowrap;
+  }
+  .tabla td { padding: 14px 20px; border-bottom: 1px solid #f0f0f0; color: rgba(0,0,0,.85); white-space: nowrap; }
+  .tabla .c-centro { text-align: center; }
+  .tabla .c-derecha { text-align: right; }
+  .tabla .c-fuerte { font-weight: 500; }
+  .tabla .c-gris { color: rgba(0,0,0,.45); }
+  .tabla .c-num { font-variant-numeric: tabular-nums; }
+  .tabla .c-flecha { color: rgba(0,0,0,.25); width: 56px; }
+  .tabla tbody tr.clickeable { cursor: pointer; transition: background .2s ease; }
+  .tabla tbody tr.clickeable:hover { background: #f0f5ff; }
+  .tabla tbody tr.hover-suave { transition: background .18s ease; }
+  .tabla tbody tr.hover-suave:hover { background: #fafafa; }
+
+  .flow-nombre { color: #1677ff; font-weight: 500; cursor: pointer; }
+  .flow-nombre:hover { text-decoration: underline; }
+
+  /* ---------- Tags ---------- */
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 4px; font-size: 12.5px; }
+  .tag--ws       { color: #0958d9; background: #e6f4ff; border: 1px solid #91caff; }
+  .tag--connekta { color: #389e0d; background: #f6ffed; border: 1px solid #b7eb8f; }
+  .tag--sap      { color: #d46b08; background: #fff7e6; border: 1px solid #ffd591; }
+  .tag--excel    { color: #595959; background: #fafafa; border: 1px solid #d9d9d9; }
+  .tag--exito    { color: #389e0d; background: #f6ffed; border: 1px solid #b7eb8f; }
+  .tag--parcial  { color: #d46b08; background: #fff7e6; border: 1px solid #ffd591; }
+  .tag--error    { color: #cf1322; background: #fff1f0; border: 1px solid #ffa39e; }
+  .tag--encurso  { color: #096dd9; background: #e6f7ff; border: 1px solid #91d5ff; }
+  .tag--activo   { color: #389e0d; background: #f6ffed; border: 1px solid #b7eb8f; }
+  .tag--inactivo { color: rgba(0,0,0,.45); background: #fafafa; border: 1px solid #d9d9d9; }
+  .tag--scheduler { color: #595959; background: #fafafa; border: 1px solid #d9d9d9; }
+  .tag--manual    { color: #096dd9; background: #e6f7ff; border: 1px solid #91d5ff; }
+  .tag__punto { width: 7px; height: 7px; border-radius: 50%; }
+  .tag--exito .tag__punto    { background: #52c41a; }
+  .tag--parcial .tag__punto  { background: #fa8c16; }
+  .tag--error .tag__punto    { background: #f5222d; }
+  .tag--encurso .tag__punto  { background: #1890ff; animation: pulsoAzul 1.4s ease-in-out infinite; }
+  .tag--activo .tag__punto   { background: #52c41a; }
+  .tag--inactivo .tag__punto { background: #bfbfbf; }
+
+  .estado { display: inline-flex; align-items: center; gap: 7px; }
+  .estado__punto { width: 7px; height: 7px; border-radius: 50%; }
+  .estado--activo { color: #389e0d; }
+  .estado--activo .estado__punto { background: #52c41a; }
+
+  .marca { font-size: 12px; }
+  .marca--exito   { color: #52c41a; }
+  .marca--parcial { color: #fa8c16; }
+  .marca--error   { color: #f5222d; }
+
+  .fallidos-cero { color: rgba(0,0,0,.45); }
+  .fallidos-si { color: #cf1322; font-weight: 600; }
+
+  /* ---------- Paginación ---------- */
+  .paginacion { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid #f0f0f0; }
+  .paginacion__resumen { font-size: 13px; color: rgba(0,0,0,.45); }
+  .paginas { display: flex; align-items: center; gap: 8px; }
+  .pagina {
+    min-width: 32px; height: 32px; padding: 0 8px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid #d9d9d9; border-radius: 6px; background: #fff;
+    font-size: 13px; color: rgba(0,0,0,.45); cursor: pointer;
+  }
+  .pagina--activa { border-color: #1890ff; color: #1890ff; font-weight: 500; }
+  .pagina--off { color: rgba(0,0,0,.25); cursor: not-allowed; }
+
+  /* ---------- Cabecera de cliente / sección ---------- */
+  .cliente { padding-bottom: 20px; border-bottom: 1px solid #f0f0f0; margin-bottom: 32px; }
+  .cliente__linea { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .cliente__nombre { margin: 0; font-size: 28px; font-weight: 700; color: #1a1a2e; letter-spacing: -.02em; }
+  .cliente__meta { margin: 0; font-size: 14px; color: #8b93a1; }
+
+  .seccion-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; }
+  .seccion-head__titulo { margin: 0; font-size: 24px; font-weight: 700; color: #1a1a2e; letter-spacing: -.02em; }
+  .seccion-head__sub { margin: 6px 0 0; font-size: 14px; color: #8b93a1; }
+
+  .seccion { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .seccion__titulo { font-size: 16px; font-weight: 600; color: #1a1a2e; white-space: nowrap; }
+  .seccion__linea { flex: 1 1 auto; height: 1px; background: #e8e8e8; }
+
+  /* ---------- Tarjetas de categoría ---------- */
+  .cards { display: flex; flex-wrap: wrap; gap: 16px; }
+  .cards--maestros { margin-bottom: 32px; }
+  .card-flow {
+    flex: 1 1 200px; max-width: 280px;
+    background: #fff; border: 1px solid #f0f0f0; border-left: 3px solid #d9d9d9;
+    border-radius: 8px; box-shadow: 0 1px 2px rgba(0,21,41,.06);
+    padding: 20px; cursor: pointer;
+    transition: box-shadow .2s ease, transform .2s ease;
+  }
+  .card-flow:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); transform: scale(1.02); }
+  .card-flow--azul { border-left-color: #1677ff; }
+  .card-flow--verde { border-left-color: #52c41a; }
+  .card-flow--naranja { border-left-color: #fa8c16; }
+  .card-flow__icono { width: 34px; height: 34px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; }
+  .card-flow__titulo { font-size: 16px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px; }
+  .card-flow__conteo { font-size: 13px; color: #8b93a1; }
+
+  /* ---------- Drawer ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s ease; z-index: 40;
+  }
+  .overlay.is-open { opacity: 1; pointer-events: auto; }
+
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 450px; max-width: 100%;
+    background: #fff;
+    box-shadow: -6px 0 24px rgba(0,0,0,.12);
+    transform: translateX(100%);
+    transition: transform .3s ease;
+    z-index: 50;
+    display: flex; flex-direction: column;
+  }
+  .drawer.is-open { transform: translateX(0); }
+  .drawer__head { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 24px; border-bottom: 1px solid #f0f0f0; }
+  .drawer__titulo { font-size: 18px; font-weight: 600; color: #1a1a2e; margin-bottom: 8px; }
+  .drawer__tag { height: 26px; padding: 0 11px; font-size: 13px; }
+  .drawer__cerrar {
+    flex: 0 0 auto; width: 30px; height: 30px;
+    border: none; border-radius: 6px; background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: rgba(0,0,0,.45);
+    transition: background .16s ease, color .16s ease;
+  }
+  .drawer__cerrar:hover { background: #f5f5f5; color: #1a1a2e; }
+  .drawer__cuerpo { flex: 1 1 auto; overflow-y: auto; padding: 24px; }
+  .drawer__seccion { font-size: 14px; font-weight: 600; color: #1a1a2e; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; margin-bottom: 16px; }
+  .drawer__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .dato__label { font-size: 12.5px; color: rgba(0,0,0,.45); margin-bottom: 3px; }
+  .dato__valor { font-size: 13.5px; color: rgba(0,0,0,.85); font-variant-numeric: tabular-nums; }
+  .dato__valor--grande { font-size: 15px; font-weight: 500; }
+  .dato__valor--verde { color: #389e0d; }
+  .dato__valor--rojo { color: #cf1322; font-weight: 700; }
+
+  .fallidos__head { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; margin-bottom: 14px; }
+  .fallidos__titulo { font-size: 14px; font-weight: 600; color: #1a1a2e; }
+  .fallidos__lista { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+  .fallido { border: 1px solid #f0f0f0; border-left: 3px solid #ff4d4f; border-radius: 6px; background: #fafafa; padding: 10px 12px; }
+  .fallido__ref { font-size: 13px; font-weight: 600; color: #1a1a2e; margin-bottom: 3px; font-family: "Fira Code", Consolas, monospace; }
+  .fallido__razon { font-size: 12.5px; color: rgba(0,0,0,.55); line-height: 1.45; }
+
+  .error-card { border: 1px solid #ffccc7; border-radius: 6px; background: #fff2f0; padding: 12px 14px; }
+  .error-card pre { margin: 0; font-family: "Fira Code", Consolas, monospace; font-size: 12px; line-height: 1.55; color: #a8071a; white-space: pre-wrap; }
+
+  @keyframes pulsoAzul { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+  @media (max-width: 820px) {
+    .sidebar { width: 80px; }
+    .sidebar .logo-completo { display: none; }
+    .sidebar .logo-marca { display: block; }
+    .sidebar .menu__texto, .sidebar .menu__caret { display: none; }
+    .sidebar .menu__item, .sidebar .menu__subitem { justify-content: center; padding: 0; }
+    .usuario__nombre { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar__marca">
+      <img class="logo-completo" src="logo-360-claro.png" alt="360 Software" />
+      <img class="logo-marca" src="logo-360-marca.png" alt="360" />
+    </div>
+
+    <nav class="menu">
+
+      <div class="menu__item" data-nav="Tablero">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 13h7v8H3z" /></svg>
+        <span class="menu__texto">Tablero</span>
+      </div>
+
+      <div class="menu__item" data-nav="Flujos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h6M14 6h6M4 18h6M14 18h6M10 6a4 4 0 004 4M10 18a4 4 0 014-4" /></svg>
+        <span class="menu__texto">Flujos</span>
+      </div>
+
+      <div class="menu__item is-active" data-nav="Ejecuciones">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l11 7-11 7z" /></svg>
+        <span class="menu__texto">Ejecuciones</span>
+      </div>
+
+      <div class="menu__item" data-nav="Auditoría">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v18H7zM10 8h4M10 12h4M10 16h2" /></svg>
+        <span class="menu__texto">Auditoría</span>
+      </div>
+
+      <div class="menu__item" id="admin-toggle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z" /></svg>
+        <span class="menu__texto">Admin</span>
+        <span class="menu__caret">▶</span>
+      </div>
+
+      <div class="submenu">
+        <div class="menu__subitem" data-nav="Clientes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 6-5s6 2 6 5M17 11a3 3 0 100-6M16 15c3 0 6 2 6 5" /></svg>
+          <span class="menu__texto">Clientes</span>
+        </div>
+        <div class="menu__subitem" data-nav="Usuarios">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
+          <span class="menu__texto">Usuarios</span>
+        </div>
+      </div>
+
+    </nav>
+
+    <div class="colapsar" id="colapsar" title="Colapsar">←</div>
+
+  </aside>
+
+  <!-- ============ Cuerpo ============ -->
+  <div class="cuerpo">
+
+    <header class="header">
+      <div class="breadcrumb">
+        <a href="1-clientes.html">Ejecuciones</a>
+        <span class="breadcrumb__sep">/</span>
+        <a href="2-categorias.html">Fenix</a>
+        <span class="breadcrumb__sep">/</span>
+        <a href="3-flujos.html">Entrada</a>
+        <span class="breadcrumb__sep">/</span>
+        <span class="breadcrumb__actual">compras</span>
+      </div>
+
+      <div class="usuario">
+        <span class="usuario__nombre">Jorge Rivera</span>
+        <span class="badge badge--superadmin">Superadmin</span>
+
+        <div class="rueda-wrap" id="rueda-wrap">
+          <div class="rueda" id="rueda" title="Opciones">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+              <path d="M9.9 2.1h3.2l.5 2.5 1.9.8 2.2-1.3 2.2 2.2-1.3 2.2.8 1.9 2.5.5v3.2l-2.5.5-.8 1.9 1.3 2.2-2.2 2.2-2.2-1.3-1.9.8-.5 2.5H9.9l-.5-2.5-1.9-.8-2.2 1.3-2.2-2.2 1.3-2.2-.8-1.9-2.5-.5v-3.2l2.5-.5.8-1.9-1.3-2.2 2.2-2.2 2.2 1.3 1.9-.8z" />
+              <circle cx="11.5" cy="11.5" r="3.1" />
+            </svg>
+          </div>
+
+          <div class="dropdown">
+            <div class="dropdown__correo">jorge.rivera@360software.com.co</div>
+            <div class="dropdown__accion">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 4H6v16h8M17 8l4 4-4 4M21 12H10" /></svg>
+              Cerrar sesión
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="contenido">
+
+      <div class="seccion-head" style="display: block;">
+        <h1 class="seccion-head__titulo">compras — Fenix</h1>
+        <p class="seccion-head__sub">Historial de ejecuciones</p>
+      </div>
+
+      <div class="filtros">
+        <label class="filtro">
+          Estado:
+          <select id="f-estado">
+            <option value="Todos">Todos</option>
+            <option value="Éxito">Éxito</option>
+            <option value="Parcial">Parcial</option>
+            <option value="Error">Error</option>
+            <option value="En curso">En curso</option>
+          </select>
+        </label>
+        <label class="filtro">
+          Disparado por:
+          <select id="f-origen">
+            <option value="Todos">Todos</option>
+            <option value="scheduler">Scheduler</option>
+            <option value="manual">Manual</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="tabla-scroll">
+          <table class="tabla tabla--historial">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fecha</th>
+                <th>Duración</th>
+                <th class="c-centro">Estado</th>
+                <th class="c-centro">Disparado por</th>
+                <th class="c-centro">Creados</th>
+                <th class="c-centro">Fallidos</th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <tr class="clickeable" data-ejec="26">
+                <td class="c-fuerte c-num">26</td>
+                <td class="c-num">20/08/2026 15:16</td>
+                <td class="c-gris c-num">3.2s</td>
+                <td class="c-centro"><span class="tag tag--exito"><span class="tag__punto"></span>Éxito</span></td>
+                <td class="c-centro"><span class="tag tag--scheduler">scheduler</span></td>
+                <td class="c-centro c-num">0</td>
+                <td class="c-centro c-num fallidos-cero">0</td>
+              </tr>
+              <tr class="clickeable" data-ejec="25">
+                <td class="c-fuerte c-num">25</td>
+                <td class="c-num">20/08/2026 15:14</td>
+                <td class="c-gris c-num">9.8s</td>
+                <td class="c-centro"><span class="tag tag--exito"><span class="tag__punto"></span>Éxito</span></td>
+                <td class="c-centro"><span class="tag tag--scheduler">scheduler</span></td>
+                <td class="c-centro c-num">5</td>
+                <td class="c-centro c-num fallidos-cero">0</td>
+              </tr>
+              <tr class="clickeable" data-ejec="24">
+                <td class="c-fuerte c-num">24</td>
+                <td class="c-num">20/08/2026 15:12</td>
+                <td class="c-gris c-num">5.3s</td>
+                <td class="c-centro"><span class="tag tag--parcial"><span class="tag__punto"></span>Parcial</span></td>
+                <td class="c-centro"><span class="tag tag--scheduler">scheduler</span></td>
+                <td class="c-centro c-num">3</td>
+                <td class="c-centro c-num fallidos-si">12</td>
+              </tr>
+              <tr class="clickeable" data-ejec="23">
+                <td class="c-fuerte c-num">23</td>
+                <td class="c-num">20/08/2026 15:10</td>
+                <td class="c-gris c-num">2.1s</td>
+                <td class="c-centro"><span class="tag tag--exito"><span class="tag__punto"></span>Éxito</span></td>
+                <td class="c-centro"><span class="tag tag--manual">manual</span></td>
+                <td class="c-centro c-num">0</td>
+                <td class="c-centro c-num fallidos-cero">0</td>
+              </tr>
+              <tr class="clickeable" data-ejec="22">
+                <td class="c-fuerte c-num">22</td>
+                <td class="c-num">20/08/2026 15:08</td>
+                <td class="c-gris c-num">12.4s</td>
+                <td class="c-centro"><span class="tag tag--error"><span class="tag__punto"></span>Error</span></td>
+                <td class="c-centro"><span class="tag tag--scheduler">scheduler</span></td>
+                <td class="c-centro c-num">0</td>
+                <td class="c-centro c-num fallidos-cero">0</td>
+              </tr>
+              <tr class="clickeable" data-ejec="21">
+                <td class="c-fuerte c-num">21</td>
+                <td class="c-num">20/08/2026 15:06</td>
+                <td class="c-gris c-num">4.7s</td>
+                <td class="c-centro"><span class="tag tag--exito"><span class="tag__punto"></span>Éxito</span></td>
+                <td class="c-centro"><span class="tag tag--scheduler">scheduler</span></td>
+                <td class="c-centro c-num">8</td>
+                <td class="c-centro c-num fallidos-cero">0</td>
+              </tr>
+              <tr class="clickeable" data-ejec="20">
+                <td class="c-fuerte c-num">20</td>
+                <td class="c-num">20/08/2026 15:04</td>
+                <td class="c-gris c-num">6.1s</td>
+                <td class="c-centro"><span class="tag tag--parcial"><span class="tag__punto"></span>Parcial</span></td>
+                <td class="c-centro"><span class="tag tag--scheduler">scheduler</span></td>
+                <td class="c-centro c-num">15</td>
+                <td class="c-centro c-num fallidos-si">3</td>
+              </tr>
+              <tr class="clickeable" data-ejec="19">
+                <td class="c-fuerte c-num">19</td>
+                <td class="c-num">20/08/2026 15:02</td>
+                <td class="c-gris c-num">3.9s</td>
+                <td class="c-centro"><span class="tag tag--exito"><span class="tag__punto"></span>Éxito</span></td>
+                <td class="c-centro"><span class="tag tag--scheduler">scheduler</span></td>
+                <td class="c-centro c-num">0</td>
+                <td class="c-centro c-num fallidos-cero">0</td>
+              </tr>
+              <tr class="clickeable" data-ejec="18">
+                <td class="c-fuerte c-num">18</td>
+                <td class="c-num">20/08/2026 15:00</td>
+                <td class="c-gris c-num">7.2s</td>
+                <td class="c-centro"><span class="tag tag--exito"><span class="tag__punto"></span>Éxito</span></td>
+                <td class="c-centro"><span class="tag tag--manual">manual</span></td>
+                <td class="c-centro c-num">22</td>
+                <td class="c-centro c-num fallidos-cero">0</td>
+              </tr>
+              <tr class="clickeable" data-ejec="17">
+                <td class="c-fuerte c-num">17</td>
+                <td class="c-num">20/08/2026 14:58</td>
+                <td class="c-gris c-num">4.5s</td>
+                <td class="c-centro"><span class="tag tag--exito"><span class="tag__punto"></span>Éxito</span></td>
+                <td class="c-centro"><span class="tag tag--scheduler">scheduler</span></td>
+                <td class="c-centro c-num">0</td>
+                <td class="c-centro c-num fallidos-cero">0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="paginacion">
+          <span class="paginacion__resumen" id="resumen">Mostrando 1-10 de 26 ejecuciones</span>
+          <div class="paginas">
+            <div class="pagina pagina--off">‹</div>
+            <div class="pagina pagina--activa">1</div>
+            <div class="pagina">2</div>
+            <div class="pagina">3</div>
+            <div class="pagina">›</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+<div class="overlay" id="overlay"></div>
+
+<aside class="drawer" id="drawer">
+  <div class="drawer__head">
+    <div>
+      <div class="drawer__titulo">Ejecución #<span id="d-num">24</span></div>
+      <span class="tag drawer__tag tag--parcial" id="d-tag"><span class="tag__punto"></span><span id="d-estado">Parcial</span></span>
+    </div>
+    <button type="button" class="drawer__cerrar" id="cerrar" title="Cerrar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+  </div>
+
+  <div class="drawer__cuerpo">
+
+    <div class="drawer__seccion">Información general</div>
+    <div class="drawer__grid">
+      <div><div class="dato__label">Fecha inicio</div><div class="dato__valor" id="d-inicio">20/08/2026 15:12:03</div></div>
+      <div><div class="dato__label">Fecha fin</div><div class="dato__valor" id="d-fin">20/08/2026 15:12:08</div></div>
+      <div><div class="dato__label">Duración</div><div class="dato__valor" id="d-dur">5.3 segundos</div></div>
+      <div><div class="dato__label">Disparado por</div><div class="dato__valor" id="d-origen">scheduler</div></div>
+      <div><div class="dato__label">Usuario</div><div class="dato__valor" id="d-usuario">—</div></div>
+    </div>
+
+    <div class="drawer__seccion">Resultado</div>
+    <div class="drawer__grid">
+      <div><div class="dato__label">Total registros</div><div class="dato__valor dato__valor--grande" id="d-total">15</div></div>
+      <div><div class="dato__label">Creados</div><div class="dato__valor dato__valor--grande dato__valor--verde" id="d-creados">3</div></div>
+      <div><div class="dato__label">Actualizados</div><div class="dato__valor dato__valor--grande">0</div></div>
+      <div><div class="dato__label">Descartados</div><div class="dato__valor dato__valor--grande">0</div></div>
+      <div><div class="dato__label">Fallidos</div><div class="dato__valor dato__valor--grande dato__valor--rojo" id="d-fallidos">12</div></div>
+    </div>
+
+    <div id="d-bloque-fallidos" style="margin-bottom: 28px;">
+      <div class="fallidos__head">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fa8c16" stroke-width="1.9" stroke-linecap="round"><path d="M12 3l9 16H3z" /><path d="M12 9v5M12 17h.01" /></svg>
+        <span class="fallidos__titulo">Fallidos (<span id="d-fallidos-n">12</span>)</span>
+      </div>
+      <div class="fallidos__lista" id="d-lista"></div>
+    </div>
+
+    <div id="d-bloque-error" style="display: none;">
+      <div class="drawer__seccion">Mensaje de error</div>
+      <div class="error-card"><pre>Traceback (most recent call last):
+  File "integrador/runner.py", line 214, in run_flow
+    payload = client.fetch(flow.endpoint)
+  File "integrador/erp/siesa.py", line 88, in fetch
+    raise ConnectionError(resp.text)
+ConnectionError: HTTP 504 — Gateway Timeout tras 12.4s</pre></div>
+    </div>
+
+  </div>
+</aside>
+
+  </div>
+
+</div>
+
+<!-- Interacciones del layout: colapsar, submenú, item activo, dropdown. -->
+<script>
+  var sidebar = document.getElementById('sidebar');
+  var colapsar = document.getElementById('colapsar');
+  var ruedaWrap = document.getElementById('rueda-wrap');
+  var breadcrumb = document.getElementById('breadcrumb');
+  var adminToggle = document.getElementById('admin-toggle');
+
+  colapsar.addEventListener('click', function () {
+    sidebar.classList.toggle('is-collapsed');
+    colapsar.textContent = sidebar.classList.contains('is-collapsed') ? '→' : '←';
+  });
+
+  adminToggle.addEventListener('click', function () {
+    adminToggle.classList.toggle('is-open');
+  });
+
+  document.querySelectorAll('[data-nav]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      document.querySelectorAll('.is-active').forEach(function (a) { a.classList.remove('is-active'); });
+      el.classList.add('is-active');
+      breadcrumb.textContent = el.getAttribute('data-nav');
+    });
+  });
+
+  document.getElementById('rueda').addEventListener('click', function (e) {
+    e.stopPropagation();
+    ruedaWrap.classList.toggle('is-open');
+  });
+  document.addEventListener('click', function () { ruedaWrap.classList.remove('is-open'); });
+
+  // Filtros del historial
+  var selEstado = document.getElementById('f-estado');
+  var selOrigen = document.getElementById('f-origen');
+  var resumen = document.getElementById('resumen');
+  var filas = Array.prototype.slice.call(document.querySelectorAll('#tbody tr'));
+
+  function filtrar() {
+    var estado = selEstado.value;
+    var origen = selOrigen.value;
+    var visibles = 0;
+    filas.forEach(function (tr) {
+      var celdas = tr.children;
+      var ok = (estado === 'Todos' || celdas[3].textContent.trim() === estado) &&
+               (origen === 'Todos' || celdas[4].textContent.trim() === origen);
+      tr.style.display = ok ? '' : 'none';
+      if (ok) visibles++;
+    });
+    resumen.textContent = visibles ? 'Mostrando 1-' + visibles + ' de 26 ejecuciones' : 'Sin resultados';
+  }
+  selEstado.addEventListener('change', filtrar);
+  selOrigen.addEventListener('change', filtrar);
+
+  // Drawer de detalle
+  var EJEC = [[26,"20/08/2026 15:16","3.2s","Éxito","exito","scheduler",0,0],[25,"20/08/2026 15:14","9.8s","Éxito","exito","scheduler",5,0],[24,"20/08/2026 15:12","5.3s","Parcial","parcial","scheduler",3,12],[23,"20/08/2026 15:10","2.1s","Éxito","exito","manual",0,0],[22,"20/08/2026 15:08","12.4s","Error","error","scheduler",0,0],[21,"20/08/2026 15:06","4.7s","Éxito","exito","scheduler",8,0],[20,"20/08/2026 15:04","6.1s","Parcial","parcial","scheduler",15,3],[19,"20/08/2026 15:02","3.9s","Éxito","exito","scheduler",0,0],[18,"20/08/2026 15:00","7.2s","Éxito","exito","manual",22,0],[17,"20/08/2026 14:58","4.5s","Éxito","exito","scheduler",0,0]];
+  var FALLIDOS = [["OC-2345","Producto 'ABC123' no encontrado en Odoo"],["OC-2346","Proveedor '900123456' no existe"],["OC-2347","Bodega 'TEMP' no está en warehouse_mapping"],["OC-2348","Error de conexión con Odoo: timeout"],["OC-2349","Campo 'cantidad' tiene valor negativo: -5"],["OC-2350","Producto 'XYZ789' no encontrado en Odoo"],["OC-2351","Producto 'DEF456' no encontrado en Odoo"],["OC-2352","Unidad 'CJ' no está en uom_mapping"]];
+  var CLASES = { 'Éxito': 'exito', 'Parcial': 'parcial', 'Error': 'error', 'En curso': 'encurso' };
+
+  var drawer = document.getElementById('drawer');
+  var overlay = document.getElementById('overlay');
+
+  function abrir(n) {
+    var e = EJEC.filter(function (x) { return x[0] === n; })[0];
+    if (!e) return;
+
+    document.getElementById('d-num').textContent = e[0];
+    document.getElementById('d-estado').textContent = e[3];
+    document.getElementById('d-tag').className = 'tag drawer__tag tag--' + CLASES[e[3]];
+    document.getElementById('d-inicio').textContent = e[1] + ':03';
+    document.getElementById('d-fin').textContent = e[1] + ':08';
+    document.getElementById('d-dur').textContent = e[2].replace('s', ' segundos');
+    document.getElementById('d-origen').textContent = e[5];
+    document.getElementById('d-usuario').textContent = e[5] === 'manual' ? 'Jorge Rivera' : '—';
+    document.getElementById('d-total').textContent = e[6] + e[7];
+    document.getElementById('d-creados').textContent = e[6];
+    document.getElementById('d-fallidos').textContent = e[7];
+
+    var bloqueFallidos = document.getElementById('d-bloque-fallidos');
+    if (e[7] > 0) {
+      bloqueFallidos.style.display = 'block';
+      document.getElementById('d-fallidos-n').textContent = e[7];
+      document.getElementById('d-lista').innerHTML = FALLIDOS.slice(0, Math.min(FALLIDOS.length, e[7])).map(function (f) {
+        return '<div class="fallido"><div class="fallido__ref">' + f[0] + '</div>' +
+               '<div class="fallido__razon">' + f[1] + '</div></div>';
+      }).join('');
+    } else {
+      bloqueFallidos.style.display = 'none';
+    }
+
+    document.getElementById('d-bloque-error').style.display = e[3] === 'Error' ? 'block' : 'none';
+
+    drawer.classList.add('is-open');
+    overlay.classList.add('is-open');
+  }
+
+  function cerrar() {
+    drawer.classList.remove('is-open');
+    overlay.classList.remove('is-open');
+  }
+
+  filas.forEach(function (tr) {
+    tr.addEventListener('click', function () { abrir(parseInt(tr.getAttribute('data-ejec'), 10)); });
+  });
+  document.getElementById('cerrar').addEventListener('click', cerrar);
+  overlay.addEventListener('click', cerrar);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') cerrar(); });
+</script>
+
+</body>
+</html>

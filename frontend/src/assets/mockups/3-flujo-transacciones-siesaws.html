@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Integrador 360 — Editar flujo · compras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --sidebar: #001529;
+    --sidebar-sub: #000c17;
+    --azul: #1890ff;
+    --contenido: #f0f2f5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: Inter, "Segoe UI", system-ui, sans-serif;
+    color: rgba(0,0,0,.85);
+    background: var(--contenido);
+  }
+  a { color: var(--azul); text-decoration: none; }
+  a:hover { color: #40a9ff; }
+
+  .layout { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    flex: 0 0 auto;
+    width: 240px;
+    background: var(--sidebar);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width .22s cubic-bezier(.2,.8,.3,1);
+  }
+  .sidebar.is-collapsed { width: 80px; }
+
+  .sidebar__marca {
+    flex: 0 0 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .sidebar__marca img { height: 34px; width: auto; max-width: none; }
+  .sidebar.is-collapsed .logo-completo { display: none; }
+  .logo-marca { display: none; }
+  .sidebar.is-collapsed .logo-marca { display: block; }
+
+  .menu { flex: 1 1 auto; padding: 8px 0; display: flex; flex-direction: column; }
+
+  .menu__item,
+  .menu__subitem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    cursor: pointer;
+    color: rgba(255,255,255,.72);
+    background: transparent;
+    border-left: 3px solid transparent;
+    font-size: 14px;
+    user-select: none;
+    transition: background .16s ease, color .16s ease;
+  }
+  .menu__item { height: 44px; }
+  .menu__subitem { height: 40px; padding: 0 20px 0 44px; }
+  .menu__item:hover,
+  .menu__subitem:hover { background: rgba(255,255,255,.10); color: #fff; }
+  .menu__item.is-active,
+  .menu__subitem.is-active {
+    color: #fff;
+    background: rgba(24,144,255,.20);
+    border-left-color: var(--azul);
+  }
+  .menu__item svg,
+  .menu__subitem svg { flex: 0 0 16px; }
+  .menu__item.is-active svg,
+  .menu__subitem.is-active svg { stroke: #fff; }
+
+  .menu__texto { white-space: nowrap; }
+  .menu__caret { margin-left: auto; font-size: 10px; transition: transform .2s ease; }
+  .menu__item.is-open .menu__caret { transform: rotate(90deg); }
+
+  .submenu { background: var(--sidebar-sub); display: none; flex-direction: column; padding: 4px 0; }
+  .menu__item.is-open + .submenu { display: flex; }
+
+  .sidebar.is-collapsed .menu__texto,
+  .sidebar.is-collapsed .menu__caret { display: none; }
+  .sidebar.is-collapsed .menu__item,
+  .sidebar.is-collapsed .menu__subitem { justify-content: center; padding: 0; }
+
+  .colapsar {
+    flex: 0 0 48px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 22px;
+    cursor: pointer;
+    color: rgba(255,255,255,.6);
+    border-top: 1px solid rgba(255,255,255,.06);
+    font-size: 22px;
+    line-height: 1;
+    user-select: none;
+    transition: background .16s ease, color .16s ease;
+  }
+  .colapsar:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+  /* ---------- Cuerpo ---------- */
+  .cuerpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+  .header {
+    flex: 0 0 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 24px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,21,41,.08);
+    position: relative;
+    z-index: 5;
+  }
+  .breadcrumb { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; color: rgba(0,0,0,.45); }
+  .breadcrumb__sep { color: rgba(0,0,0,.25); }
+  .breadcrumb__actual { color: rgba(0,0,0,.85); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .usuario { display: flex; align-items: center; gap: 14px; }
+  .usuario__nombre { font-size: 14px; white-space: nowrap; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge--superadmin { color: #cf1322; background: #fff1f0; border: 1px solid #ffa39e; }
+  .badge--admin      { color: #096dd9; background: #e6f7ff; border: 1px solid #91d5ff; }
+  .badge--viewer     { color: #389e0d; background: #f6ffed; border: 1px solid #b7eb8f; }
+
+  .rueda-wrap { position: relative; }
+  .rueda {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: rgba(0,0,0,.55);
+    background: transparent;
+    transition: background .16s ease, color .16s ease;
+  }
+  .rueda:hover,
+  .rueda-wrap.is-open .rueda { background: #f0f5ff; color: var(--azul); }
+
+  .dropdown {
+    display: none;
+    position: absolute;
+    top: 40px; right: 0;
+    min-width: 168px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), 0 3px 6px rgba(0,0,0,.06);
+    padding: 4px;
+    z-index: 10;
+  }
+  .rueda-wrap.is-open .dropdown { display: block; }
+  .dropdown__correo { padding: 8px 12px; font-size: 12px; color: rgba(0,0,0,.45); border-bottom: 1px solid #f0f0f0; }
+  .dropdown__accion {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background .14s ease;
+  }
+  .dropdown__accion:hover { background: #f5f5f5; }
+
+  .contenido { flex: 1 1 auto; padding: 24px; background: var(--contenido); }
+  .contenido__placeholder {
+    min-height: 320px;
+    height: 100%;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px dashed #d9d9d9;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(0,0,0,.35);
+    font-size: 15px;
+  }
+
+  /* ---------- Cabecera del formulario ---------- */
+  .form-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .form-head__izq { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .form-head__titulo { margin: 0; font-size: 24px; font-weight: 700; color: #1a1a2e; letter-spacing: -.02em; }
+  .form-head__acciones { display: flex; align-items: center; gap: 12px; }
+
+  .tag { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 4px; font-size: 12.5px; }
+  .tag--tipo { color: #1677ff; background: #e6f4ff; border: 1px solid #91caff; }
+  .tag--erp  { color: #595959; background: #fafafa; border: 1px solid #d9d9d9; }
+
+  .btn {
+    padding: 8px 20px; border-radius: 8px;
+    font-family: inherit; font-size: 14px; cursor: pointer;
+    transition: background .18s ease, box-shadow .18s ease, border-color .16s ease, color .16s ease;
+  }
+  .btn--outline { border: 1px solid #d9d9d9; background: #fff; color: #595959; }
+  .btn--outline:hover { border-color: #8c8c8c; color: #1a1a2e; }
+  .btn--primario {
+    border: none; background: #1677ff; color: #fff; font-weight: 500;
+    box-shadow: 0 2px 6px rgba(22,119,255,.24);
+  }
+  .btn--primario:hover { background: #0958d9; box-shadow: 0 6px 16px rgba(22,119,255,.32); }
+
+  /* ---------- Cards de sección ---------- */
+  .seccion {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0,21,41,.06);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .seccion:last-child { margin-bottom: 0; }
+  .seccion__titulo {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 16px; font-weight: 600; color: #1a1a2e;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 20px;
+  }
+
+  /* ---------- Campos ---------- */
+  .campos-base { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; align-items: start; }
+  .campos { display: flex; flex-direction: column; gap: 24px; }
+  .campos-fila { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; max-width: 620px; }
+
+  .campo__label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: #434343;
+    margin-bottom: 8px;
+  }
+  .campo__input {
+    width: 100%; height: 36px;
+    padding: 8px 12px;
+    border: 1px solid #d9d9d9; border-radius: 6px;
+    background: #fff;
+    font-family: inherit; font-size: 14px;
+    color: rgba(0,0,0,.85);
+    outline: none;
+    transition: border-color .16s ease, box-shadow .16s ease;
+  }
+  .campo__input:focus { border-color: #1677ff; box-shadow: 0 0 0 2px rgba(22,119,255,.12); }
+  .campo__input--mono { font-family: "Fira Code", Consolas, monospace; font-size: 13px; }
+  .campo__input--corto { max-width: 160px; }
+  .campo__input:disabled,
+  .campo__input[readonly] { background: #fafafa; color: rgba(0,0,0,.4); cursor: not-allowed; }
+  .campo__ayuda { margin: 6px 0 0; font-size: 12px; color: #bfbfbf; }
+
+  /* ---------- Popover de ayuda ---------- */
+  .info { position: relative; display: flex; align-items: center; }
+  .info__icono {
+    width: 17px; height: 17px;
+    border-radius: 50%;
+    border: 1px solid #d9d9d9;
+    background: #fff;
+    color: #bfbfbf;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    cursor: pointer; user-select: none;
+    transition: background .16s ease, color .16s ease, border-color .16s ease;
+  }
+  .info__icono:hover { background: #e6f4ff; border-color: #1677ff; color: #1677ff; }
+  .info.is-open .info__icono { background: #e6f4ff; border-color: #1677ff; color: #1677ff; }
+  .info__pop {
+    display: none;
+    position: absolute; top: 26px; left: -8px;
+    width: 340px;
+    background: #fff;
+    border: 1px solid #f0f0f0; border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), 0 3px 6px rgba(0,0,0,.06);
+    padding: 12px 14px;
+    font-size: 12.5px; line-height: 1.55; color: #595959;
+    z-index: 20;
+  }
+  .info.is-open .info__pop { display: block; }
+
+  /* ---------- Switch ---------- */
+  .switch-fila { display: flex; align-items: center; gap: 12px; }
+  .switch {
+    flex: 0 0 auto;
+    width: 44px; height: 22px;
+    border-radius: 11px;
+    background-color: #d9d9d9;
+    padding: 2px;
+    display: flex; justify-content: flex-start;
+    cursor: pointer;
+    transition: background-color .2s ease;
+  }
+  .switch__bolita { width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .switch.is-on { background-color: #52c41a; justify-content: flex-end; }
+  .switch.is-locked { opacity: .55; cursor: not-allowed; }
+  .switch-fila__texto { font-size: 13.5px; color: rgba(0,0,0,.55); display: inline-flex; align-items: center; gap: 7px; }
+
+  /* ---------- Editor SQL ---------- */
+  .editor { background: #1e1e1e; border: 1px solid #303030; border-radius: 6px; overflow: hidden; }
+  .editor__barra {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: #252526;
+    border-bottom: 1px solid #303030;
+  }
+  .editor__punto { width: 9px; height: 9px; border-radius: 50%; background: #3c3c3c; }
+  .editor__archivo { font-family: "Fira Code", Consolas, monospace; font-size: 11.5px; color: #858585; }
+  .editor__cuerpo { display: flex; height: 250px; overflow: auto; }
+  .editor__lineas {
+    flex: 0 0 44px;
+    padding: 14px 12px 14px 0;
+    text-align: right;
+    color: #4a4a4a;
+    font-family: "Fira Code", Consolas, monospace;
+    font-size: 13px; line-height: 1.65;
+    user-select: none;
+  }
+  .editor__codigo {
+    flex: 1 1 auto; margin: 0;
+    padding: 14px 16px;
+    font-family: "Fira Code", Consolas, monospace;
+    font-size: 13px; line-height: 1.65;
+    color: #d4d4d4;
+  }
+  .kw { color: #569cd6; }
+  .num { color: #b5cea8; }
+  .fn { color: #dcdcaa; }
+  .col { color: #9cdcfe; }
+
+  /* ---------- Tabla editable ---------- */
+  .tabla-mapeo-wrap { max-width: 620px; border: 1px solid #f0f0f0; border-radius: 6px; overflow: hidden; }
+  .tabla-mapeo { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tabla-mapeo th {
+    padding: 10px 14px; text-align: left;
+    font-size: 12.5px; font-weight: 500; color: #595959;
+    text-transform: uppercase; letter-spacing: .5px;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .tabla-mapeo td { padding: 8px 14px; border-bottom: 1px solid #f5f5f5; }
+  .tabla-mapeo tbody tr:nth-child(even) { background: #fcfcfc; }
+  .tabla-mapeo__celda {
+    width: 100%; height: 32px;
+    padding: 6px 10px;
+    border: 1px solid #f0f0f0; border-radius: 4px;
+    background: #fff;
+    font-family: inherit; font-size: 13.5px;
+    color: rgba(0,0,0,.85);
+    outline: none;
+    transition: border-color .16s ease;
+  }
+  .tabla-mapeo__celda:focus { border-color: #1677ff; }
+  .tabla-mapeo__celda--mono { font-family: "Fira Code", Consolas, monospace; font-size: 13px; }
+  .tabla-mapeo__acciones { width: 52px; text-align: center; }
+  .btn-borrar {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    border: none; border-radius: 5px;
+    background: transparent;
+    color: #bfbfbf;
+    cursor: pointer;
+    transition: background .16s ease, color .16s ease;
+  }
+  .btn-borrar:hover { background: #fff1f0; color: #cf1322; }
+
+  .btn-agregar {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin-top: 12px;
+    padding: 7px 14px;
+    border: 1px dashed #d9d9d9; border-radius: 6px;
+    background: #fff;
+    color: #595959;
+    font-family: inherit; font-size: 13.5px;
+    cursor: pointer;
+    transition: border-color .16s ease, color .16s ease;
+  }
+  .btn-agregar:hover { border-color: #1677ff; color: #1677ff; }
+
+  @media (max-width: 820px) {
+    .sidebar { width: 80px; }
+    .sidebar .logo-completo { display: none; }
+    .sidebar .logo-marca { display: block; }
+    .sidebar .menu__texto, .sidebar .menu__caret { display: none; }
+    .sidebar .menu__item, .sidebar .menu__subitem { justify-content: center; padding: 0; }
+    .usuario__nombre { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar__marca">
+      <img class="logo-completo" src="logo-360-claro.png" alt="360 Software" />
+      <img class="logo-marca" src="logo-360-marca.png" alt="360" />
+    </div>
+
+    <nav class="menu">
+
+      <div class="menu__item" data-nav="Tablero">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 13h7v8H3z" /></svg>
+        <span class="menu__texto">Tablero</span>
+      </div>
+
+      <div class="menu__item is-active" data-nav="Flujos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h6M14 6h6M4 18h6M14 18h6M10 6a4 4 0 004 4M10 18a4 4 0 014-4" /></svg>
+        <span class="menu__texto">Flujos</span>
+      </div>
+
+      <div class="menu__item" data-nav="Ejecuciones">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l11 7-11 7z" /></svg>
+        <span class="menu__texto">Ejecuciones</span>
+      </div>
+
+      <div class="menu__item" data-nav="Auditoría">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v18H7zM10 8h4M10 12h4M10 16h2" /></svg>
+        <span class="menu__texto">Auditoría</span>
+      </div>
+
+      <div class="menu__item" id="admin-toggle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z" /></svg>
+        <span class="menu__texto">Admin</span>
+        <span class="menu__caret">▶</span>
+      </div>
+
+      <div class="submenu">
+        <div class="menu__subitem" data-nav="Clientes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 6-5s6 2 6 5M17 11a3 3 0 100-6M16 15c3 0 6 2 6 5" /></svg>
+          <span class="menu__texto">Clientes</span>
+        </div>
+        <div class="menu__subitem" data-nav="Usuarios">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
+          <span class="menu__texto">Usuarios</span>
+        </div>
+      </div>
+
+    </nav>
+
+    <div class="colapsar" id="colapsar" title="Colapsar">←</div>
+
+  </aside>
+
+  <!-- ============ Cuerpo ============ -->
+  <div class="cuerpo">
+
+    <header class="header">
+      <div class="breadcrumb">
+        <a href="#">Flujos</a>
+        <span class="breadcrumb__sep">/</span>
+        <a href="#">Fenix</a>
+        <span class="breadcrumb__sep">/</span>
+        <a href="#">Entrada</a>
+        <span class="breadcrumb__sep">/</span>
+        <span class="breadcrumb__actual">Editar flujo</span>
+      </div>
+
+      <div class="usuario">
+        <span class="usuario__nombre">Jorge Rivera</span>
+        <span class="badge badge--superadmin">Superadmin</span>
+
+        <div class="rueda-wrap" id="rueda-wrap">
+          <div class="rueda" id="rueda" title="Opciones">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+              <path d="M9.9 2.1h3.2l.5 2.5 1.9.8 2.2-1.3 2.2 2.2-1.3 2.2.8 1.9 2.5.5v3.2l-2.5.5-.8 1.9 1.3 2.2-2.2 2.2-2.2-1.3-1.9.8-.5 2.5H9.9l-.5-2.5-1.9-.8-2.2 1.3-2.2-2.2 1.3-2.2-.8-1.9-2.5-.5v-3.2l2.5-.5.8-1.9-1.3-2.2 2.2-2.2 2.2 1.3 1.9-.8z" />
+              <circle cx="11.5" cy="11.5" r="3.1" />
+            </svg>
+          </div>
+
+          <div class="dropdown">
+            <div class="dropdown__correo">jorge.rivera@360software.com.co</div>
+            <div class="dropdown__accion">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 4H6v16h8M17 8l4 4-4 4M21 12H10" /></svg>
+              Cerrar sesión
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="contenido">
+
+      <div class="form-head">
+        <div class="form-head__izq">
+          <h1 class="form-head__titulo">compras</h1>
+          <span class="tag tag--tipo">purchases</span>
+          <span class="tag tag--erp">SIESA WebService</span>
+        </div>
+        <div class="form-head__acciones">
+          <button type="button" class="btn btn--outline">Cancelar</button>
+          <button type="button" class="btn btn--primario">Guardar</button>
+        </div>
+      </div>
+
+      <div class="seccion">
+        <div class="campos-base">
+          <div>
+            <label class="campo__label">Cliente</label>
+            <input type="text" class="campo__input" value="Fenix" readonly />
+          </div>
+          <div>
+            <label class="campo__label">Nombre del flujo</label>
+            <input type="text" class="campo__input" value="compras" />
+          </div>
+          <div>
+            <label class="campo__label">Tipo de flujo</label>
+            <select class="campo__input">
+              <option>items</option>
+              <option>customer</option>
+              <option>supplier</option>
+              <option selected>purchases</option>
+              <option>sales</option>
+            </select>
+          </div>
+          <div>
+            <label class="campo__label">Cron</label>
+            <input type="text" class="campo__input campo__input--mono" value="*/2 * * * *" />
+          </div>
+          <div>
+            <label class="campo__label">Orden de ejecución</label>
+            <input type="number" class="campo__input" value="10" />
+          </div>
+          <div>
+            <label class="campo__label">Activo</label>
+            <div class="switch-fila" style="height: 36px;">
+              <span class="switch is-on" data-switch><span class="switch__bolita"></span></span>
+              <span class="switch-fila__texto" data-switch-texto="Activo|Inactivo">Activo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion__titulo">
+          Consulta SQL
+          <span class="info is-open" data-info="sql">
+              <span class="info__icono">i</span>
+              <span class="info__pop">Query SQL que se ejecuta en el ERP SIESA vía Web Service. Debe usar alias canónicos en las columnas (AS referencia, AS descripcion). Soporta JOINs, CASE WHEN y funciones de fecha.</span>
+            </span>
+        </div>
+        <div class="editor">
+          <div class="editor__barra">
+            <span class="editor__punto"></span>
+            <span class="editor__archivo">query.sql</span>
+          </div>
+          <div class="editor__cuerpo">
+            <div class="editor__lineas">
+              <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div>
+            </div>
+            <pre class="editor__codigo"><span class="kw">SET</span> <span class="kw">QUOTED_IDENTIFIER</span> <span class="kw">OFF</span>;
+<span class="kw">SELECT</span> <span class="kw">TOP</span> <span class="num">500</span>
+    <span class="col">f120_rowid</span> <span class="kw">AS</span> <span class="col">referencia</span>,
+    <span class="col">f120_descripcion</span> <span class="kw">AS</span> <span class="col">descripcion</span>,
+    <span class="col">f120_id_unidad_inventario</span> <span class="kw">AS</span> <span class="col">unidad</span>,
+    <span class="fn">ISNULL</span>(<span class="col">f120_ind_estado</span>, <span class="num">1</span>) <span class="kw">AS</span> <span class="col">activo</span>
+<span class="kw">FROM</span> <span class="col">t120_mc_items</span>
+<span class="kw">WHERE</span> <span class="col">f120_id_cia</span> = <span class="num">1</span>
+  <span class="kw">AND</span> <span class="col">f120_ind_estado</span> = <span class="num">1</span>
+<span class="kw">ORDER BY</span> <span class="col">f120_rowid</span> <span class="kw">ASC</span>;
+<span class="kw">SET</span> <span class="kw">QUOTED_IDENTIFIER</span> <span class="kw">ON</span>;</pre>
+          </div>
+        </div>
+        <p class="campo__ayuda">Use SET QUOTED_IDENTIFIER OFF al inicio y comillas dobles para strings literales</p>
+      </div>
+
+      <div class="seccion">
+        <div class="seccion__titulo">Configuración del flujo — Documentos de entrada / salida</div>
+        <div class="campo__label">
+          Mapeo de almacenes
+          <span class="info is-open" data-info="wh">
+              <span class="info__icono">i</span>
+              <span class="info__pop" style="width: 360px;">Mapea el código de bodega del ERP al ID del tipo de operación (stock.picking.type) en Odoo. La bodega "00151" del ERP corresponde al picking type 1. Si no está en el mapeo, se usa el tipo por defecto.</span>
+            </span>
+        </div>
+        <div class="tabla-mapeo-wrap">
+          <table class="tabla-mapeo">
+            <thead>
+              <tr><th>Bodega ERP</th><th>ID Odoo</th><th class="tabla-mapeo__acciones"></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="text" class="tabla-mapeo__celda tabla-mapeo__celda--mono" value="00151" /></td>
+                <td><input type="number" class="tabla-mapeo__celda" value="1" /></td>
+                <td class="tabla-mapeo__acciones"><button type="button" class="btn-borrar" title="Eliminar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg></button></td>
+              </tr>
+              <tr>
+                <td><input type="text" class="tabla-mapeo__celda tabla-mapeo__celda--mono" value="02201" /></td>
+                <td><input type="number" class="tabla-mapeo__celda" value="17" /></td>
+                <td class="tabla-mapeo__acciones"><button type="button" class="btn-borrar" title="Eliminar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg></button></td>
+              </tr>
+              <tr>
+                <td><input type="text" class="tabla-mapeo__celda tabla-mapeo__celda--mono" value="03301" /></td>
+                <td><input type="number" class="tabla-mapeo__celda" value="9" /></td>
+                <td class="tabla-mapeo__acciones"><button type="button" class="btn-borrar" title="Eliminar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg></button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button type="button" class="btn-agregar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg> Agregar</button>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<!-- Interacciones del layout: colapsar, submenú, item activo, dropdown. -->
+<script>
+  var sidebar = document.getElementById('sidebar');
+  var colapsar = document.getElementById('colapsar');
+  var ruedaWrap = document.getElementById('rueda-wrap');
+  var breadcrumb = document.getElementById('breadcrumb');
+  var adminToggle = document.getElementById('admin-toggle');
+
+  colapsar.addEventListener('click', function () {
+    sidebar.classList.toggle('is-collapsed');
+    colapsar.textContent = sidebar.classList.contains('is-collapsed') ? '→' : '←';
+  });
+
+  adminToggle.addEventListener('click', function () {
+    adminToggle.classList.toggle('is-open');
+  });
+
+  document.querySelectorAll('[data-nav]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      document.querySelectorAll('.is-active').forEach(function (a) { a.classList.remove('is-active'); });
+      el.classList.add('is-active');
+      breadcrumb.textContent = el.getAttribute('data-nav');
+    });
+  });
+
+  document.getElementById('rueda').addEventListener('click', function (e) {
+    e.stopPropagation();
+    ruedaWrap.classList.toggle('is-open');
+  });
+  document.addEventListener('click', function () { ruedaWrap.classList.remove('is-open'); });
+
+  // Popovers de ayuda
+  document.querySelectorAll('[data-info] .info__icono').forEach(function (icono) {
+    icono.addEventListener('click', function (e) {
+      e.stopPropagation();
+      icono.parentElement.classList.toggle('is-open');
+    });
+  });
+
+  // Switches
+  document.querySelectorAll('[data-switch]').forEach(function (sw) {
+    sw.addEventListener('click', function () {
+      sw.classList.toggle('is-on');
+      var texto = sw.parentElement.querySelector('[data-switch-texto]');
+      if (texto) {
+        var partes = texto.getAttribute('data-switch-texto').split('|');
+        texto.textContent = sw.classList.contains('is-on') ? partes[0] : partes[1];
+      }
+      var dependiente = document.querySelector('[data-depende="' + sw.getAttribute('data-switch') + '"]');
+      if (dependiente) {
+        var on = sw.classList.contains('is-on');
+        dependiente.disabled = !on;
+        var ayuda = dependiente.parentElement.querySelector('.campo__ayuda');
+        if (ayuda) ayuda.textContent = on ? 'sucursal_padre' : 'Active la jerarquía de sucursales para editar este campo';
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,627 @@
+/* ========== Filtros (nivel 1) ========== */
+
+.flujo-filtros {
+    margin-bottom: 16px;
+    row-gap: 8px;
+}
+
+.flujo-filtros__buscador {
+    width: 300px;
+    max-width: 100%;
+}
+
+.flujo-filtros__select {
+    min-width: 190px;
+}
+
+.flujo-filtros__select--corto {
+    min-width: 140px;
+}
+
+/* ========== Navegacion entre niveles ========== */
+
+.flujo-cabecera-nivel {
+    margin-bottom: 16px;
+}
+
+.flujo-volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #1677ff;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.flujo-volver:hover {
+    color: #4096ff;
+}
+
+/* ========== Cabecera del cliente (nivel 2) ========== */
+
+.flujo-cliente-head {
+    margin-bottom: 28px;
+}
+
+.flujo-cliente-head__info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.flujo-cliente-head__nombre {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: -0.02em;
+}
+
+.flujo-cliente-head__tags {
+    display: flex;
+    gap: 8px;
+}
+
+.flujo-cliente-head__meta {
+    margin: 0;
+    font-size: 13.5px;
+    color: #8b93a1;
+}
+
+/* ========== Grupos de tarjetas (nivel 2) ========== */
+
+.flujo-grupo {
+    margin-bottom: 28px;
+}
+
+.flujo-grupo__titulo {
+    font-size: 13px;
+    font-weight: 600;
+    color: #8b93a1;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 12px;
+}
+
+.flujo-tarjetas {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+}
+
+.flujo-tarjeta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-left: 3px solid;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 21, 41, 0.06);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    text-align: left;
+    width: 100%;
+}
+
+.flujo-tarjeta:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 21, 41, 0.1);
+}
+
+.flujo-tarjeta--vacia {
+    opacity: 0.7;
+}
+
+.flujo-tarjeta--vacia:hover {
+    opacity: 1;
+}
+
+.flujo-tarjeta__icono {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flujo-tarjeta__texto {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.flujo-tarjeta__titulo {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.flujo-tarjeta__conteo {
+    font-size: 12.5px;
+    color: #8b93a1;
+}
+
+.flujo-tarjeta__conteo--vacio {
+    color: #bfbfbf;
+    font-style: italic;
+}
+
+/* ========== Cabecera de flows (nivel 3) ========== */
+
+.flujo-flow-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.flujo-flow-head__izq {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.flujo-flow-head__titulo {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: -0.01em;
+}
+
+.flujo-flow-head__separador {
+    margin: 0 8px;
+    color: #d9d9d9;
+    font-weight: 400;
+}
+
+/* ========== Flow link (nivel 3) ========== */
+
+.flujo-flow-link {
+    color: #1677ff;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.flujo-flow-link:hover {
+    text-decoration: underline;
+}
+
+/* ========== Cron monospace ========== */
+
+.flujo-cron {
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 13px;
+    color: #595959;
+}
+
+/* ========== Estados vacios y carga ========== */
+
+.flujo-cargando {
+    display: flex;
+    justify-content: center;
+    padding: 60px 0;
+}
+
+.flujo-vacio {
+    text-align: center;
+    padding: 60px 0;
+    font-size: 14px;
+    color: #8b93a1;
+}
+
+/* ========== Editor de flow (nivel 4) ========== */
+
+.flujo-editor-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+}
+
+.flujo-editor-head__izq {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.flujo-editor-head__titulo {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: -0.02em;
+}
+
+.flujo-editor-head__tags {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.flujo-editor-head__tipo {
+    display: inline-block;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #595959;
+    background: #fafafa;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+}
+
+.flujo-editor-head__acciones {
+    display: flex;
+    gap: 8px;
+}
+
+.flujo-editor-cuerpo {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.flujo-editor-pie {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 20px 0;
+    margin-top: 8px;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* ========== Secciones del editor ========== */
+
+.flujo-seccion {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0, 21, 41, 0.06);
+}
+
+.flujo-seccion__titulo {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.flujo-seccion__ayuda {
+    font-size: 13px;
+    color: #8b93a1;
+    margin: -8px 0 16px;
+    line-height: 1.5;
+}
+
+/* ========== Campos del formulario ========== */
+
+.flujo-campos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.flujo-campos--params {
+    margin-top: 12px;
+}
+
+.flujo-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.flujo-campo--ancho {
+    grid-column: 1 / -1;
+}
+
+.flujo-campo--switch {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+}
+
+.flujo-campo__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #434343;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.flujo-campo__hint {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: #8b93a1;
+}
+
+.flujo-input-mono,
+.flujo-input-mono input {
+    font-family: 'Fira Code', Consolas, monospace !important;
+    font-size: 13px !important;
+}
+
+/* ========== SQL textarea ========== */
+
+.flujo-sql {
+    width: 100%;
+    min-height: 200px;
+    padding: 16px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    border: 1px solid #333;
+    border-radius: 8px;
+    resize: vertical;
+    outline: none;
+    tab-size: 4;
+}
+
+.flujo-sql:focus {
+    border-color: #4096ff;
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.15);
+}
+
+.flujo-sql::placeholder {
+    color: #666;
+}
+
+/* ========== Tabla clave-valor ========== */
+
+.flujo-tcv {
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.flujo-tcv__cabecera {
+    display: grid;
+    grid-template-columns: 1fr 1fr 32px;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fafafa;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #434343;
+}
+
+.flujo-tcv__col--accion {
+    width: 32px;
+}
+
+.flujo-tcv__fila {
+    display: grid;
+    grid-template-columns: 1fr 1fr 32px;
+    gap: 8px;
+    padding: 6px 12px;
+    border-top: 1px solid #f5f5f5;
+    align-items: center;
+}
+
+.flujo-tcv__fila:nth-child(even) {
+    background: #fafbfc;
+}
+
+.flujo-tcv__input {
+    font-size: 13px !important;
+}
+
+.flujo-tcv__eliminar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: none;
+    color: #bfbfbf;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.flujo-tcv__eliminar:hover {
+    color: #ff4d4f;
+    background: #fff1f0;
+}
+
+.flujo-tcv__vacio {
+    padding: 16px 12px;
+    text-align: center;
+    font-size: 13px;
+    color: #bfbfbf;
+    font-style: italic;
+}
+
+.flujo-tcv__agregar {
+    margin: 8px 12px 10px;
+}
+
+/* ========== Filtro OData ========== */
+
+.flujo-filtro-odata {
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.flujo-filtro-odata__cabecera {
+    display: grid;
+    grid-template-columns: 1fr 160px 1fr 32px;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fafafa;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #434343;
+}
+
+.flujo-filtro-odata__col--op {
+    width: 160px;
+}
+
+.flujo-filtro-odata__col--accion {
+    width: 32px;
+}
+
+.flujo-filtro-odata__fila {
+    display: grid;
+    grid-template-columns: 1fr 160px 1fr 32px;
+    gap: 8px;
+    padding: 6px 12px;
+    border-top: 1px solid #f5f5f5;
+    align-items: center;
+}
+
+.flujo-filtro-odata__preview {
+    padding: 8px 12px;
+    border-top: 1px solid #f0f0f0;
+    background: #f9f9f9;
+}
+
+.flujo-filtro-odata__preview-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #8b93a1;
+    margin-right: 6px;
+}
+
+.flujo-filtro-odata__preview-valor {
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 12px;
+    color: #1a1a2e;
+}
+
+/* ========== Condicionales ========== */
+
+.flujo-condicional {
+    padding: 16px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    background: #fafbfc;
+}
+
+.flujo-condicional--regla {
+    border-left: 3px solid #1677ff;
+}
+
+.flujo-condicional--funcion {
+    border-left: 3px solid #52c41a;
+}
+
+.flujo-condicional__cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.flujo-condicional__tipo {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.flujo-condicional--regla .flujo-condicional__tipo {
+    color: #1677ff;
+}
+
+.flujo-condicional--funcion .flujo-condicional__tipo {
+    color: #52c41a;
+}
+
+.flujo-condicional__acciones {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* ========== Resolve info ========== */
+
+.flujo-resolve-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #e6f7ff;
+    border: 1px solid #91d5ff;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #434343;
+    line-height: 1.5;
+}
+
+.flujo-resolve-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.flujo-resolve-toggle__texto {
+    font-size: 13px;
+    color: #8b93a1;
+    line-height: 1.5;
+}
+
+/* ========== Responsive ========== */
+
+@media (max-width: 768px) {
+    .flujo-campos {
+        grid-template-columns: 1fr;
+    }
+
+    .flujo-editor-head {
+        flex-direction: column;
+    }
+
+    .flujo-editor-head__acciones {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .flujo-flow-head {
+        flex-direction: column;
+    }
+
+    .flujo-filtros__buscador {
+        width: 100%;
+    }
+
+    .flujo-tcv__cabecera,
+    .flujo-tcv__fila {
+        grid-template-columns: 1fr 1fr 28px;
+    }
+
+    .flujo-filtro-odata__cabecera,
+    .flujo-filtro-odata__fila {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+    .flujo-filtro-odata__col--op,
+    .flujo-filtro-odata__col--accion {
+        width: auto;
+    }
+}

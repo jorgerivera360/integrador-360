@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Integrador 360 — Clientes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --sidebar: #001529;
+    --sidebar-sub: #000c17;
+    --azul: #1890ff;
+    --contenido: #f0f2f5;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: Inter, "Segoe UI", system-ui, sans-serif;
+    color: rgba(0,0,0,.85);
+    background: var(--contenido);
+  }
+  a { color: var(--azul); text-decoration: none; }
+  a:hover { color: #40a9ff; }
+
+  .layout { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    flex: 0 0 auto;
+    width: 240px;
+    background: var(--sidebar);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width .22s cubic-bezier(.2,.8,.3,1);
+  }
+  .sidebar.is-collapsed { width: 80px; }
+
+  .sidebar__marca {
+    flex: 0 0 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .sidebar__marca img { height: 34px; width: auto; max-width: none; }
+  .sidebar.is-collapsed .logo-completo { display: none; }
+  .logo-marca { display: none; }
+  .sidebar.is-collapsed .logo-marca { display: block; }
+
+  .menu { flex: 1 1 auto; padding: 8px 0; display: flex; flex-direction: column; }
+
+  .menu__item,
+  .menu__subitem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    cursor: pointer;
+    color: rgba(255,255,255,.72);
+    background: transparent;
+    border-left: 3px solid transparent;
+    font-size: 14px;
+    user-select: none;
+    transition: background .16s ease, color .16s ease;
+  }
+  .menu__item { height: 44px; }
+  .menu__subitem { height: 40px; padding: 0 20px 0 44px; }
+  .menu__item:hover,
+  .menu__subitem:hover { background: rgba(255,255,255,.10); color: #fff; }
+  .menu__item.is-active,
+  .menu__subitem.is-active {
+    color: #fff;
+    background: rgba(24,144,255,.20);
+    border-left-color: var(--azul);
+  }
+  .menu__item svg,
+  .menu__subitem svg { flex: 0 0 16px; }
+  .menu__item.is-active svg,
+  .menu__subitem.is-active svg { stroke: #fff; }
+
+  .menu__texto { white-space: nowrap; }
+  .menu__caret { margin-left: auto; font-size: 10px; transition: transform .2s ease; }
+  .menu__item.is-open .menu__caret { transform: rotate(90deg); }
+
+  .submenu { background: var(--sidebar-sub); display: none; flex-direction: column; padding: 4px 0; }
+  .menu__item.is-open + .submenu { display: flex; }
+
+  .sidebar.is-collapsed .menu__texto,
+  .sidebar.is-collapsed .menu__caret { display: none; }
+  .sidebar.is-collapsed .menu__item,
+  .sidebar.is-collapsed .menu__subitem { justify-content: center; padding: 0; }
+
+  .colapsar {
+    flex: 0 0 48px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 22px;
+    cursor: pointer;
+    color: rgba(255,255,255,.6);
+    border-top: 1px solid rgba(255,255,255,.06);
+    font-size: 22px;
+    line-height: 1;
+    user-select: none;
+    transition: background .16s ease, color .16s ease;
+  }
+  .colapsar:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+  /* ---------- Cuerpo ---------- */
+  .cuerpo { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+  .header {
+    flex: 0 0 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 24px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,21,41,.08);
+    position: relative;
+    z-index: 5;
+  }
+  .breadcrumb { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 14px; color: rgba(0,0,0,.45); }
+  .breadcrumb__sep { color: rgba(0,0,0,.25); }
+  .breadcrumb__actual { color: rgba(0,0,0,.85); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .usuario { display: flex; align-items: center; gap: 14px; }
+  .usuario__nombre { font-size: 14px; white-space: nowrap; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .badge--superadmin { color: #cf1322; background: #fff1f0; border: 1px solid #ffa39e; }
+  .badge--admin      { color: #096dd9; background: #e6f7ff; border: 1px solid #91d5ff; }
+  .badge--viewer     { color: #389e0d; background: #f6ffed; border: 1px solid #b7eb8f; }
+
+  .rueda-wrap { position: relative; }
+  .rueda {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: rgba(0,0,0,.55);
+    background: transparent;
+    transition: background .16s ease, color .16s ease;
+  }
+  .rueda:hover,
+  .rueda-wrap.is-open .rueda { background: #f0f5ff; color: var(--azul); }
+
+  .dropdown {
+    display: none;
+    position: absolute;
+    top: 40px; right: 0;
+    min-width: 168px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), 0 3px 6px rgba(0,0,0,.06);
+    padding: 4px;
+    z-index: 10;
+  }
+  .rueda-wrap.is-open .dropdown { display: block; }
+  .dropdown__correo { padding: 8px 12px; font-size: 12px; color: rgba(0,0,0,.45); border-bottom: 1px solid #f0f0f0; }
+  .dropdown__accion {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background .14s ease;
+  }
+  .dropdown__accion:hover { background: #f5f5f5; }
+
+  .contenido { flex: 1 1 auto; padding: 24px; background: var(--contenido); }
+  .contenido__placeholder {
+    min-height: 320px;
+    height: 100%;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px dashed #d9d9d9;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(0,0,0,.35);
+    font-size: 15px;
+  }
+
+  /* ---------- Cabecera de página / cliente ---------- */
+  .pagina-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .pagina-head__titulo { margin: 0 0 6px; font-size: 24px; font-weight: 700; color: #1a1a2e; letter-spacing: -.02em; }
+  .pagina-head__sub { margin: 0; font-size: 14px; color: #8b93a1; }
+
+  .cliente-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 20px; border-bottom: 1px solid #f0f0f0; }
+  .cliente-head__linea { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .cliente-head__nombre { margin: 0; font-size: 28px; font-weight: 700; color: #1a1a2e; letter-spacing: -.02em; }
+  .cliente-head__meta { margin: 0; font-size: 13.5px; color: #8b93a1; }
+
+  /* ---------- Botones ---------- */
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border-radius: 8px; font-family: inherit; font-size: 14px; cursor: pointer; transition: background .18s ease, box-shadow .18s ease, border-color .16s ease, color .16s ease; }
+  .btn--primario { border: none; background: #1677ff; color: #fff; font-weight: 500; box-shadow: 0 2px 6px rgba(22,119,255,.24); }
+  .btn--primario:hover { background: #0958d9; box-shadow: 0 6px 16px rgba(22,119,255,.32); }
+  .btn--verde { border: none; background: #52c41a; color: #fff; font-weight: 500; box-shadow: 0 2px 6px rgba(82,196,26,.24); }
+  .btn--verde:hover { background: #389e0d; }
+  .btn--outline { border: 1px solid #d9d9d9; background: #fff; color: #595959; }
+  .btn--outline:hover { border-color: #8c8c8c; color: #1a1a2e; }
+  .btn--peligro-outline { border: 1px solid #ffa39e; background: #fff; color: #cf1322; }
+  .btn--peligro-outline:hover { background: #fff1f0; border-color: #ff4d4f; }
+  .btn--peligro { border: none; background: #ff4d4f; color: #fff; font-weight: 500; }
+  .btn--peligro:disabled { background: #f5f5f5; color: rgba(0,0,0,.25); cursor: not-allowed; }
+  .btn:disabled { cursor: not-allowed; }
+  .btn--cargando { opacity: .75; }
+
+  .spinner { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; display: inline-block; animation: girar .7s linear infinite; flex: 0 0 auto; }
+
+  /* ---------- Filtros ---------- */
+  .filtros { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .buscador { position: relative; width: 300px; max-width: 100%; }
+  .buscador svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: rgba(0,0,0,.3); pointer-events: none; }
+  .buscador input {
+    width: 100%; height: 36px; padding: 0 12px 0 34px;
+    border: 1px solid #d9d9d9; border-radius: 6px; background: #fff;
+    font-family: inherit; font-size: 14px; color: rgba(0,0,0,.85);
+    outline: none; transition: border-color .16s ease, box-shadow .16s ease;
+  }
+  .buscador input:hover { border-color: #40a9ff; }
+  .buscador input:focus { border-color: #40a9ff; box-shadow: 0 0 0 2px rgba(24,144,255,.14); }
+  .filtro { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; font-size: 14px; color: rgba(0,0,0,.65); cursor: pointer; transition: border-color .16s ease; }
+  .filtro:hover { border-color: #40a9ff; }
+  .filtro select { border: none; outline: none; background: transparent; font-family: inherit; font-size: 14px; color: rgba(0,0,0,.85); cursor: pointer; }
+
+  /* ---------- Tabla ---------- */
+  .card { background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,21,41,.06); overflow: hidden; }
+  .tabla-scroll { overflow-x: auto; }
+  .tabla { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 900px; }
+  .tabla th {
+    padding: 12px 20px; text-align: left;
+    font-size: 13px; font-weight: 500; color: #595959;
+    text-transform: uppercase; letter-spacing: .5px;
+    background: #fafafa; border-bottom: 1px solid #f0f0f0; white-space: nowrap;
+  }
+  .tabla td { padding: 14px 20px; border-bottom: 1px solid #f0f0f0; color: rgba(0,0,0,.85); white-space: nowrap; }
+  .tabla .c-centro { text-align: center; }
+  .tabla .c-derecha { text-align: right; }
+  .tabla .c-id { font-family: "Fira Code", Consolas, monospace; font-size: 13px; color: #595959; }
+  .tabla .c-nombre { font-weight: 500; color: #1a1a2e; }
+  .tabla .c-gris { color: rgba(0,0,0,.45); font-variant-numeric: tabular-nums; }
+  .tabla .c-flecha { color: rgba(0,0,0,.25); width: 40px; }
+  .tabla tbody tr { cursor: pointer; transition: background .2s ease; }
+  .tabla tbody tr:hover { background: #f0f5ff; }
+
+  .tag { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: 4px; font-size: 12.5px; }
+  .tag--ws       { color: #0958d9; background: #e6f4ff; border: 1px solid #91caff; }
+  .tag--connekta { color: #389e0d; background: #f6ffed; border: 1px solid #b7eb8f; }
+  .tag--sap      { color: #d46b08; background: #fff7e6; border: 1px solid #ffd591; }
+  .tag--excel    { color: #595959; background: #fafafa; border: 1px solid #d9d9d9; }
+  .tag--activo   { color: #389e0d; background: #f6ffed; border: 1px solid #b7eb8f; }
+  .tag--inactivo { color: #595959; background: #fafafa; border: 1px solid #d9d9d9; }
+  .tag__punto { width: 7px; height: 7px; border-radius: 50%; }
+  .tag--activo .tag__punto { background: #52c41a; }
+  .tag--inactivo .tag__punto { background: #bfbfbf; }
+
+  /* ---------- Paginación ---------- */
+  .paginacion { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 20px; border-top: 1px solid #f0f0f0; }
+  .paginacion__resumen { font-size: 13px; color: rgba(0,0,0,.45); }
+  .paginas { display: flex; align-items: center; gap: 8px; }
+  .pagina { min-width: 32px; height: 32px; padding: 0 8px; display: flex; align-items: center; justify-content: center; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; font-size: 13px; color: rgba(0,0,0,.45); cursor: pointer; }
+  .pagina--activa { border-color: #1890ff; color: #1890ff; font-weight: 500; }
+  .pagina--off { color: rgba(0,0,0,.25); cursor: not-allowed; }
+
+  /* ---------- Tabs ---------- */
+  .tabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid #f0f0f0; margin-bottom: 24px; }
+  .tab { padding: 12px 18px; cursor: pointer; font-size: 14px; color: rgba(0,0,0,.55); border-bottom: 2px solid transparent; margin-bottom: -1px; user-select: none; transition: color .16s ease; }
+  .tab:hover { color: #1677ff; }
+  .tab.is-active { color: #1677ff; font-weight: 600; border-bottom-color: #1677ff; }
+  .tab-panel { display: none; }
+  .tab-panel.is-active { display: block; }
+
+  /* ---------- Formulario ---------- */
+  .seccion { background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,21,41,.06); padding: 24px; margin-bottom: 20px; }
+  .seccion__titulo { font-size: 16px; font-weight: 600; color: #1a1a2e; }
+  .seccion__sub { margin: 6px 0 0; font-size: 13px; color: #8b93a1; line-height: 1.55; max-width: 720px; }
+  .seccion__linea { border-bottom: 1px solid #f0f0f0; margin: 16px 0 24px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 24px; }
+
+  .campo__label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #434343; margin-bottom: 8px; }
+  .campo__input {
+    width: 100%; max-width: 320px; height: 36px; padding: 8px 12px;
+    border: 1px solid #d9d9d9; border-radius: 6px; background: #fff;
+    font-family: inherit; font-size: 14px; color: rgba(0,0,0,.85);
+    outline: none; transition: border-color .16s ease, box-shadow .16s ease;
+  }
+  .campo__input:focus { border-color: #1677ff; box-shadow: 0 0 0 2px rgba(22,119,255,.12); }
+  .campo__input--mono { font-family: "Fira Code", Consolas, monospace; font-size: 13px; }
+  .campo__input--full { max-width: none; }
+
+  .info { position: relative; display: flex; align-items: center; }
+  .info__icono {
+    width: 17px; height: 17px; border-radius: 50%;
+    border: 1px solid #d9d9d9; background: #fff; color: #bfbfbf;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; cursor: pointer; user-select: none;
+    transition: background .16s ease, color .16s ease, border-color .16s ease;
+  }
+  .info__icono:hover, .info.is-open .info__icono { background: #e6f4ff; border-color: #1677ff; color: #1677ff; }
+  .info__pop {
+    display: none; position: absolute; top: 26px; left: -8px; width: 360px;
+    background: #fff; border: 1px solid #f0f0f0; border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0,0,0,.12), 0 3px 6px rgba(0,0,0,.06);
+    padding: 12px 14px; font-size: 12.5px; line-height: 1.55; color: #595959; z-index: 30;
+  }
+  .info.is-open .info__pop { display: block; }
+
+  .switch-fila { display: flex; align-items: center; gap: 12px; }
+  .switch { flex: 0 0 auto; width: 50px; height: 26px; border-radius: 13px; background-color: #d9d9d9; padding: 3px; display: flex; justify-content: flex-start; cursor: pointer; transition: background-color .2s ease; }
+  .switch__bolita { width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .switch.is-on { background-color: #52c41a; justify-content: flex-end; }
+  .switch-fila__texto { font-size: 14px; font-weight: 500; color: #595959; }
+  .switch.is-on + .switch-fila__texto { color: #389e0d; }
+
+  .sistema { border: 1px solid #f0f0f0; border-radius: 8px; background: #fafafa; padding: 18px; }
+  .sistema__titulo { font-size: 13px; font-weight: 600; color: #434343; margin-bottom: 14px; }
+  .sistema__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .dato__label { font-size: 12px; color: rgba(0,0,0,.45); margin-bottom: 2px; }
+  .dato__valor { font-size: 13px; color: rgba(0,0,0,.85); font-variant-numeric: tabular-nums; }
+
+  .acciones { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  /* ---------- Test de conexiones ---------- */
+  .test { border: 1px solid #f0f0f0; border-radius: 8px; padding: 22px; }
+  .test__icono { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .test__icono--azul { background: #e6f4ff; }
+  .test__icono--verde { background: #f6ffed; }
+  .test__titulo { font-size: 16px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px; }
+  .test__sub { margin: 0 0 18px; font-size: 13px; color: #8b93a1; line-height: 1.5; }
+  .resultado { display: none; margin-top: 18px; border-radius: 8px; overflow: hidden; animation: entrar .25s ease both; }
+  .resultado.is-visible { display: block; }
+  .resultado--ok { border: 1px solid #b7eb8f; }
+  .resultado--error { border: 1px solid #ffccc7; }
+  .resultado__head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; }
+  .resultado--ok .resultado__head { background: #f6ffed; color: #237804; }
+  .resultado--error .resultado__head { background: #fff2f0; color: #a8071a; }
+  .resultado__cuerpo { padding: 12px 14px; background: #fff; }
+  .resultado__detalle { font-size: 13px; color: rgba(0,0,0,.55); line-height: 1.5; margin-bottom: 10px; }
+  .resultado__tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 4px; font-size: 12.5px; color: #595959; background: #fafafa; border: 1px solid #d9d9d9; font-family: "Fira Code", Consolas, monospace; }
+
+  .alerta { display: flex; align-items: flex-start; gap: 12px; margin-top: 24px; padding: 14px 16px; border: 1px solid #91caff; border-radius: 8px; background: #e6f4ff; }
+  .alerta svg { flex: 0 0 17px; margin-top: 1px; }
+  .alerta span { font-size: 13px; color: #0958d9; line-height: 1.55; }
+
+  /* ---------- Modales ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center;
+    padding: 24px; z-index: 60;
+  }
+  .overlay.is-open { display: flex; }
+  .modal { background: #fff; border-radius: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.2); animation: aparecer .22s ease both; overflow: hidden; max-width: 100%; }
+  .modal--crear { width: 520px; }
+  .modal--borrar { width: 480px; border-top: 4px solid #ff4d4f; }
+  .modal__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; border-bottom: 1px solid #f0f0f0; }
+  .modal__titulo { font-size: 18px; font-weight: 600; color: #1a1a2e; }
+  .modal__cerrar { width: 28px; height: 28px; border: none; border-radius: 6px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; color: rgba(0,0,0,.45); transition: background .16s ease, color .16s ease; }
+  .modal__cerrar:hover { background: #f5f5f5; color: #1a1a2e; }
+  .modal__cuerpo { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+  .modal__pie { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #f0f0f0; background: #fafafa; }
+
+  .borrar__head { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+  .borrar__icono { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%; background: #fff1f0; display: flex; align-items: center; justify-content: center; }
+  .borrar__titulo { font-size: 18px; font-weight: 600; color: #1a1a2e; margin-bottom: 6px; }
+  .borrar__texto { font-size: 13.5px; color: rgba(0,0,0,.55); line-height: 1.5; }
+  .cascada { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+  .cascada__item { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; color: rgba(0,0,0,.65); }
+  .cascada__item svg { flex: 0 0 14px; margin-top: 3px; }
+  .borrar__aviso { margin: 0 0 20px; font-size: 13px; font-weight: 600; color: #434343; line-height: 1.5; }
+
+  @keyframes girar { to { transform: rotate(360deg); } }
+  @keyframes aparecer { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes entrar { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 1000px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 820px) {
+    .sidebar { width: 80px; }
+    .sidebar .logo-completo { display: none; }
+    .sidebar .logo-marca { display: block; }
+    .sidebar .menu__texto, .sidebar .menu__caret { display: none; }
+    .sidebar .menu__item, .sidebar .menu__subitem { justify-content: center; padding: 0; }
+    .usuario__nombre { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ============ Sidebar ============ -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar__marca">
+      <img class="logo-completo" src="logo-360-claro.png" alt="360 Software" />
+      <img class="logo-marca" src="logo-360-marca.png" alt="360" />
+    </div>
+
+    <nav class="menu">
+
+      <div class="menu__item" data-nav="Tablero">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 13h7v8H3z" /></svg>
+        <span class="menu__texto">Tablero</span>
+      </div>
+
+      <div class="menu__item" data-nav="Flujos">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h6M14 6h6M4 18h6M14 18h6M10 6a4 4 0 004 4M10 18a4 4 0 014-4" /></svg>
+        <span class="menu__texto">Flujos</span>
+      </div>
+
+      <div class="menu__item" data-nav="Ejecuciones">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l11 7-11 7z" /></svg>
+        <span class="menu__texto">Ejecuciones</span>
+      </div>
+
+      <div class="menu__item" data-nav="Auditoría">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10v18H7zM10 8h4M10 12h4M10 16h2" /></svg>
+        <span class="menu__texto">Auditoría</span>
+      </div>
+
+      <div class="menu__item is-open" id="admin-toggle">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z" /></svg>
+        <span class="menu__texto">Admin</span>
+        <span class="menu__caret">▶</span>
+      </div>
+
+      <div class="submenu">
+        <div class="menu__subitem is-active" data-nav="Clientes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 11a3 3 0 100-6 3 3 0 000 6zM2 20c0-3 3-5 6-5s6 2 6 5M17 11a3 3 0 100-6M16 15c3 0 6 2 6 5" /></svg>
+          <span class="menu__texto">Clientes</span>
+        </div>
+        <div class="menu__subitem" data-nav="Usuarios">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.72)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6" /></svg>
+          <span class="menu__texto">Usuarios</span>
+        </div>
+      </div>
+
+    </nav>
+
+    <div class="colapsar" id="colapsar" title="Colapsar">←</div>
+
+  </aside>
+
+  <!-- ============ Cuerpo ============ -->
+  <div class="cuerpo">
+
+    <header class="header">
+      <div class="breadcrumb">
+        <span>Admin</span>
+        <span class="breadcrumb__sep">/</span>
+        <a href="#" id="bc-clientes" style="display: none;">Clientes</a>
+        <span class="breadcrumb__sep" id="bc-sep" style="display: none;">/</span>
+        <span class="breadcrumb__actual" id="bc-nivel3">Clientes</span>
+      </div>
+
+      <div class="usuario">
+        <span class="usuario__nombre">Jorge Rivera</span>
+        <span class="badge badge--superadmin">Superadmin</span>
+
+        <div class="rueda-wrap" id="rueda-wrap">
+          <div class="rueda" id="rueda" title="Opciones">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+              <path d="M9.9 2.1h3.2l.5 2.5 1.9.8 2.2-1.3 2.2 2.2-1.3 2.2.8 1.9 2.5.5v3.2l-2.5.5-.8 1.9 1.3 2.2-2.2 2.2-2.2-1.3-1.9.8-.5 2.5H9.9l-.5-2.5-1.9-.8-2.2 1.3-2.2-2.2 1.3-2.2-.8-1.9-2.5-.5v-3.2l2.5-.5.8-1.9-1.3-2.2 2.2-2.2 2.2 1.3 1.9-.8z" />
+              <circle cx="11.5" cy="11.5" r="3.1" />
+            </svg>
+          </div>
+
+          <div class="dropdown">
+            <div class="dropdown__correo">jorge.rivera@360software.com.co</div>
+            <div class="dropdown__accion">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 4H6v16h8M17 8l4 4-4 4M21 12H10" /></svg>
+              Cerrar sesión
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="contenido">
+
+      <!-- ══════ VISTA 1 — Lista ══════ -->
+      <section id="vista-lista">
+
+        <div class="pagina-head">
+          <div>
+            <h1 class="pagina-head__titulo">Clientes</h1>
+            <p class="pagina-head__sub">Gestión de empresas clientes conectadas al integrador</p>
+          </div>
+          <button type="button" class="btn btn--primario" id="btn-crear"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg> Crear cliente</button>
+        </div>
+
+        <div class="filtros">
+          <div class="buscador">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5L21 21" /></svg>
+            <input type="text" id="buscar" placeholder="Buscar por nombre o ID..." />
+          </div>
+          <label class="filtro">
+            ERP:
+            <select id="f-erp">
+              <option value="Todos">Todos</option>
+              <option value="Siesa Web Service">Siesa Web Service</option>
+              <option value="Siesa Connekta">Siesa Connekta</option>
+              <option value="SAP">SAP</option>
+              <option value="Excel">Excel</option>
+            </select>
+          </label>
+          <label class="filtro">
+            Estado:
+            <select id="f-estado">
+              <option value="Todos">Todos</option>
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="card">
+          <div class="tabla-scroll">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th>ID del cliente</th>
+                  <th>Nombre</th>
+                  <th class="c-centro">ERP</th>
+                  <th class="c-centro">Estado</th>
+                  <th>Creado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tbody">
+                <tr data-id="fenix" data-nombre="Fenix" data-erp-slug="ws" data-erp="Siesa Web Service" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">fenix</td>
+                  <td class="c-nombre">Fenix</td>
+                  <td class="c-centro"><span class="tag tag--ws">Siesa Web Service</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="faizan" data-nombre="Faizan" data-erp-slug="ws" data-erp="Siesa Web Service" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">faizan</td>
+                  <td class="c-nombre">Faizan</td>
+                  <td class="c-centro"><span class="tag tag--ws">Siesa Web Service</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="surtinegocios" data-nombre="Surtinegocios" data-erp-slug="ws" data-erp="Siesa Web Service" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">surtinegocios</td>
+                  <td class="c-nombre">Surtinegocios</td>
+                  <td class="c-centro"><span class="tag tag--ws">Siesa Web Service</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="papis" data-nombre="Grupo Empresarial Papis" data-erp-slug="ws" data-erp="Siesa Web Service" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">papis</td>
+                  <td class="c-nombre">Grupo Empresarial Papis</td>
+                  <td class="c-centro"><span class="tag tag--ws">Siesa Web Service</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="titopabon" data-nombre="Tito Pabón" data-erp-slug="connekta" data-erp="Siesa Connekta" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">titopabon</td>
+                  <td class="c-nombre">Tito Pabón</td>
+                  <td class="c-centro"><span class="tag tag--connekta">Siesa Connekta</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="oit" data-nombre="OIT" data-erp-slug="connekta" data-erp="Siesa Connekta" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">oit</td>
+                  <td class="c-nombre">OIT</td>
+                  <td class="c-centro"><span class="tag tag--connekta">Siesa Connekta</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="simonbolivar" data-nombre="R.P. Simón Bolívar" data-erp-slug="connekta" data-erp="Siesa Connekta" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">simonbolivar</td>
+                  <td class="c-nombre">R.P. Simón Bolívar</td>
+                  <td class="c-centro"><span class="tag tag--connekta">Siesa Connekta</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="bycsa" data-nombre="BYCSA" data-erp-slug="sap" data-erp="SAP" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">bycsa</td>
+                  <td class="c-nombre">BYCSA</td>
+                  <td class="c-centro"><span class="tag tag--sap">SAP</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="fabercastell" data-nombre="Faber Castell" data-erp-slug="sap" data-erp="SAP" data-activo="true" data-creado="15/08/2026">
+                  <td class="c-id">fabercastell</td>
+                  <td class="c-nombre">Faber Castell</td>
+                  <td class="c-centro"><span class="tag tag--sap">SAP</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">15/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="pruebaws" data-nombre="Prueba WS" data-erp-slug="ws" data-erp="Siesa Web Service" data-activo="true" data-creado="10/08/2026">
+                  <td class="c-id">pruebaws</td>
+                  <td class="c-nombre">Prueba WS</td>
+                  <td class="c-centro"><span class="tag tag--ws">Siesa Web Service</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">10/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="pruebaconnekta" data-nombre="Prueba Connekta" data-erp-slug="connekta" data-erp="Siesa Connekta" data-activo="true" data-creado="10/08/2026">
+                  <td class="c-id">pruebaconnekta</td>
+                  <td class="c-nombre">Prueba Connekta</td>
+                  <td class="c-centro"><span class="tag tag--connekta">Siesa Connekta</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">10/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="pruebasap" data-nombre="Prueba SAP" data-erp-slug="sap" data-erp="SAP" data-activo="true" data-creado="10/08/2026">
+                  <td class="c-id">pruebasap</td>
+                  <td class="c-nombre">Prueba SAP</td>
+                  <td class="c-centro"><span class="tag tag--sap">SAP</span></td>
+                  <td class="c-centro"><span class="tag tag--activo"><span class="tag__punto"></span>Activo</span></td>
+                  <td class="c-gris">10/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+                <tr data-id="pruebaexcel" data-nombre="Prueba Excel" data-erp-slug="excel" data-erp="Excel" data-activo="false" data-creado="10/08/2026">
+                  <td class="c-id">pruebaexcel</td>
+                  <td class="c-nombre">Prueba Excel</td>
+                  <td class="c-centro"><span class="tag tag--excel">Excel</span></td>
+                  <td class="c-centro"><span class="tag tag--inactivo"><span class="tag__punto"></span>Inactivo</span></td>
+                  <td class="c-gris">10/08/2026</td>
+                  <td class="c-derecha c-flecha"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="paginacion">
+            <span class="paginacion__resumen" id="resumen">Mostrando 1-13 de 13 clientes</span>
+            <div class="paginas">
+              <div class="pagina pagina--off">‹</div>
+              <div class="pagina pagina--activa">1</div>
+              <div class="pagina">2</div>
+              <div class="pagina">›</div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ══════ VISTA 2 — Detalle ══════ -->
+      <section id="vista-detalle" style="display: none;">
+
+        <div class="cliente-head">
+          <div>
+            <div class="cliente-head__linea">
+              <h1 class="cliente-head__nombre" id="d-nombre">Fenix</h1>
+              <span class="tag tag--ws" id="d-tag-erp">Siesa Web Service</span>
+              <span class="tag tag--activo" id="d-tag-estado"><span class="tag__punto"></span><span id="d-tag-estado-texto">Activo</span></span>
+            </div>
+            <p class="cliente-head__meta">ID: <span id="d-meta-id">fenix</span> · Creado: <span id="d-meta-creado">15/08/2026</span> · Última actualización: 20/08/2026</p>
+          </div>
+          <button type="button" class="btn btn--peligro-outline" id="btn-borrar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6" /></svg> Eliminar cliente</button>
+        </div>
+
+        <div class="tabs">
+          <div class="tab is-active" data-tab="info">Información</div>
+          <div class="tab" data-tab="test">Test de conexiones</div>
+        </div>
+
+        <!-- Tab Información -->
+        <div class="tab-panel is-active" data-panel="info">
+          <div class="seccion">
+            <div class="seccion__titulo">Datos del cliente</div>
+            <div class="seccion__linea"></div>
+
+            <div class="grid-2">
+              <div class="col">
+                <div>
+                  <div class="campo__label">
+                    ID del cliente
+                    <span class="info">
+              <span class="info__icono">i</span>
+              <span class="info__pop" style="width: 380px;">Identificador interno del cliente, distinto del nombre visible. Debe coincidir con el nombre del secret en GCP (integrador-{id}) y con la variable CLIENT_ID del contenedor Docker.</span>
+            </span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#faad14" stroke-width="1.9" stroke-linecap="round"><path d="M12 3l9 16H3z" /><path d="M12 9v5M12 16h.01" /></svg>
+                  </div>
+                  <input type="text" class="campo__input campo__input--mono" id="d-input-id" value="fenix" />
+                </div>
+
+                <div>
+                  <label class="campo__label">Nombre del cliente</label>
+                  <input type="text" class="campo__input" id="d-input-nombre" value="Fenix" />
+                </div>
+
+                <div>
+                  <div class="campo__label">
+                    ERP conectado
+                    <span class="info">
+              <span class="info__icono">i</span>
+              <span class="info__pop">Determina qué conector y transformador usa el integrador para este cliente. Cambiarlo afecta a todos sus flujos.</span>
+            </span>
+                  </div>
+                  <select class="campo__input" id="d-select-erp">
+              <option value="ws" selected>Siesa Web Service (ws)</option>
+              <option value="connekta">Siesa Connekta (connekta)</option>
+              <option value="sap">SAP B1 (sap)</option>
+              <option value="excel">Excel (excel)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="col">
+                <div>
+                  <div class="campo__label">
+                    Estado del cliente
+                    <span class="info">
+              <span class="info__icono">i</span>
+              <span class="info__pop">Los clientes inactivos no pueden ejecutar flujos ni recibir ejecuciones manuales desde la API.</span>
+            </span>
+                  </div>
+                  <div class="switch-fila">
+                    <span class="switch is-on" id="d-switch"><span class="switch__bolita"></span></span>
+                    <span class="switch-fila__texto" id="d-switch-texto">Activo</span>
+                  </div>
+                </div>
+
+                <div class="sistema">
+                  <div class="sistema__titulo">Información del sistema</div>
+                  <div class="sistema__grid">
+                    <div><div class="dato__label">Creado por</div><div class="dato__valor">Jorge Rivera</div></div>
+                    <div><div class="dato__label">Actualizado por</div><div class="dato__valor">Jorge Rivera</div></div>
+                    <div><div class="dato__label">Fecha creación</div><div class="dato__valor">15/08/2026 10:30</div></div>
+                    <div><div class="dato__label">Última actualización</div><div class="dato__valor">20/08/2026 15:16</div></div>
+                    <div><div class="dato__label">ID interno</div><div class="dato__valor">1</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="acciones">
+            <button type="button" class="btn btn--primario">Guardar cambios</button>
+            <button type="button" class="btn btn--outline" id="btn-cancelar">Cancelar</button>
+          </div>
+        </div>
+
+        <!-- Tab Test de conexiones -->
+        <div class="tab-panel" data-panel="test">
+          <div class="seccion" style="margin-bottom: 0;">
+            <div class="seccion__titulo">Verificar conectividad</div>
+            <p class="seccion__sub">Prueba la conexión con el ERP del cliente y con su instancia de Odoo. Las credenciales se obtienen de GCP Secret Manager.</p>
+            <div class="seccion__linea"></div>
+
+            <div class="grid-2">
+              <div class="test">
+                <div class="test__icono test__icono--azul">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1677ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="2" /><rect x="3" y="14" width="18" height="6" rx="2" /><path d="M7 7h.01M7 17h.01" /></svg>
+                </div>
+                <div class="test__titulo">ERP — <span id="d-test-erp">Siesa Web Service</span></div>
+                <p class="test__sub">Prueba que el integrador puede conectarse al ERP del cliente</p>
+                <button type="button" class="btn btn--primario" data-test="erp"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z" /></svg> Probar conexión ERP</button>
+                <div class="resultado" data-resultado="erp"></div>
+              </div>
+
+              <div class="test">
+                <div class="test__icono test__icono--verde">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#52c41a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18a4 4 0 01.4-8A5.5 5.5 0 0117 9.5a3.5 3.5 0 011 6.9" /><path d="M6 18h11.5" /></svg>
+                </div>
+                <div class="test__titulo">Odoo WMS</div>
+                <p class="test__sub">Prueba que el integrador puede autenticarse en la instancia de Odoo</p>
+                <button type="button" class="btn btn--verde" data-test="odoo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z" /></svg> Probar conexión Odoo</button>
+                <div class="resultado" data-resultado="odoo"></div>
+              </div>
+            </div>
+
+            <div class="alerta">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1677ff" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
+              <span>Las credenciales se cargan desde GCP Secret Manager. Si la prueba falla, verificar que el secret del cliente existe y que la service account tiene acceso.</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+<!-- ══════ Modal crear ══════ -->
+<div class="overlay" id="overlay-crear">
+  <div class="modal modal--crear">
+    <div class="modal__head">
+      <span class="modal__titulo">Nuevo cliente</span>
+      <button type="button" class="modal__cerrar" data-cerrar="crear"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+    </div>
+    <div class="modal__cuerpo">
+      <div>
+        <div class="campo__label">
+          ID del cliente
+          <span class="info">
+              <span class="info__icono">i</span>
+              <span class="info__pop" style="width: 340px;">Debe ser único. Se usará como nombre del secret en GCP y como CLIENT_ID del contenedor.</span>
+            </span>
+        </div>
+        <input type="text" class="campo__input campo__input--mono campo__input--full" placeholder="ej: fenixcol" />
+      </div>
+      <div>
+        <label class="campo__label">Nombre</label>
+        <input type="text" class="campo__input campo__input--full" placeholder="ej: Fenix Colombia" />
+      </div>
+      <div>
+        <label class="campo__label">Tipo de ERP</label>
+        <select class="campo__input campo__input--full">
+              <option value="ws" selected>Siesa Web Service (ws)</option>
+              <option value="connekta">Siesa Connekta (connekta)</option>
+              <option value="sap">SAP B1 (sap)</option>
+              <option value="excel">Excel (excel)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal__pie">
+      <button type="button" class="btn btn--outline" data-cerrar="crear">Cancelar</button>
+      <button type="button" class="btn btn--primario" data-cerrar="crear">Crear cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ Modal eliminar ══════ -->
+<div class="overlay" id="overlay-borrar">
+  <div class="modal modal--borrar">
+    <div style="padding: 24px;">
+      <div class="borrar__head">
+        <div class="borrar__icono">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#cf1322" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z" /><path d="M12 9v5M12 16h.01" /></svg>
+        </div>
+        <div style="min-width: 0;">
+          <div class="borrar__titulo">¿Eliminar cliente <span id="b-nombre">Fenix</span>?</div>
+          <div class="borrar__texto">Esta acción es irreversible. Se eliminarán permanentemente:</div>
+        </div>
+      </div>
+
+      <div class="cascada">
+        <div class="cascada__item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          Todos los flujos configurados del cliente
+        </div>
+        <div class="cascada__item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          Todo el historial de ejecuciones
+        </div>
+        <div class="cascada__item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          Los registros de auditoría asociados
+        </div>
+      </div>
+
+      <p class="borrar__aviso">Las credenciales en GCP Secret Manager y el contenedor Docker NO se eliminan automáticamente.</p>
+
+      <label class="campo__label">Escribe el ID del cliente para confirmar</label>
+      <input type="text" class="campo__input campo__input--mono campo__input--full" id="b-input" placeholder="fenix" />
+    </div>
+    <div class="modal__pie">
+      <button type="button" class="btn btn--outline" data-cerrar="borrar">Cancelar</button>
+      <button type="button" class="btn btn--peligro" id="b-confirmar" disabled>Eliminar permanentemente</button>
+    </div>
+  </div>
+</div>
+
+  </div>
+
+</div>
+
+<!-- Interacciones del layout: colapsar, submenú, item activo, dropdown. -->
+<script>
+  var sidebar = document.getElementById('sidebar');
+  var colapsar = document.getElementById('colapsar');
+  var ruedaWrap = document.getElementById('rueda-wrap');
+  var breadcrumb = document.getElementById('breadcrumb');
+  var adminToggle = document.getElementById('admin-toggle');
+
+  colapsar.addEventListener('click', function () {
+    sidebar.classList.toggle('is-collapsed');
+    colapsar.textContent = sidebar.classList.contains('is-collapsed') ? '→' : '←';
+  });
+
+  adminToggle.addEventListener('click', function () {
+    adminToggle.classList.toggle('is-open');
+  });
+
+  document.querySelectorAll('[data-nav]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      document.querySelectorAll('.is-active').forEach(function (a) { a.classList.remove('is-active'); });
+      el.classList.add('is-active');
+      breadcrumb.textContent = el.getAttribute('data-nav');
+    });
+  });
+
+  document.getElementById('rueda').addEventListener('click', function (e) {
+    e.stopPropagation();
+    ruedaWrap.classList.toggle('is-open');
+  });
+  document.addEventListener('click', function () { ruedaWrap.classList.remove('is-open'); });
+
+  // ── Popovers de ayuda ──
+  document.querySelectorAll('.info__icono').forEach(function (icono) {
+    icono.addEventListener('click', function (e) {
+      e.stopPropagation();
+      icono.parentElement.classList.toggle('is-open');
+    });
+  });
+
+  // ── Navegación entre vistas ──
+  var vistaLista = document.getElementById('vista-lista');
+  var vistaDetalle = document.getElementById('vista-detalle');
+  var bcClientes = document.getElementById('bc-clientes');
+  var clienteActual = { id: 'fenix', nombre: 'Fenix' };
+
+  function irALista() {
+    vistaDetalle.style.display = 'none';
+    vistaLista.style.display = '';
+    document.getElementById('bc-nivel3').textContent = 'Clientes';
+    bcClientes.style.display = 'none';
+    document.getElementById('bc-sep').style.display = 'none';
+  }
+
+  function irADetalle(datos) {
+    clienteActual = { id: datos.id, nombre: datos.nombre };
+    vistaLista.style.display = 'none';
+    vistaDetalle.style.display = '';
+
+    document.getElementById('d-nombre').textContent = datos.nombre;
+    document.getElementById('d-meta-id').textContent = datos.id;
+    document.getElementById('d-meta-creado').textContent = datos.creado;
+    document.getElementById('d-input-id').value = datos.id;
+    document.getElementById('d-input-nombre').value = datos.nombre;
+    document.getElementById('d-select-erp').value = datos.erpSlug;
+    document.getElementById('d-test-erp').textContent = datos.erp;
+
+    var tagErp = document.getElementById('d-tag-erp');
+    tagErp.className = 'tag tag--' + datos.erpSlug;
+    tagErp.textContent = datos.erp;
+
+    var sw = document.getElementById('d-switch');
+    sw.classList.toggle('is-on', datos.activo);
+    actualizarEstado();
+
+    document.getElementById('bc-nivel3').textContent = datos.nombre;
+    bcClientes.style.display = '';
+    document.getElementById('bc-sep').style.display = '';
+
+    document.querySelector('.tab[data-tab="info"]').click();
+  }
+
+  document.querySelectorAll('#tbody tr').forEach(function (tr) {
+    tr.addEventListener('click', function () {
+      irADetalle({
+        id: tr.getAttribute('data-id'),
+        nombre: tr.getAttribute('data-nombre'),
+        erpSlug: tr.getAttribute('data-erp-slug'),
+        erp: tr.getAttribute('data-erp'),
+        activo: tr.getAttribute('data-activo') === 'true',
+        creado: tr.getAttribute('data-creado')
+      });
+    });
+  });
+
+  bcClientes.addEventListener('click', function (e) { e.preventDefault(); irALista(); });
+  document.getElementById('btn-cancelar').addEventListener('click', irALista);
+
+  // ── Filtros de la lista ──
+  var inputBuscar = document.getElementById('buscar');
+  var selErp = document.getElementById('f-erp');
+  var selEstado = document.getElementById('f-estado');
+  var resumen = document.getElementById('resumen');
+  var filas = Array.prototype.slice.call(document.querySelectorAll('#tbody tr'));
+
+  function filtrar() {
+    var q = inputBuscar.value.trim().toLowerCase();
+    var erp = selErp.value;
+    var estado = selEstado.value;
+    var visibles = 0;
+
+    filas.forEach(function (tr) {
+      var id = tr.getAttribute('data-id');
+      var nombre = tr.getAttribute('data-nombre').toLowerCase();
+      var activo = tr.getAttribute('data-activo') === 'true';
+      var ok = (!q || id.indexOf(q) !== -1 || nombre.indexOf(q) !== -1) &&
+               (erp === 'Todos' || tr.getAttribute('data-erp') === erp) &&
+               (estado === 'Todos' || (estado === 'Activo') === activo);
+      tr.style.display = ok ? '' : 'none';
+      if (ok) visibles++;
+    });
+
+    resumen.textContent = visibles ? 'Mostrando 1-' + visibles + ' de 13 clientes' : 'Sin resultados';
+  }
+  inputBuscar.addEventListener('input', filtrar);
+  selErp.addEventListener('change', filtrar);
+  selEstado.addEventListener('change', filtrar);
+
+  // ── Tabs ──
+  document.querySelectorAll('.tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('is-active'); });
+      document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('is-active'); });
+      tab.classList.add('is-active');
+      document.querySelector('.tab-panel[data-panel="' + tab.getAttribute('data-tab') + '"]').classList.add('is-active');
+    });
+  });
+
+  // ── Switch de estado ──
+  var switchEstado = document.getElementById('d-switch');
+  function actualizarEstado() {
+    var on = switchEstado.classList.contains('is-on');
+    document.getElementById('d-switch-texto').textContent = on ? 'Activo' : 'Inactivo';
+    var tag = document.getElementById('d-tag-estado');
+    tag.className = 'tag tag--' + (on ? 'activo' : 'inactivo');
+    document.getElementById('d-tag-estado-texto').textContent = on ? 'Activo' : 'Inactivo';
+  }
+  switchEstado.addEventListener('click', function () {
+    switchEstado.classList.toggle('is-on');
+    actualizarEstado();
+  });
+
+  // ── ERP: el tag sigue al select ──
+  var ERP_NOMBRE = { ws: 'Siesa Web Service', connekta: 'Siesa Connekta', sap: 'SAP', excel: 'Excel' };
+  document.getElementById('d-select-erp').addEventListener('change', function (e) {
+    var slug = e.target.value;
+    var tag = document.getElementById('d-tag-erp');
+    tag.className = 'tag tag--' + slug;
+    tag.textContent = ERP_NOMBRE[slug];
+    document.getElementById('d-test-erp').textContent = ERP_NOMBRE[slug];
+  });
+
+  // ── Test de conexiones ──
+  var RESULTADOS = {
+    erp: {
+      ok: ['Conexión exitosa con SIESA WS — UnoEE', 'ERP: ws'],
+      error: ['No se pudo conectar: timeout after 30s', 'ERP: ws']
+    },
+    odoo: {
+      ok: ['Autenticación exitosa', 'URL: pruebas.360software.com.co'],
+      error: ['Error de autenticación: credenciales inválidas', 'URL: pruebas.360software.com.co']
+    }
+  };
+  var ultimo = { erp: 'error', odoo: 'error' };
+
+  var CHECK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#389e0d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>';
+  var CRUZ = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#cf1322" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>';
+  var RAYO = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7z" /></svg>';
+
+  document.querySelectorAll('[data-test]').forEach(function (btn) {
+    var cual = btn.getAttribute('data-test');
+    var zona = document.querySelector('[data-resultado="' + cual + '"]');
+    var etiqueta = btn.textContent.trim();
+
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      btn.classList.add('btn--cargando');
+      btn.innerHTML = '<span class="spinner"></span> Probando…';
+      zona.classList.remove('is-visible');
+
+      setTimeout(function () {
+        var tipo = ultimo[cual] === 'ok' ? 'error' : 'ok';
+        ultimo[cual] = tipo;
+        var datos = RESULTADOS[cual][tipo];
+
+        zona.className = 'resultado resultado--' + (tipo === 'ok' ? 'ok' : 'error') + ' is-visible';
+        zona.innerHTML =
+          '<div class="resultado__head">' + (tipo === 'ok' ? CHECK : CRUZ) +
+          (tipo === 'ok' ? 'Conexión exitosa' : 'Conexión fallida') + '</div>' +
+          '<div class="resultado__cuerpo">' +
+          '<div class="resultado__detalle">' + datos[0] + '</div>' +
+          '<span class="resultado__tag">' + datos[1] + '</span></div>';
+
+        btn.disabled = false;
+        btn.classList.remove('btn--cargando');
+        btn.innerHTML = RAYO + ' ' + etiqueta;
+      }, 2000);
+    });
+  });
+
+  // ── Modales ──
+  var overlayCrear = document.getElementById('overlay-crear');
+  var overlayBorrar = document.getElementById('overlay-borrar');
+  var inputConfirmar = document.getElementById('b-input');
+  var btnConfirmar = document.getElementById('b-confirmar');
+
+  document.getElementById('btn-crear').addEventListener('click', function () { overlayCrear.classList.add('is-open'); });
+  document.getElementById('btn-borrar').addEventListener('click', function () {
+    document.getElementById('b-nombre').textContent = clienteActual.nombre;
+    inputConfirmar.value = '';
+    inputConfirmar.placeholder = clienteActual.id;
+    btnConfirmar.disabled = true;
+    overlayBorrar.classList.add('is-open');
+  });
+
+  document.querySelectorAll('[data-cerrar]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.getElementById('overlay-' + btn.getAttribute('data-cerrar')).classList.remove('is-open');
+    });
+  });
+  [overlayCrear, overlayBorrar].forEach(function (ov) {
+    ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('is-open'); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      overlayCrear.classList.remove('is-open');
+      overlayBorrar.classList.remove('is-open');
+    }
+  });
+
+  inputConfirmar.addEventListener('input', function () {
+    btnConfirmar.disabled = inputConfirmar.value.trim() !== clienteActual.id;
+  });
+</script>
+
+</body>
+</html>
