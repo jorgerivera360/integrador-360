@@ -119,6 +119,7 @@ const ClientesListPage = () => {
             <div className="tarjeta-borde">
                 <Table
                     className="tabla-panel tabla-panel--clicable"
+                    showSorterTooltip={false}
                     columns={columnas}
                     dataSource={clientes}
                     rowKey="id"
