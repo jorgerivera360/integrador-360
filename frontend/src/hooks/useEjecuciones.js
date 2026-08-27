@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { getFlowExecutions } from '@/services/executions'
-import { getClients } from '@/services/clients'
+import { getClientsSummary } from '@/services/clients'
 import { getFlows } from '@/services/flows'
 
 /**
@@ -26,7 +26,7 @@ export function useClientesEjecuciones(filtros = {}) {
 
     return useQuery({
         queryKey: CLAVES_EJECUCIONES.clientes(params),
-        queryFn: () => getClients(params),
+        queryFn: () => getClientsSummary(params),
         select: (respuesta) => respuesta.data,
         placeholderData: (previo) => previo,
     })

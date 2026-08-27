@@ -4,6 +4,10 @@ export const getClients = (params = {}) => {
     return api.get('/clients/', { params })
 }
 
+export const getClientsSummary = (params = {}) => {
+    return api.get('/clients/summary', { params })
+}
+
 export const getClient = (id) => {
     return api.get(`/clients/${id}`)
 }
