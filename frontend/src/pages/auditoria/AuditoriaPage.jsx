@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Alert, Button, Table } from 'antd'
+import { Alert, Button, Table, Tooltip } from 'antd'
+import { InfoCircleOutlined } from '@ant-design/icons'
 import useDebounce from '@/hooks/useDebounce'
 import { useCambios, LIMITE_CAMBIOS } from '@/hooks/useCambios'
 import { mensajeDeError } from '@/hooks/useClientes'
@@ -32,12 +33,14 @@ const AccionTag = ({ accion }) => {
     )
 }
 
-/** Nombres de los campos tocados. En un borrado no hay 'changed_fields'. */
-function camposModificados(cambio) {
-    const origen = cambio.changed_fields || cambio.previous_values
-    if (!origen || typeof origen !== 'object') return '—'
-    const claves = Object.keys(origen)
-    return claves.length ? claves.join(', ') : '—'
+const NOMBRE_MODULO = {
+    flows: 'Flujos',
+    clients: 'Clientes',
+    users: 'Usuarios',
+}
+
+function nombreModulo(tabla) {
+    return NOMBRE_MODULO[tabla] || tabla
 }
 
 /** Valores únicos de un campo, para poblar un desplegable. */
@@ -55,53 +58,6 @@ function opcionesDe(filas, obtenerValor, obtenerEtiqueta = obtenerValor) {
 
 const columnas = [
     {
-        title: 'Fecha',
-        dataIndex: 'changed_at',
-        key: 'changed_at',
-        className: 'celda-fecha',
-        defaultSortOrder: 'descend',
-        sorter: (a, b) => new Date(a.changed_at) - new Date(b.changed_at),
-        render: (fecha) => formatFechaHora(fecha),
-    },
-    {
-        title: 'Tabla',
-        dataIndex: 'table_name',
-        key: 'table_name',
-        render: (tabla) => (
-            <span className="celda-tabla">
-                <IconTabla />
-                {tabla}
-            </span>
-        ),
-    },
-    {
-        title: 'Registro',
-        dataIndex: 'record_id',
-        key: 'record_id',
-        align: 'center',
-        className: 'celda-fecha',
-        render: (id) => `#${id}`,
-    },
-    {
-        title: 'Acción',
-        dataIndex: 'action',
-        key: 'action',
-        align: 'center',
-        render: (accion) => <AccionTag accion={accion} />,
-    },
-    {
-        title: 'Campos modificados',
-        key: 'campos',
-        render: (_, cambio) => {
-            const texto = camposModificados(cambio)
-            return (
-                <div className="celda-campos" title={texto}>
-                    {texto}
-                </div>
-            )
-        },
-    },
-    {
         title: 'Usuario',
         key: 'usuario',
         render: (_, cambio) =>
@@ -113,6 +69,33 @@ const columnas = [
             ) : (
                 <span className="celda-tenue">Sistema</span>
             ),
+    },
+    {
+        title: 'Acción',
+        dataIndex: 'action',
+        key: 'action',
+        align: 'center',
+        render: (accion) => <AccionTag accion={accion} />,
+    },
+    {
+        title: 'Módulo',
+        dataIndex: 'table_name',
+        key: 'table_name',
+        render: (tabla) => (
+            <span className="celda-tabla">
+                <IconTabla />
+                {nombreModulo(tabla)}
+            </span>
+        ),
+    },
+    {
+        title: 'Fecha',
+        dataIndex: 'changed_at',
+        key: 'changed_at',
+        className: 'celda-fecha',
+        defaultSortOrder: 'descend',
+        sorter: (a, b) => new Date(a.changed_at) - new Date(b.changed_at),
+        render: (fecha) => formatFechaHora(fecha),
     },
 ]
 
@@ -129,7 +112,10 @@ const AuditoriaPage = () => {
 
     // Las opciones salen de los datos crudos, antes de filtrar en memoria: así
     // el desplegable no se queda con una sola opción al usarlo.
-    const opcionesTabla = useMemo(() => opcionesDe(filas, (f) => f.table_name), [filas])
+    const opcionesTabla = useMemo(
+        () => opcionesDe(filas, (f) => f.table_name, (f) => nombreModulo(f.table_name)),
+        [filas]
+    )
     const opcionesAccion = useMemo(
         () => opcionesDe(filas, (f) => f.action, (f) => etiquetaAccion(f.action)),
         [filas]
@@ -172,11 +158,12 @@ const AuditoriaPage = () => {
         <>
             <div className="pagina-head">
                 <div>
-                    <h1 className="pagina-head__titulo">Historial de cambios</h1>
-                    <p className="pagina-head__sub">
-                        Registro de todas las modificaciones realizadas en la configuración del
-                        sistema
-                    </p>
+                    <h1 className="pagina-head__titulo">
+                        Auditoría{' '}
+                        <Tooltip title="Registro de todas las modificaciones realizadas en la configuración del sistema">
+                            <InfoCircleOutlined style={{ fontSize: 16, color: '#8c8c8c', cursor: 'pointer', verticalAlign: 'middle' }} />
+                        </Tooltip>
+                    </h1>
                 </div>
             </div>
 
@@ -204,7 +191,7 @@ const AuditoriaPage = () => {
                     dataSource={filtradas}
                     rowKey="id"
                     loading={isPending}
-                    scroll={{ x: 1040 }}
+                    scroll={{ x: 700 }}
                     expandable={{
                         expandedRowRender: (cambio) => <DetalleCambio cambio={cambio} />,
                         rowExpandable: (cambio) =>
