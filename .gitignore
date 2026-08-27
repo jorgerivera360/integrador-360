@@ -8,6 +8,7 @@ venv/
 
 # Entorno
 .env
+.env.development
 
 # Credenciales GCP
 *.json
