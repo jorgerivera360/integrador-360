@@ -27,7 +27,9 @@ CREATE TABLE users (
     is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
     last_login    TIMESTAMPTZ,
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    created_by    INTEGER,
+    updated_by    INTEGER
 );
 -- Indices automaticos: id (PK), email (UNIQUE)
 
