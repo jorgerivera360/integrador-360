@@ -15,24 +15,30 @@ def get_users(
     current_user=Depends(require_role("superadmin"))
 ):
     cursor = db.cursor()
-    query = "SELECT * FROM users WHERE 1=1"
+    query = """SELECT u.*,
+                c.name AS created_by_name,
+                up.name AS updated_by_name
+        FROM users u
+        LEFT JOIN users c ON u.created_by = c.id
+        LEFT JOIN users up ON u.updated_by = up.id
+        WHERE 1=1"""
     params = []
 
     if search:
-          query += " AND (name ILIKE %s OR email ILIKE %s)"
+          query += " AND (u.name ILIKE %s OR u.email ILIKE %s)"
           params.extend([f"%{search}%", f"%{search}%"])
 
     if role:
         if role not in ("superadmin", "admin", "viewer"):
             raise HTTPException(status_code=400, detail="Rol inválido. Opciones: superadmin, admin, viewer")
-        query += " AND role = %s"
+        query += " AND u.role = %s"
         params.append(role)
 
     if is_active is not None:
-        query += " AND is_active = %s"
+        query += " AND u.is_active = %s"
         params.append(is_active)
 
-    query += " ORDER BY id"
+    query += " ORDER BY u.id"
     cursor.execute(query, params)
     return cursor.fetchall()
 
@@ -44,7 +50,13 @@ def get_user(
     current_user=Depends(require_role("superadmin"))
 ):
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    cursor.execute("""SELECT u.*,
+            c.name AS created_by_name,
+            up.name AS updated_by_name
+        FROM users u
+        LEFT JOIN users c ON u.created_by = c.id
+        LEFT JOIN users up ON u.updated_by = up.id
+        WHERE u.id = %s""", (user_id,))
     user = cursor.fetchone()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -69,8 +81,8 @@ def create_user(
         raise HTTPException(status_code=400, detail="Rol inválido. Opciones: superadmin, admin, viewer")
 
     cursor.execute(
-        "INSERT INTO users (email, name, role) VALUES (%s, %s, %s) RETURNING *",
-        (user.email, user.name, user.role)
+        "INSERT INTO users (email, name, role, created_by) VALUES (%s, %s, %s, %s) RETURNING *",
+        (user.email, user.name, user.role, current_user["id"])
     )
     new_user = cursor.fetchone()
     db.commit()
@@ -111,7 +123,8 @@ def update_user(
 
     if not updates:
         raise HTTPException(status_code=400, detail="No se enviaron campos para actualizar")
-
+    
+    updates["updated_by"] = current_user["id"]
     # Armar query dinámico
     set_clause = ", ".join(f"{key} = %s" for key in updates)
     values = list(updates.values()) + [user_id]
