@@ -23,6 +23,8 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
     last_login: Optional[datetime] = None
+    created_by_name: Optional[str] = None
+    updated_by_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
