@@ -15,20 +15,26 @@ def get_clients(
     current_user=Depends(require_role("superadmin", "admin", "viewer"))
 ):
     cursor = db.cursor()
-    query = "SELECT * FROM clients WHERE 1=1"
+    query = """SELECT cl.*,
+                c.name AS created_by_name,
+                up.name AS updated_by_name
+        FROM clients cl
+        LEFT JOIN users c ON cl.created_by = c.id
+        LEFT JOIN users up ON cl.updated_by = up.id
+        WHERE 1=1"""
     params = []
 
     if erp_type is not None:
-        query += " AND erp_type = %s"
+        query += " AND cl.erp_type = %s"
         params.append(erp_type)
     if is_active is not None:
-        query += " AND is_active = %s"
+        query += " AND cl.is_active = %s"
         params.append(is_active)
     if search is not None:
-        query += " AND (client_id ILIKE %s OR name ILIKE %s)"
+        query += " AND (cl.client_id ILIKE %s OR cl.name ILIKE %s)"
         params.extend([f"%{search}%", f"%{search}%"])
 
-    query += " ORDER BY name"
+    query += " ORDER BY cl.name"
     cursor.execute(query, params)
     return cursor.fetchall()
 
@@ -40,7 +46,13 @@ def get_client(
     current_user=Depends(require_role("superadmin", "admin", "viewer"))
 ):
     cursor = db.cursor()
-    cursor.execute("SELECT * FROM clients WHERE id = %s", (client_id,))
+    cursor.execute("""SELECT cl.*,
+            c.name AS created_by_name,
+            up.name AS updated_by_name
+        FROM clients cl
+        LEFT JOIN users c ON cl.created_by = c.id
+        LEFT JOIN users up ON cl.updated_by = up.id
+        WHERE cl.id = %s""", (client_id,))
     client = cursor.fetchone()
     if not client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
