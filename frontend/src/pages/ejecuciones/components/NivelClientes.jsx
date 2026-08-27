@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Alert, Button, Input, Select, Space, Table } from 'antd'
+import { Alert, Button, Input, Select, Space, Table, Tooltip } from 'antd'
+import { InfoCircleOutlined } from '@ant-design/icons'
 import ErpTag from '@/components/ErpTag'
 import ActivoTag from '@/components/ActivoTag'
 import useDebounce from '@/hooks/useDebounce'
 import { useClientesEjecuciones, mensajeDeError } from '@/hooks/useEjecuciones'
 import { OPCIONES_ERP } from '@/config/erp'
+import { formatFechaHora } from '@/utils/format'
 import { IconFlecha, IconLupa } from '../icons'
 
 const FILTROS_VACIOS = { search: '', erpType: null, isActive: null }
@@ -22,27 +24,32 @@ const columnas = [
         dataIndex: 'erp_type',
         key: 'erp_type',
         align: 'center',
+        sorter: (a, b) => (a.erp_type || '').localeCompare(b.erp_type || '', 'es'),
         render: (erpType) => <ErpTag erpType={erpType} />,
     },
     {
         title: 'Flujos',
+        dataIndex: 'flows_count',
         key: 'flujos',
         align: 'center',
-        className: 'celda-tenue',
-        render: () => '—',
+        sorter: (a, b) => (a.flows_count || 0) - (b.flows_count || 0),
+        render: (count) => count ?? 0,
     },
     {
         title: 'Estado',
         dataIndex: 'is_active',
         key: 'is_active',
         align: 'center',
+        sorter: (a, b) => Number(a.is_active) - Number(b.is_active),
         render: (activo) => <ActivoTag activo={activo} />,
     },
     {
         title: 'Última ejecución',
+        dataIndex: 'last_execution',
         key: 'ultima',
         className: 'celda-fecha',
-        render: () => '—',
+        sorter: (a, b) => new Date(a.last_execution || 0) - new Date(b.last_execution || 0),
+        render: (fecha) => fecha ? formatFechaHora(fecha) : '—',
     },
     {
         key: 'flecha',
@@ -81,10 +88,12 @@ const NivelClientes = ({ onSeleccionar }) => {
         <>
             <div className="pagina-head">
                 <div>
-                    <h1 className="pagina-head__titulo">Ejecuciones</h1>
-                    <p className="pagina-head__sub">
-                        Historial de ejecuciones de los flujos de integración
-                    </p>
+                    <h1 className="pagina-head__titulo">
+                        Ejecuciones{' '}
+                        <Tooltip title="Historial de ejecuciones de los flujos de integración">
+                            <InfoCircleOutlined style={{ fontSize: 16, color: '#8c8c8c', cursor: 'pointer', verticalAlign: 'middle' }} />
+                        </Tooltip>
+                    </h1>
                 </div>
             </div>
 
