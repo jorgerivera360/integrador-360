@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
-import { Alert, Button, Table } from 'antd'
-import useDebounce from '@/hooks/useDebounce'
+import { useState } from 'react'
+import { Alert, Button, Table, Tooltip } from 'antd'
+import { InfoCircleOutlined } from '@ant-design/icons'
 import { useCambios, LIMITE_CAMBIOS } from '@/hooks/useCambios'
 import { mensajeDeError } from '@/hooks/useClientes'
-import { ACCIONES, etiquetaAccion } from '@/config/auditoria'
+import { ACCIONES } from '@/config/auditoria'
 import { formatFechaHora } from '@/utils/format'
 import FiltrosAuditoria, { FILTROS_VACIOS } from './components/FiltrosAuditoria'
 import DetalleCambio from './components/DetalleCambio'
@@ -32,78 +32,22 @@ const AccionTag = ({ accion }) => {
     )
 }
 
-/** Nombres de los campos tocados. En un borrado no hay 'changed_fields'. */
-function camposModificados(cambio) {
-    const origen = cambio.changed_fields || cambio.previous_values
-    if (!origen || typeof origen !== 'object') return '—'
-    const claves = Object.keys(origen)
-    return claves.length ? claves.join(', ') : '—'
+const NOMBRE_MODULO = {
+    flows: 'Flujos',
+    clients: 'Clientes',
+    users: 'Usuarios',
 }
 
-/** Valores únicos de un campo, para poblar un desplegable. */
-function opcionesDe(filas, obtenerValor, obtenerEtiqueta = obtenerValor) {
-    const mapa = new Map()
-    filas.forEach((fila) => {
-        const valor = obtenerValor(fila)
-        if (valor === null || valor === undefined || valor === '') return
-        if (!mapa.has(valor)) mapa.set(valor, obtenerEtiqueta(fila) ?? String(valor))
-    })
-    return [...mapa.entries()]
-        .map(([value, label]) => ({ value, label }))
-        .sort((a, b) => String(a.label).localeCompare(String(b.label), 'es'))
+function nombreModulo(tabla) {
+    return NOMBRE_MODULO[tabla] || tabla
 }
+
 
 const columnas = [
     {
-        title: 'Fecha',
-        dataIndex: 'changed_at',
-        key: 'changed_at',
-        className: 'celda-fecha',
-        defaultSortOrder: 'descend',
-        sorter: (a, b) => new Date(a.changed_at) - new Date(b.changed_at),
-        render: (fecha) => formatFechaHora(fecha),
-    },
-    {
-        title: 'Tabla',
-        dataIndex: 'table_name',
-        key: 'table_name',
-        render: (tabla) => (
-            <span className="celda-tabla">
-                <IconTabla />
-                {tabla}
-            </span>
-        ),
-    },
-    {
-        title: 'Registro',
-        dataIndex: 'record_id',
-        key: 'record_id',
-        align: 'center',
-        className: 'celda-fecha',
-        render: (id) => `#${id}`,
-    },
-    {
-        title: 'Acción',
-        dataIndex: 'action',
-        key: 'action',
-        align: 'center',
-        render: (accion) => <AccionTag accion={accion} />,
-    },
-    {
-        title: 'Campos modificados',
-        key: 'campos',
-        render: (_, cambio) => {
-            const texto = camposModificados(cambio)
-            return (
-                <div className="celda-campos" title={texto}>
-                    {texto}
-                </div>
-            )
-        },
-    },
-    {
         title: 'Usuario',
         key: 'usuario',
+        sorter: (a, b) => (a.changed_by_name || '').localeCompare(b.changed_by_name || '', 'es'),
         render: (_, cambio) =>
             cambio.changed_by_name ? (
                 <div>
@@ -114,41 +58,43 @@ const columnas = [
                 <span className="celda-tenue">Sistema</span>
             ),
     },
+    {
+        title: 'Acción',
+        dataIndex: 'action',
+        key: 'action',
+        align: 'center',
+        sorter: (a, b) => (a.action || '').localeCompare(b.action || '', 'es'),
+        render: (accion) => <AccionTag accion={accion} />,
+    },
+    {
+        title: 'Módulo',
+        dataIndex: 'table_name',
+        key: 'table_name',
+        sorter: (a, b) => nombreModulo(a.table_name).localeCompare(nombreModulo(b.table_name), 'es'),
+        render: (tabla) => (
+            <span className="celda-tabla">
+                <IconTabla />
+                {nombreModulo(tabla)}
+            </span>
+        ),
+    },
+    {
+        title: 'Fecha',
+        dataIndex: 'changed_at',
+        key: 'changed_at',
+        className: 'celda-fecha',
+        defaultSortOrder: 'descend',
+        sorter: (a, b) => new Date(a.changed_at) - new Date(b.changed_at),
+        render: (fecha) => formatFechaHora(fecha),
+    },
 ]
 
 const AuditoriaPage = () => {
     const [filtros, setFiltros] = useState(FILTROS_VACIOS)
 
-    // El ID se difiere: se escribe dígito a dígito y cada cambio va al servidor.
-    const registroDiferido = useDebounce(filtros.recordId, 400)
-    const { data: cambios, isPending, isError, error, refetch } = useCambios({
-        recordId: registroDiferido,
-    })
+    const { data: cambios, isPending, isError, error, refetch } = useCambios(filtros)
 
-    const filas = useMemo(() => cambios ?? [], [cambios])
-
-    // Las opciones salen de los datos crudos, antes de filtrar en memoria: así
-    // el desplegable no se queda con una sola opción al usarlo.
-    const opcionesTabla = useMemo(() => opcionesDe(filas, (f) => f.table_name), [filas])
-    const opcionesAccion = useMemo(
-        () => opcionesDe(filas, (f) => f.action, (f) => etiquetaAccion(f.action)),
-        [filas]
-    )
-    const opcionesUsuario = useMemo(
-        () => opcionesDe(filas, (f) => f.changed_by, (f) => f.changed_by_name),
-        [filas]
-    )
-
-    const filtradas = useMemo(
-        () =>
-            filas.filter((fila) => {
-                if (filtros.tableName && fila.table_name !== filtros.tableName) return false
-                if (filtros.action && fila.action !== filtros.action) return false
-                if (filtros.changedBy && fila.changed_by !== filtros.changedBy) return false
-                return true
-            }),
-        [filas, filtros.tableName, filtros.action, filtros.changedBy]
-    )
+    const filas = cambios ?? []
 
     if (isError) {
         return (
@@ -172,23 +118,21 @@ const AuditoriaPage = () => {
         <>
             <div className="pagina-head">
                 <div>
-                    <h1 className="pagina-head__titulo">Historial de cambios</h1>
-                    <p className="pagina-head__sub">
-                        Registro de todas las modificaciones realizadas en la configuración del
-                        sistema
-                    </p>
+                    <h1 className="pagina-head__titulo">
+                        Auditoría{' '}
+                        <Tooltip title="Registro de todas las modificaciones realizadas en la configuración del sistema">
+                            <InfoCircleOutlined style={{ fontSize: 16, color: '#8c8c8c', cursor: 'pointer', verticalAlign: 'middle' }} />
+                        </Tooltip>
+                    </h1>
                 </div>
             </div>
 
             <FiltrosAuditoria
                 valor={filtros}
                 onChange={setFiltros}
-                tablas={opcionesTabla}
-                acciones={opcionesAccion}
-                usuarios={opcionesUsuario}
             />
 
-            {alcanzoElTope && !filtros.recordId && (
+            {alcanzoElTope && (
                 <Alert
                     type="info"
                     showIcon
@@ -201,10 +145,10 @@ const AuditoriaPage = () => {
                 <Table
                     className="tabla-panel"
                     columns={columnas}
-                    dataSource={filtradas}
+                    dataSource={filas}
                     rowKey="id"
                     loading={isPending}
-                    scroll={{ x: 1040 }}
+                    scroll={{ x: 700 }}
                     expandable={{
                         expandedRowRender: (cambio) => <DetalleCambio cambio={cambio} />,
                         rowExpandable: (cambio) =>

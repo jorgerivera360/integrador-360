@@ -1,31 +1,59 @@
-import { InputNumber, Select, Space } from 'antd'
+import { Select, Space } from 'antd'
+import useHasRole from '@/hooks/useHasRole'
+import { useUsuarios } from '@/hooks/useUsuarios'
 
 export const FILTROS_VACIOS = {
     tableName: null,
     action: null,
     changedBy: null,
-    recordId: null,
 }
 
-/**
- * Filtros del historial de cambios.
- *
- * `recordId` va al servidor; los otros tres filtran en memoria sobre lo ya
- * cargado. Por eso sus opciones se reciben ya derivadas de los datos: así
- * solo aparecen tablas, acciones y usuarios que existen de verdad en el
- * historial, y la lista no se vacía al aplicar un filtro.
- */
-const FiltrosAuditoria = ({ valor, onChange, tablas = [], acciones = [], usuarios = [] }) => {
+const OPCIONES_MODULO = [
+    { value: 'flows', label: 'Flujos' },
+    { value: 'clients', label: 'Clientes' },
+    { value: 'users', label: 'Usuarios' },
+]
+
+const OPCIONES_ACCION = [
+    { value: 'create', label: 'Creación' },
+    { value: 'update', label: 'Actualización' },
+    { value: 'delete', label: 'Eliminación' },
+]
+
+const SelectUsuario = ({ value, onChange }) => {
+    const { data: usuarios } = useUsuarios()
+
+    const opciones = (usuarios || []).map((u) => ({
+        value: u.id,
+        label: u.name,
+    }))
+
+    return (
+        <Select
+            className="auditoria-filtros__select"
+            placeholder="Usuario: todos"
+            value={value}
+            onChange={onChange}
+            options={opciones}
+            allowClear
+            showSearch
+            optionFilterProp="label"
+        />
+    )
+}
+
+const FiltrosAuditoria = ({ valor, onChange }) => {
     const cambiar = (campo) => (nuevo) => onChange({ ...valor, [campo]: nuevo ?? null })
+    const esSuperadmin = useHasRole(['superadmin'])
 
     return (
         <Space className="auditoria-filtros" wrap size={12}>
             <Select
                 className="auditoria-filtros__select"
-                placeholder="Tabla: todas"
+                placeholder="Módulo: todos"
                 value={valor.tableName}
                 onChange={cambiar('tableName')}
-                options={tablas}
+                options={OPCIONES_MODULO}
                 allowClear
             />
 
@@ -34,32 +62,16 @@ const FiltrosAuditoria = ({ valor, onChange, tablas = [], acciones = [], usuario
                 placeholder="Acción: todas"
                 value={valor.action}
                 onChange={cambiar('action')}
-                options={acciones}
+                options={OPCIONES_ACCION}
                 allowClear
             />
 
-            <Select
-                className="auditoria-filtros__select"
-                placeholder="Usuario: todos"
-                value={valor.changedBy}
-                onChange={cambiar('changedBy')}
-                options={usuarios}
-                allowClear
-                showSearch
-                optionFilterProp="label"
-            />
-
-            <div>
-                <InputNumber
-                    className="auditoria-filtros__registro"
-                    placeholder="ID de registro..."
-                    value={valor.recordId}
-                    onChange={cambiar('recordId')}
-                    min={1}
-                    precision={0}
+            {esSuperadmin && (
+                <SelectUsuario
+                    value={valor.changedBy}
+                    onChange={cambiar('changedBy')}
                 />
-                <p className="auditoria-filtros__ayuda">Filtrar por ID del registro modificado</p>
-            </div>
+            )}
         </Space>
     )
 }
