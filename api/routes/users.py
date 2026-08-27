@@ -19,7 +19,7 @@ def get_users(
     params = []
 
     if search:
-          query += " AND (name LIKE %s OR email LIKE %s OR name ILIKE %s OR email ILIKE %s)"
+          query += " AND (name ILIKE %s OR email ILIKE %s)"
           params.extend([f"%{search}%", f"%{search}%"])
 
     if role:
