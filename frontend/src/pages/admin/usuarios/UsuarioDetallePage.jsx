@@ -206,7 +206,9 @@ const UsuarioDetallePage = () => {
                                     <MetaSistema
                                         items={[
                                             { label: 'Creado', valor: formatFechaHora(usuario.created_at) },
+                                            { label: 'Creado por', valor: usuario.created_by_name || '—' },
                                             { label: 'Actualizado', valor: formatFechaHora(usuario.updated_at) },
+                                            { label: 'Actualizado por', valor: usuario.updated_by_name || '—' },
                                             {
                                                 label: 'Último acceso',
                                                 valor: usuario.last_login
