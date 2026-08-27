@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Alert, App, Button, Form, Input, Select, Skeleton, Switch, Tooltip } from 'antd'
+import { Alert, App, Button, Collapse, Form, Input, Select, Skeleton, Switch, Tooltip } from 'antd'
 import MetaSistema from '@/components/MetaSistema'
 import RolBadge from '@/components/RolBadge'
 import useAuthStore from '@/store/authStore'
@@ -8,7 +8,7 @@ import { useUsuario, useActualizarUsuario } from '@/hooks/useUsuarios'
 import { mensajeDeError } from '@/hooks/useClientes'
 import { useSetBreadcrumb } from '@/layouts/BreadcrumbContext'
 import { DOMINIO_CORPORATIVO, OPCIONES_ROL, ROLES_INFO } from '@/config/roles'
-import { formatDesde, formatFecha, formatFechaHora } from '@/utils/format'
+import { formatFechaHora } from '@/utils/format'
 import ModalEliminarUsuario from './components/ModalEliminarUsuario'
 import { IconPapelera } from './icons'
 import '@/styles/pagina.css'
@@ -75,6 +75,7 @@ const UsuarioDetallePage = () => {
             },
         })
         message.success('Cambios guardados')
+        navigate('/admin/usuarios')
     }
 
     const cancelar = () => {
@@ -107,10 +108,6 @@ const UsuarioDetallePage = () => {
                             {usuario.is_active ? 'Activo' : 'Inactivo'}
                         </span>
                     </div>
-                    <p className="cliente-head__meta">
-                        {usuario.email} · Último acceso: {formatDesde(usuario.last_login)} ·
-                        Creado: {formatFecha(usuario.created_at)}
-                    </p>
                 </div>
 
                 <Tooltip title={esUnoMismo ? 'No puedes eliminarte a ti mismo' : undefined}>
@@ -199,17 +196,27 @@ const UsuarioDetallePage = () => {
                         </div>
                     </div>
 
-                    <MetaSistema
+                    <Collapse
+                        ghost
                         items={[
-                            { label: 'Creado', valor: formatFechaHora(usuario.created_at) },
-                            { label: 'Actualizado', valor: formatFechaHora(usuario.updated_at) },
                             {
-                                label: 'Último acceso',
-                                valor: usuario.last_login
-                                    ? formatFechaHora(usuario.last_login)
-                                    : 'Nunca',
+                                key: 'info',
+                                label: 'Información adicional',
+                                children: (
+                                    <MetaSistema
+                                        items={[
+                                            { label: 'Creado', valor: formatFechaHora(usuario.created_at) },
+                                            { label: 'Actualizado', valor: formatFechaHora(usuario.updated_at) },
+                                            {
+                                                label: 'Último acceso',
+                                                valor: usuario.last_login
+                                                    ? formatFechaHora(usuario.last_login)
+                                                    : 'Nunca',
+                                            },
+                                        ]}
+                                    />
+                                ),
                             },
-                            { label: 'ID interno', valor: usuario.id },
                         ]}
                     />
                 </div>

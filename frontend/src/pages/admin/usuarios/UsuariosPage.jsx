@@ -5,7 +5,7 @@ import RolBadge from '@/components/RolBadge'
 import { useUsuarios } from '@/hooks/useUsuarios'
 import useDebounce from '@/hooks/useDebounce'
 import { mensajeDeError } from '@/hooks/useClientes'
-import { formatDesde, formatFechaHora } from '@/utils/format'
+import { formatFechaHora } from '@/utils/format'
 import ModalCrearUsuario from './components/ModalCrearUsuario'
 import { IconFlecha, IconInfo, IconMas } from './icons'
 import '@/styles/pagina.css'
@@ -59,7 +59,7 @@ const columnas = [
         sorter: (a, b) => new Date(a.last_login || 0) - new Date(b.last_login || 0),
         render: (fecha) =>
             fecha ? (
-                <span title={formatFechaHora(fecha)}>{formatDesde(fecha)}</span>
+                formatFechaHora(fecha)
             ) : (
                 <span className="celda-nunca">Nunca</span>
             ),
