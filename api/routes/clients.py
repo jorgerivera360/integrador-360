@@ -38,6 +38,36 @@ def get_clients(
     cursor.execute(query, params)
     return cursor.fetchall()
 
+@router.get("/summary", response_model=list)
+def get_clients_summary(
+    erp_type: str = None,
+    is_active: bool = None,
+    search: str = None,
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin", "viewer"))
+):
+    cursor = db.cursor()
+    query = """SELECT cl.id, cl.client_id, cl.name, cl.erp_type, cl.is_active,
+                (SELECT COUNT(*) FROM flows f WHERE f.client_id = cl.id) AS flows_count,
+                (SELECT MAX(e.started_at) FROM executions e JOIN flows f ON e.flow_id = f.id WHERE f.client_id = cl.id) AS last_execution
+        FROM clients cl
+        WHERE 1=1"""
+    params = []
+
+    if erp_type is not None:
+        query += " AND cl.erp_type = %s"
+        params.append(erp_type)
+    if is_active is not None:
+        query += " AND cl.is_active = %s"
+        params.append(is_active)
+    if search is not None:
+        query += " AND (cl.client_id ILIKE %s OR cl.name ILIKE %s)"
+        params.extend([f"%{search}%", f"%{search}%"])
+
+    query += " ORDER BY cl.name"
+    cursor.execute(query, params)
+    return cursor.fetchall()
+
 
 @router.get("/{client_id}", response_model=ClientResponse)
 def get_client(
@@ -57,7 +87,6 @@ def get_client(
     if not client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return client
-
 
 @router.post("/", response_model=ClientResponse, status_code=201)
 def create_client(
