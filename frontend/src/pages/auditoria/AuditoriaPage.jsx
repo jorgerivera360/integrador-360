@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Alert, Button, Table, Tooltip } from 'antd'
 import { InfoCircleOutlined } from '@ant-design/icons'
-import useDebounce from '@/hooks/useDebounce'
 import { useCambios, LIMITE_CAMBIOS } from '@/hooks/useCambios'
 import { mensajeDeError } from '@/hooks/useClientes'
-import { ACCIONES, etiquetaAccion } from '@/config/auditoria'
+import { ACCIONES } from '@/config/auditoria'
 import { formatFechaHora } from '@/utils/format'
 import FiltrosAuditoria, { FILTROS_VACIOS } from './components/FiltrosAuditoria'
 import DetalleCambio from './components/DetalleCambio'
@@ -43,23 +42,12 @@ function nombreModulo(tabla) {
     return NOMBRE_MODULO[tabla] || tabla
 }
 
-/** Valores únicos de un campo, para poblar un desplegable. */
-function opcionesDe(filas, obtenerValor, obtenerEtiqueta = obtenerValor) {
-    const mapa = new Map()
-    filas.forEach((fila) => {
-        const valor = obtenerValor(fila)
-        if (valor === null || valor === undefined || valor === '') return
-        if (!mapa.has(valor)) mapa.set(valor, obtenerEtiqueta(fila) ?? String(valor))
-    })
-    return [...mapa.entries()]
-        .map(([value, label]) => ({ value, label }))
-        .sort((a, b) => String(a.label).localeCompare(String(b.label), 'es'))
-}
 
 const columnas = [
     {
         title: 'Usuario',
         key: 'usuario',
+        sorter: (a, b) => (a.changed_by_name || '').localeCompare(b.changed_by_name || '', 'es'),
         render: (_, cambio) =>
             cambio.changed_by_name ? (
                 <div>
@@ -75,12 +63,14 @@ const columnas = [
         dataIndex: 'action',
         key: 'action',
         align: 'center',
+        sorter: (a, b) => (a.action || '').localeCompare(b.action || '', 'es'),
         render: (accion) => <AccionTag accion={accion} />,
     },
     {
         title: 'Módulo',
         dataIndex: 'table_name',
         key: 'table_name',
+        sorter: (a, b) => nombreModulo(a.table_name).localeCompare(nombreModulo(b.table_name), 'es'),
         render: (tabla) => (
             <span className="celda-tabla">
                 <IconTabla />
@@ -102,39 +92,9 @@ const columnas = [
 const AuditoriaPage = () => {
     const [filtros, setFiltros] = useState(FILTROS_VACIOS)
 
-    // El ID se difiere: se escribe dígito a dígito y cada cambio va al servidor.
-    const registroDiferido = useDebounce(filtros.recordId, 400)
-    const { data: cambios, isPending, isError, error, refetch } = useCambios({
-        recordId: registroDiferido,
-    })
+    const { data: cambios, isPending, isError, error, refetch } = useCambios(filtros)
 
-    const filas = useMemo(() => cambios ?? [], [cambios])
-
-    // Las opciones salen de los datos crudos, antes de filtrar en memoria: así
-    // el desplegable no se queda con una sola opción al usarlo.
-    const opcionesTabla = useMemo(
-        () => opcionesDe(filas, (f) => f.table_name, (f) => nombreModulo(f.table_name)),
-        [filas]
-    )
-    const opcionesAccion = useMemo(
-        () => opcionesDe(filas, (f) => f.action, (f) => etiquetaAccion(f.action)),
-        [filas]
-    )
-    const opcionesUsuario = useMemo(
-        () => opcionesDe(filas, (f) => f.changed_by, (f) => f.changed_by_name),
-        [filas]
-    )
-
-    const filtradas = useMemo(
-        () =>
-            filas.filter((fila) => {
-                if (filtros.tableName && fila.table_name !== filtros.tableName) return false
-                if (filtros.action && fila.action !== filtros.action) return false
-                if (filtros.changedBy && fila.changed_by !== filtros.changedBy) return false
-                return true
-            }),
-        [filas, filtros.tableName, filtros.action, filtros.changedBy]
-    )
+    const filas = cambios ?? []
 
     if (isError) {
         return (
@@ -170,12 +130,9 @@ const AuditoriaPage = () => {
             <FiltrosAuditoria
                 valor={filtros}
                 onChange={setFiltros}
-                tablas={opcionesTabla}
-                acciones={opcionesAccion}
-                usuarios={opcionesUsuario}
             />
 
-            {alcanzoElTope && !filtros.recordId && (
+            {alcanzoElTope && (
                 <Alert
                     type="info"
                     showIcon
@@ -188,7 +145,7 @@ const AuditoriaPage = () => {
                 <Table
                     className="tabla-panel"
                     columns={columnas}
-                    dataSource={filtradas}
+                    dataSource={filas}
                     rowKey="id"
                     loading={isPending}
                     scroll={{ x: 700 }}

@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { Table } from 'antd'
 import EstadoTag, { etiquetaEstado } from '@/components/EstadoTag'
 import FiltrosEjecuciones, { FILTROS_VACIOS, hayFiltros } from '@/components/FiltrosEjecuciones'
+import DrawerEjecucion from '@/pages/ejecuciones/components/DrawerEjecucion'
 import { formatDuracion, formatFechaHora } from '@/utils/format'
 import { contiene } from '@/utils/texto'
+import '@/pages/ejecuciones/ejecuciones.css'
 
 /** El nombre del cliente puede venir nulo; el slug siempre está. */
 const nombreCliente = (fila) => fila.client_name || fila.client_slug || '—'
@@ -78,6 +80,8 @@ function aplicarFiltros(filas, filtros) {
  */
 const TablaRecientes = ({ ejecuciones = [], cargando = false }) => {
     const [filtros, setFiltros] = useState(FILTROS_VACIOS)
+    const [drawerAbierto, setDrawerAbierto] = useState(false)
+    const [ejecucionActiva, setEjecucionActiva] = useState(null)
 
     const filtradas = useMemo(
         () => aplicarFiltros(ejecuciones, filtros),
@@ -85,6 +89,11 @@ const TablaRecientes = ({ ejecuciones = [], cargando = false }) => {
     )
 
     const filtrando = hayFiltros(filtros)
+
+    const abrirDrawer = (ejecucion) => {
+        setEjecucionActiva(ejecucion)
+        setDrawerAbierto(true)
+    }
 
     return (
         <div className="tarjeta panel-tabla">
@@ -103,17 +112,27 @@ const TablaRecientes = ({ ejecuciones = [], cargando = false }) => {
             </div>
 
             <Table
+                className="tabla-panel tabla-panel--clicable"
                 columns={columnas}
                 dataSource={filtradas}
                 rowKey="id"
                 loading={cargando}
                 pagination={false}
                 scroll={{ x: 860 }}
+                onRow={(ejecucion) => ({
+                    onClick: () => abrirDrawer(ejecucion),
+                })}
                 locale={{
                     emptyText: filtrando
                         ? 'Ninguna ejecución coincide con los filtros'
                         : 'Sin ejecuciones registradas',
                 }}
+            />
+
+            <DrawerEjecucion
+                ejecucion={ejecucionActiva}
+                abierto={drawerAbierto}
+                onCerrar={() => setDrawerAbierto(false)}
             />
         </div>
     )
