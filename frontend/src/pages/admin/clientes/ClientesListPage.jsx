@@ -8,7 +8,7 @@ import useHasRole from '@/hooks/useHasRole'
 import useDebounce from '@/hooks/useDebounce'
 import { useClientes, mensajeDeError } from '@/hooks/useClientes'
 import { ROLES } from '@/config/navigation'
-import { formatFecha } from '@/utils/format'
+import { formatFechaHora } from '@/utils/format'
 import FiltrosClientes, { FILTROS_VACIOS } from './components/FiltrosClientes'
 import ModalCrearCliente from './components/ModalCrearCliente'
 import { IconFlecha, IconInfo, IconMas } from './icons'
@@ -52,7 +52,7 @@ const columnas = [
         key: 'created_at',
         className: 'celda-fecha',
         sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
-        render: (fecha) => formatFecha(fecha),
+        render: (fecha) => formatFechaHora(fecha),
     },
     {
         key: 'flecha',

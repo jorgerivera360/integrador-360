@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Alert, App, Button, Form, Input, Select, Skeleton, Switch, Tabs, Tooltip } from 'antd'
+import { Alert, App, Button, Collapse, Form, Input, Select, Skeleton, Switch, Tabs, Tooltip } from 'antd'
 import ActivoTag from '@/components/ActivoTag'
 import ErpTag from '@/components/ErpTag'
 import MetaSistema from '@/components/MetaSistema'
@@ -9,7 +9,7 @@ import { useCliente, useActualizarCliente, mensajeDeError } from '@/hooks/useCli
 import { useSetBreadcrumb } from '@/layouts/BreadcrumbContext'
 import { OPCIONES_ERP } from '@/config/erp'
 import { ROLES } from '@/config/navigation'
-import { formatFecha, formatFechaHora } from '@/utils/format'
+import { formatFechaHora } from '@/utils/format'
 import ModalEliminarCliente from './components/ModalEliminarCliente'
 import TestConexiones from './components/TestConexiones'
 import { IconAdvertencia, IconInfo, IconPapelera } from './icons'
@@ -162,6 +162,9 @@ const ClienteDetallePage = () => {
                                 <Input className="campo-ancho" autoComplete="off" />
                             </Form.Item>
 
+                        </div>
+
+                        <div className="columna">
                             <Form.Item
                                 name="erp_type"
                                 label={<Etiqueta ayuda={AYUDA_ERP}>ERP conectado</Etiqueta>}
@@ -170,9 +173,7 @@ const ClienteDetallePage = () => {
                             >
                                 <Select className="campo-ancho" options={OPCIONES_ERP} />
                             </Form.Item>
-                        </div>
 
-                        <div className="columna">
                             <Form.Item
                                 name="is_active"
                                 label={<Etiqueta ayuda={AYUDA_ESTADO}>Estado del cliente</Etiqueta>}
@@ -184,13 +185,24 @@ const ClienteDetallePage = () => {
                         </div>
                     </div>
 
-                    <MetaSistema
+                    <Collapse
+                        ghost
+                        style={{ marginTop: 24 }}
                         items={[
-                            { label: 'Creado', valor: formatFechaHora(cliente.created_at) },
-                            { label: 'Actualizado', valor: formatFechaHora(cliente.updated_at) },
-                            { label: 'Creado por', valor: cliente.created_by },
-                            { label: 'Actualizado por', valor: cliente.updated_by },
-                            { label: 'ID interno', valor: cliente.id },
+                            {
+                                key: 'info',
+                                label: 'Información adicional',
+                                children: (
+                                    <MetaSistema
+                                        items={[
+                                            { label: 'Creado', valor: formatFechaHora(cliente.created_at) },
+                                            { label: 'Creado por', valor: cliente.created_by_name || '—' },
+                                            { label: 'Actualizado', valor: formatFechaHora(cliente.updated_at) },
+                                            { label: 'Actualizado por', valor: cliente.updated_by_name || '—' },
+                                        ]}
+                                    />
+                                ),
+                            },
                         ]}
                     />
                 </div>
@@ -225,10 +237,6 @@ const ClienteDetallePage = () => {
                         <ErpTag erpType={cliente.erp_type} />
                         <ActivoTag activo={cliente.is_active} />
                     </div>
-                    <p className="cliente-head__meta">
-                        ID: {cliente.client_id} · Creado: {formatFecha(cliente.created_at)} ·
-                        Última actualización: {formatFecha(cliente.updated_at)}
-                    </p>
                 </div>
 
                 {puedeEliminar && (
