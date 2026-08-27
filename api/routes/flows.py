@@ -37,6 +37,38 @@ def get_flows(
     cursor.execute(query, params)
     return cursor.fetchall()
 
+@router.get("/summary")
+def get_flows_summary(
+    client_id: int,
+    flow_type: str = None,
+    is_active: bool = None,
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin", "viewer"))
+):
+    cursor = db.cursor()
+
+    # Verificar que el cliente existe
+    cursor.execute("SELECT id FROM clients WHERE id = %s", (client_id,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    query = """SELECT f.id, f.flow_name, f.flow_type, f.is_active, f.schedule_cron, f.execution_order,
+                (SELECT MAX(e.started_at) FROM executions e WHERE e.flow_id = f.id) AS last_execution
+        FROM flows f
+        WHERE f.client_id = %s"""
+    params = [client_id]
+
+    if flow_type is not None:
+        query += " AND f.flow_type = %s"
+        params.append(flow_type)
+    if is_active is not None:
+        query += " AND f.is_active = %s"
+        params.append(is_active)
+
+    query += " ORDER BY f.execution_order, f.flow_name"
+    cursor.execute(query, params)
+    return cursor.fetchall()
+
 
 @router.get("/{flow_id}", response_model=FlowResponse)
 def get_flow(
