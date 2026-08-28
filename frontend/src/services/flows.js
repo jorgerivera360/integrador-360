@@ -4,6 +4,10 @@ export const getFlows = (clientId, params = {}) => {
     return api.get(`/clients/${clientId}/flows/`, { params })
 }
 
+export const getFlowsSummary = (clientId, params = {}) => {
+    return api.get(`/clients/${clientId}/flows/summary`, { params })
+}
+
 export const getFlow = (clientId, flowId) => {
     return api.get(`/clients/${clientId}/flows/${flowId}`)
 }

@@ -1,9 +1,8 @@
 import { Alert, Button, Spin, Table } from 'antd'
 import ErpTag from '@/components/ErpTag'
 import ActivoTag from '@/components/ActivoTag'
-import EstadoTag from '@/components/EstadoTag'
 import { useFlowsCliente, mensajeDeError } from '@/hooks/useEjecuciones'
-import { formatDesde } from '@/utils/format'
+import { formatFechaHora } from '@/utils/format'
 import { IconVolver } from '../icons'
 
 const TITULOS_TIPO = {
@@ -25,6 +24,8 @@ const NivelFlows = ({ cliente, flowType, onSeleccionar, onVolver }) => {
             title: 'Nombre',
             dataIndex: 'flow_name',
             key: 'flow_name',
+            width: 200,
+            sorter: (a, b) => a.flow_name.localeCompare(b.flow_name, 'es'),
             render: (nombre) => (
                 <span className="ejec-flow-link">{nombre}</span>
             ),
@@ -35,14 +36,16 @@ const NivelFlows = ({ cliente, flowType, onSeleccionar, onVolver }) => {
             key: 'is_active',
             align: 'center',
             width: 120,
+            sorter: (a, b) => Number(a.is_active) - Number(b.is_active),
             render: (activo) => <ActivoTag activo={activo} />,
         },
         {
             title: 'Última ejecución',
+            dataIndex: 'last_execution',
             key: 'ultima',
-            className: 'celda-fecha',
-            width: 200,
-            render: () => '—',
+            width: 170,
+            sorter: (a, b) => new Date(a.last_execution || 0) - new Date(b.last_execution || 0),
+            render: (fecha) => fecha ? formatFechaHora(fecha) : '—',
         },
     ]
 

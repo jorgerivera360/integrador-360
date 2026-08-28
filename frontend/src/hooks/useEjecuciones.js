@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getFlowExecutions } from '@/services/executions'
 import { getClientsSummary } from '@/services/clients'
-import { getFlows } from '@/services/flows'
+import { getFlows, getFlowsSummary } from '@/services/flows'
 
 /**
  * Hooks de datos para la pantalla de Ejecuciones.
@@ -35,7 +35,7 @@ export function useClientesEjecuciones(filtros = {}) {
 export function useFlowsCliente(clienteId) {
     return useQuery({
         queryKey: CLAVES_EJECUCIONES.flows(clienteId, {}),
-        queryFn: () => getFlows(clienteId),
+        queryFn: () => getFlowsSummary(clienteId),
         select: (respuesta) => respuesta.data,
         enabled: Boolean(clienteId),
     })

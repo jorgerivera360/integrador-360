@@ -54,24 +54,24 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
 
     const columnas = [
         {
-            title: '#',
-            dataIndex: 'id',
-            key: 'id',
-            width: 70,
-            className: 'celda-tenue',
-        },
-        {
             title: 'Fecha',
             dataIndex: 'started_at',
             key: 'started_at',
-            className: 'celda-fecha',
+            width: 170,
+            defaultSortOrder: 'descend',
+            sorter: (a, b) => new Date(a.started_at) - new Date(b.started_at),
             render: (fecha) => formatFechaHora(fecha),
         },
         {
-            title: 'Duracion',
+            title: 'Duración',
             key: 'duracion',
             width: 100,
             className: 'celda-tenue',
+            sorter: (a, b) => {
+                const da = new Date(a.finished_at) - new Date(a.started_at)
+                const db = new Date(b.finished_at) - new Date(b.started_at)
+                return (da || 0) - (db || 0)
+            },
             render: (_, rec) => formatDuracion(rec.started_at, rec.finished_at),
         },
         {
@@ -80,6 +80,7 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
             key: 'status',
             align: 'center',
             width: 110,
+            sorter: (a, b) => (a.status || '').localeCompare(b.status || '', 'es'),
             render: (estado) => <EstadoTag estado={estado} />,
         },
         {
@@ -88,6 +89,7 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
             key: 'triggered_by',
             align: 'center',
             width: 130,
+            sorter: (a, b) => (a.triggered_by || '').localeCompare(b.triggered_by || '', 'es'),
             render: (tipo) => <DisparadoTag tipo={tipo} />,
         },
         {
@@ -96,13 +98,28 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
             align: 'center',
             width: 90,
             className: 'celda-tenue',
+            sorter: (a, b) => (a.result?.creados ?? 0) - (b.result?.creados ?? 0),
             render: (_, rec) => rec.result?.creados ?? '—',
+        },
+        {
+            title: 'Actualizados',
+            key: 'actualizados',
+            align: 'center',
+            width: 110,
+            className: 'celda-tenue',
+            sorter: (a, b) => (a.result?.actualizados ?? 0) - (b.result?.actualizados ?? 0),
+            render: (_, rec) => rec.result?.actualizados ?? '—',
         },
         {
             title: 'Fallidos',
             key: 'fallidos',
             align: 'center',
             width: 90,
+            sorter: (a, b) => {
+                const fa = a.result?.fallidos?.length ?? a.result?.fallidos_count ?? 0
+                const fb = b.result?.fallidos?.length ?? b.result?.fallidos_count ?? 0
+                return fa - fb
+            },
             render: (_, rec) => {
                 const n = rec.result?.fallidos?.length ?? rec.result?.fallidos_count ?? 0
                 return (
