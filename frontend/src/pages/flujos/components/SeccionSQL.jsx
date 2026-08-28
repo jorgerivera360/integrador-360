@@ -1,11 +1,15 @@
+import { Tooltip } from 'antd'
+import { InfoCircleOutlined } from '@ant-design/icons'
+
 const SeccionSQL = ({ sql, onChange }) => {
     return (
         <div className="flujo-seccion">
-            <h3 className="flujo-seccion__titulo">Consulta SQL</h3>
-            <p className="flujo-seccion__ayuda">
-                Query SQL que se ejecuta contra SIESA WS. Usa SET QUOTED_IDENTIFIER OFF
-                y alias canonicos (AS referencia, AS descripcion, etc.)
-            </p>
+            <h3 className="flujo-seccion__titulo">
+                Consulta SQL{' '}
+                <Tooltip title="Query SQL que se ejecuta contra SIESA WS via SOAP. Debe usar alias canónicos (AS referencia, AS descripcion, etc.) y comillas dobles para strings literales con SET QUOTED_IDENTIFIER OFF">
+                    <InfoCircleOutlined className="flujo-seccion__info" />
+                </Tooltip>
+            </h3>
             <textarea
                 className="flujo-sql"
                 value={sql || ''}

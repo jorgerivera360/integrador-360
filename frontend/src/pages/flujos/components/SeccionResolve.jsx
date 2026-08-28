@@ -1,4 +1,5 @@
-import { Input, Switch } from 'antd'
+import { Input, Switch, Tooltip } from 'antd'
+import { InfoCircleOutlined } from '@ant-design/icons'
 import { IconInfo } from '../icons'
 
 const SeccionResolve = ({ erpType, flowType, config, onChange }) => {
@@ -20,7 +21,12 @@ const SeccionResolve = ({ erpType, flowType, config, onChange }) => {
 
     return (
         <div className="flujo-seccion">
-            <h3 className="flujo-seccion__titulo">Resolucion de maestros faltantes</h3>
+            <h3 className="flujo-seccion__titulo">
+                Resolución de maestros faltantes{' '}
+                <Tooltip title="Cuando una transacción referencia un producto, cliente o proveedor que no existe en Odoo, el sistema consulta el ERP y lo crea automáticamente antes de procesar la transacción">
+                    <InfoCircleOutlined className="flujo-seccion__info" />
+                </Tooltip>
+            </h3>
 
             <div className="flujo-resolve-toggle">
                 <Switch checked disabled />

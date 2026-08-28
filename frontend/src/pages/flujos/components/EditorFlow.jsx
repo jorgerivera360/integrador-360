@@ -387,7 +387,7 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                     />
                 )}
 
-                {(erpType === 'connekta' || erpType === 'sap') && (
+                {(erpType === 'connekta' || erpType === 'sap') && flowType !== 'items' && (
                     <SeccionMapping
                         erpType={erpType}
                         config={config}
@@ -404,6 +404,7 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
 
                 {flowType === 'items' && (
                     <SeccionConfigItems
+                        erpType={erpType}
                         config={config}
                         onChange={setConfig}
                     />

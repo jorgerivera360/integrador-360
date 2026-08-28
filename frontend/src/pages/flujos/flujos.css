@@ -295,12 +295,36 @@
 }
 
 .flujo-seccion__titulo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 16px;
     font-weight: 600;
     color: #1a1a2e;
     margin: 0 0 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid #f0f0f0;
+}
+
+.flujo-seccion__info {
+    font-size: 14px;
+    color: #8c8c8c;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.flujo-seccion__info:hover {
+    color: #1677ff;
+}
+
+.flujo-seccion__subtitulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #434343;
+    margin: 0 0 12px;
 }
 
 .flujo-seccion__ayuda {
@@ -366,25 +390,26 @@
     width: 100%;
     min-height: 200px;
     padding: 16px;
-    background: #1e1e1e;
-    color: #d4d4d4;
+    background: #fafafa;
+    color: #1a1a2e;
     font-family: 'Fira Code', Consolas, monospace;
     font-size: 13px;
     line-height: 1.6;
-    border: 1px solid #333;
+    border: 1px solid #e8e8e8;
     border-radius: 8px;
     resize: vertical;
     outline: none;
     tab-size: 4;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .flujo-sql:focus {
     border-color: #4096ff;
-    box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.15);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.06), 0 0 0 2px rgba(22, 119, 255, 0.15);
 }
 
 .flujo-sql::placeholder {
-    color: #666;
+    color: #bfbfbf;
 }
 
 /* ========== Tabla clave-valor ========== */
@@ -552,6 +577,35 @@
     color: #52c41a;
 }
 
+/* --- Regla condicional: layout inline --- */
+
+.flujo-regla-config {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.flujo-regla-linea {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.flujo-regla-linea--default {
+    margin-top: 12px;
+}
+
+.flujo-regla-etiqueta {
+    font-size: 13px;
+    color: #595959;
+    white-space: nowrap;
+    min-width: 150px;
+}
+
+.flujo-regla-input {
+    max-width: 240px;
+}
+
 .flujo-condicional__acciones {
     display: flex;
     gap: 8px;
@@ -559,6 +613,111 @@
 }
 
 /* ========== Resolve info ========== */
+
+/* ========== Variables dinámicas (parámetros Connekta) ========== */
+
+.flujo-variables {
+    margin-top: 10px;
+}
+
+.flujo-variables__toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12.5px;
+    color: #1677ff;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.flujo-variables__toggle:hover {
+    color: #4096ff;
+}
+
+.flujo-variables__lista {
+    margin-top: 8px;
+    padding: 12px 14px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.flujo-variables__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.flujo-variables__codigo {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 12px;
+    color: #1677ff;
+    flex-shrink: 0;
+}
+
+.flujo-variables__nombre {
+    color: #595959;
+}
+
+/* --- Catálogo de funciones --- */
+
+.flujo-condicional__acciones + .flujo-variables {
+    margin-top: 20px;
+}
+
+.flujo-catalogo-fn {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.flujo-catalogo-fn:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.flujo-catalogo-fn:first-child {
+    padding-top: 0;
+}
+
+.flujo-catalogo-fn__cabecera {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.flujo-catalogo-fn__params {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-left: 4px;
+}
+
+.flujo-catalogo-fn__param {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.flujo-catalogo-fn__param-nombre {
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 11px;
+    color: #595959;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 3px;
+    padding: 1px 6px;
+}
+
+/* ========== Resolve ========== */
 
 .flujo-resolve-info {
     display: flex;

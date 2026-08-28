@@ -15,29 +15,34 @@ const columnas = [
     {
         title: 'Cliente',
         key: 'cliente',
+        width: 150,
         render: (_, fila) => nombreCliente(fila),
     },
     {
         title: 'Flujo',
         dataIndex: 'flow_name',
         key: 'flujo',
+        width: 150,
     },
     {
         title: 'Estado',
         dataIndex: 'status',
         key: 'estado',
+        width: 100,
         render: (estado) => <EstadoTag estado={estado} />,
     },
     {
         title: 'Fecha',
         dataIndex: 'started_at',
         key: 'fecha',
+        width: 180,
         className: 'celda-num',
         render: (inicio) => formatFechaHora(inicio),
     },
     {
         title: 'Duración',
         key: 'duracion',
+        width: 100,
         className: 'celda-num',
         render: (_, fila) => formatDuracion(fila.started_at, fila.finished_at),
     },
@@ -45,6 +50,7 @@ const columnas = [
         title: 'Disparado por',
         dataIndex: 'triggered_by',
         key: 'disparado',
+        width: 120,
     },
 ]
 

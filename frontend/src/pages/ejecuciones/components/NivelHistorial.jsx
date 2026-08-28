@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Alert, Button, Select, Space, Spin, Table } from 'antd'
 import ErpTag from '@/components/ErpTag'
 import EstadoTag from '@/components/EstadoTag'
@@ -52,7 +52,7 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
         setDrawerAbierto(true)
     }
 
-    const columnas = [
+    const columnas = useMemo(() => [
         {
             title: 'Fecha',
             dataIndex: 'started_at',
@@ -129,7 +129,7 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
                 )
             },
         },
-    ]
+    ], [])
 
     if (isError) {
         return (

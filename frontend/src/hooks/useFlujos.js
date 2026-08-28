@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getClients } from '@/services/clients'
-import { getFlows, getFlow, createFlow, updateFlow, deleteFlow, executeFlow } from '@/services/flows'
+import { getClientsSummary } from '@/services/clients'
+import { getFlows, getFlowsSummary, getFlow, createFlow, updateFlow, deleteFlow, executeFlow } from '@/services/flows'
 
 export const CLAVES_FLUJOS = {
     clientes: (filtros) => ['flujos', 'clientes', filtros],
@@ -18,7 +18,7 @@ export function useClientesFlujos(filtros = {}) {
 
     return useQuery({
         queryKey: CLAVES_FLUJOS.clientes(params),
-        queryFn: () => getClients(params),
+        queryFn: () => getClientsSummary(params),
         select: (respuesta) => respuesta.data,
         placeholderData: (previo) => previo,
     })
@@ -28,6 +28,15 @@ export function useFlowsCliente(clienteId) {
     return useQuery({
         queryKey: CLAVES_FLUJOS.flows(clienteId),
         queryFn: () => getFlows(clienteId),
+        select: (respuesta) => respuesta.data,
+        enabled: Boolean(clienteId),
+    })
+}
+
+export function useFlowsClienteSummary(clienteId) {
+    return useQuery({
+        queryKey: ['flujos', 'flows-summary', String(clienteId)],
+        queryFn: () => getFlowsSummary(clienteId),
         select: (respuesta) => respuesta.data,
         enabled: Boolean(clienteId),
     })

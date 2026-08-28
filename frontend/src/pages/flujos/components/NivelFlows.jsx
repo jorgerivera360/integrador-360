@@ -1,10 +1,10 @@
+import { useMemo } from 'react'
 import { Alert, Button, Spin, Table, message } from 'antd'
 import ErpTag from '@/components/ErpTag'
 import ActivoTag from '@/components/ActivoTag'
-import EstadoTag from '@/components/EstadoTag'
 import useHasRole from '@/hooks/useHasRole'
-import { useFlowsCliente, useEjecutarFlow, mensajeDeError } from '@/hooks/useFlujos'
-import { formatDesde } from '@/utils/format'
+import { useFlowsClienteSummary, useEjecutarFlow, mensajeDeError } from '@/hooks/useFlujos'
+import { formatFechaHora } from '@/utils/format'
 import { IconVolver, IconMas, IconPlay } from '../icons'
 
 const TITULOS_TIPO = {
@@ -16,7 +16,7 @@ const TITULOS_TIPO = {
 }
 
 const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
-    const { data: todosFlows, isPending, isError, error, refetch } = useFlowsCliente(cliente.id)
+    const { data: todosFlows, isPending, isError, error, refetch } = useFlowsClienteSummary(cliente.id)
     const ejecutar = useEjecutarFlow()
     const puedeEditar = useHasRole(['superadmin', 'admin'])
 
@@ -26,16 +26,18 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
     const handleEjecutar = (e, flow) => {
         e.stopPropagation()
         ejecutar.mutate(flow.id, {
-            onSuccess: () => message.success(`Ejecucion de "${flow.flow_name}" iniciada`),
-            onError: (err) => message.error(mensajeDeError(err, 'No se pudo iniciar la ejecucion')),
+            onSuccess: () => message.success(`Ejecución de "${flow.flow_name}" iniciada`),
+            onError: (err) => message.error(mensajeDeError(err, 'No se pudo iniciar la ejecución')),
         })
     }
 
-    const columnas = [
+    const columnas = useMemo(() => [
         {
             title: 'Nombre',
             dataIndex: 'flow_name',
             key: 'flow_name',
+            width: 200,
+            sorter: (a, b) => a.flow_name.localeCompare(b.flow_name, 'es'),
             render: (nombre) => (
                 <span className="flujo-flow-link">{nombre}</span>
             ),
@@ -45,38 +47,34 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
             dataIndex: 'schedule_cron',
             key: 'schedule_cron',
             width: 150,
+            sorter: (a, b) => (a.schedule_cron || '').localeCompare(b.schedule_cron || ''),
             render: (cron) => (
                 <span className="flujo-cron">{cron || '—'}</span>
             ),
-        },
-        {
-            title: 'Orden',
-            dataIndex: 'execution_order',
-            key: 'execution_order',
-            align: 'center',
-            width: 80,
-            className: 'celda-tenue',
         },
         {
             title: 'Estado',
             dataIndex: 'is_active',
             key: 'is_active',
             align: 'center',
-            width: 120,
+            width: 100,
+            sorter: (a, b) => Number(a.is_active) - Number(b.is_active),
             render: (activo) => <ActivoTag activo={activo} />,
         },
         {
-            title: 'Ultima ejecucion',
+            title: 'Última ejecución',
+            dataIndex: 'last_execution',
             key: 'ultima',
             className: 'celda-fecha',
             width: 180,
-            render: () => '—',
+            sorter: (a, b) => new Date(a.last_execution || 0) - new Date(b.last_execution || 0),
+            render: (fecha) => fecha ? formatFechaHora(fecha) : '—',
         },
         ...(puedeEditar ? [{
             title: 'Acciones',
             key: 'acciones',
             align: 'center',
-            width: 100,
+            width: 110,
             render: (_, flow) => (
                 <Button
                     size="small"
@@ -91,7 +89,7 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
                 </Button>
             ),
         }] : []),
-    ]
+    ], [puedeEditar, ejecutar.isPending, ejecutar.variables])
 
     if (isError) {
         return (

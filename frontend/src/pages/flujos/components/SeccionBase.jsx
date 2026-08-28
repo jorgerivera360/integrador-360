@@ -1,4 +1,5 @@
-import { Input, InputNumber, Select, Switch } from 'antd'
+import { Input, Select, Switch, Tooltip } from 'antd'
+import { InfoCircleOutlined } from '@ant-design/icons'
 
 const OPCIONES_FLOW_TYPE = [
     { value: 'items', label: 'Productos (items)' },
@@ -19,7 +20,12 @@ const SeccionBase = ({ datos, onChange, esEdicion }) => {
 
     return (
         <div className="flujo-seccion">
-            <h3 className="flujo-seccion__titulo">Informacion del flujo</h3>
+            <h3 className="flujo-seccion__titulo">
+                Información del flujo{' '}
+                <Tooltip title="Datos generales del flujo: nombre, tipo de procesamiento, programación cron y orden de ejecución en el arranque del scheduler">
+                    <InfoCircleOutlined className="flujo-seccion__info" />
+                </Tooltip>
+            </h3>
 
             <div className="flujo-campos">
                 <div className="flujo-campo">
@@ -50,17 +56,6 @@ const SeccionBase = ({ datos, onChange, esEdicion }) => {
                         value={datos.schedule_cron || ''}
                         onChange={cambiarInput('schedule_cron')}
                         placeholder="ej: */2 * * * *"
-                    />
-                </div>
-
-                <div className="flujo-campo">
-                    <label className="flujo-campo__label">Orden de ejecucion</label>
-                    <InputNumber
-                        value={datos.execution_order}
-                        onChange={cambiar('execution_order')}
-                        min={1}
-                        max={999}
-                        style={{ width: '100%' }}
                     />
                 </div>
 

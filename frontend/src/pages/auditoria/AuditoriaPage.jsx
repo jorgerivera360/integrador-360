@@ -47,6 +47,7 @@ const columnas = [
     {
         title: 'Usuario',
         key: 'usuario',
+        width: 200,
         sorter: (a, b) => (a.changed_by_name || '').localeCompare(b.changed_by_name || '', 'es'),
         render: (_, cambio) =>
             cambio.changed_by_name ? (
@@ -63,6 +64,7 @@ const columnas = [
         dataIndex: 'action',
         key: 'action',
         align: 'center',
+        width: 120,
         sorter: (a, b) => (a.action || '').localeCompare(b.action || '', 'es'),
         render: (accion) => <AccionTag accion={accion} />,
     },
@@ -70,6 +72,7 @@ const columnas = [
         title: 'Módulo',
         dataIndex: 'table_name',
         key: 'table_name',
+        width: 140,
         sorter: (a, b) => nombreModulo(a.table_name).localeCompare(nombreModulo(b.table_name), 'es'),
         render: (tabla) => (
             <span className="celda-tabla">
@@ -82,6 +85,7 @@ const columnas = [
         title: 'Fecha',
         dataIndex: 'changed_at',
         key: 'changed_at',
+        width: 180,
         className: 'celda-fecha',
         defaultSortOrder: 'descend',
         sorter: (a, b) => new Date(a.changed_at) - new Date(b.changed_at),

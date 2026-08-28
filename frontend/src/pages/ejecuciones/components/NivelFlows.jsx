@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Alert, Button, Spin, Table } from 'antd'
 import ErpTag from '@/components/ErpTag'
 import ActivoTag from '@/components/ActivoTag'
@@ -19,7 +20,7 @@ const NivelFlows = ({ cliente, flowType, onSeleccionar, onVolver }) => {
     const flows = todosFlows?.filter((f) => f.flow_type === flowType) || []
     const tituloTipo = TITULOS_TIPO[flowType] || flowType
 
-    const columnas = [
+    const columnas = useMemo(() => [
         {
             title: 'Nombre',
             dataIndex: 'flow_name',
@@ -47,7 +48,7 @@ const NivelFlows = ({ cliente, flowType, onSeleccionar, onVolver }) => {
             sorter: (a, b) => new Date(a.last_execution || 0) - new Date(b.last_execution || 0),
             render: (fecha) => fecha ? formatFechaHora(fecha) : '—',
         },
-    ]
+    ], [])
 
     if (isError) {
         return (
