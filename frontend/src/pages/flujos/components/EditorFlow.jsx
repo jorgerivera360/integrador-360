@@ -120,7 +120,6 @@ function deserializar(flow, erpType, flowType) {
             flow_name: flow?.flow_name || '',
             flow_type: flow?.flow_type || flowType || '',
             schedule_cron: flow?.schedule_cron || '',
-            execution_order: flow?.execution_order ?? 99,
             is_active: flow?.is_active ?? true,
         },
         config: {},
@@ -248,7 +247,6 @@ function serializar(base, config, erpType, flowType) {
         flow_type: base.flow_type,
         flow_config: fc,
         schedule_cron: base.schedule_cron || null,
-        execution_order: base.execution_order ?? 99,
         is_active: base.is_active ?? true,
     }
 }
@@ -270,7 +268,6 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
         flow_name: '',
         flow_type: flowTypeInicial || '',
         schedule_cron: '',
-        execution_order: 99,
         is_active: true,
     })
     const [config, setConfig] = useState({})
