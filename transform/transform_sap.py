@@ -12,7 +12,7 @@ Fase: 3 — Transform Layer
 from config.logger import IntegradorLogger
 from transform.base import Transform
 from transform.utils.determination_functions import get_determination_function
-from transform.utils.helpers import (clean_row, validate_record, to_float, to_int, parse_fecha)
+from transform.utils.helpers import (clean_row, validate_record, to_float, to_int, parse_fecha, resolve_parametros)
 
 
 class TransformSAP(Transform):
@@ -49,6 +49,7 @@ class TransformSAP(Transform):
             filter_str = flow_config.get("filter", "")
             params = {}
             if filter_str:
+                filter_str = resolve_parametros(filter_str)
                 params["filter"] = filter_str
 
             if flow_type == "items":
