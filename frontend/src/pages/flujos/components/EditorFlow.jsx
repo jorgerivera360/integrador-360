@@ -169,13 +169,17 @@ function deserializar(flow, erpType, flowType) {
         estado.config.warehouse_mapping_tabla = dictATabla(fc.warehouse_mapping)
     }
 
-    if (erpType === 'sap' && (flowType === 'items' || flowType === 'customer' || flowType === 'supplier')) {
-        estado.config.resolve_filter_field = fc.resolve_filter_field || ''
-        estado.config.resolve_filter_template = fc.resolve_filter_template || ''
-    }
+    if (flowType === 'items' || flowType === 'customer' || flowType === 'supplier') {
+        estado.config.resolve_enabled = fc.resolve_enabled !== false
 
-    if (erpType === 'ws' && (flowType === 'items' || flowType === 'customer' || flowType === 'supplier')) {
-        estado.config.resolve_sql_inject = fc.resolve_sql_inject || ''
+        if (erpType === 'sap' || erpType === 'connekta') {
+            estado.config.resolve_filter_field = fc.resolve_filter_field || ''
+            estado.config.resolve_filter_template = fc.resolve_filter_template || ''
+        }
+
+        if (erpType === 'ws') {
+            estado.config.resolve_sql_inject = fc.resolve_sql_inject || ''
+        }
     }
 
     return estado
@@ -227,13 +231,17 @@ function serializar(base, config, erpType, flowType) {
         fc.warehouse_mapping = tablaADict(config.warehouse_mapping_tabla || [])
     }
 
-    if (erpType === 'sap' && (flowType === 'items' || flowType === 'customer' || flowType === 'supplier')) {
-        if (config.resolve_filter_field) fc.resolve_filter_field = config.resolve_filter_field
-        if (config.resolve_filter_template) fc.resolve_filter_template = config.resolve_filter_template
-    }
+    if (flowType === 'items' || flowType === 'customer' || flowType === 'supplier') {
+        fc.resolve_enabled = config.resolve_enabled !== false
 
-    if (erpType === 'ws' && (flowType === 'items' || flowType === 'customer' || flowType === 'supplier')) {
-        if (config.resolve_sql_inject) fc.resolve_sql_inject = config.resolve_sql_inject
+        if ((erpType === 'sap' || erpType === 'connekta') && fc.resolve_enabled) {
+            if (config.resolve_filter_field) fc.resolve_filter_field = config.resolve_filter_field
+            if (config.resolve_filter_template) fc.resolve_filter_template = config.resolve_filter_template
+        }
+
+        if (erpType === 'ws' && fc.resolve_enabled) {
+            if (config.resolve_sql_inject) fc.resolve_sql_inject = config.resolve_sql_inject
+        }
     }
 
     return {
