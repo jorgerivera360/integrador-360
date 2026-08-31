@@ -321,18 +321,26 @@ def _build_resolve_filter(flow_config, faltantes, logger=None):
     if not faltantes:
         return flow_config
 
-    # Caso SAP: filtro OData dinámico
+    # Caso SAP / Connekta: filtro dinámico por campo
     resolve_field = flow_config.get("resolve_filter_field")
     resolve_template = flow_config.get("resolve_filter_template")
     if resolve_field and resolve_template:
         parts = [resolve_template.replace("{ref}", str(ref)) for ref in faltantes]
-        dynamic_filter = "(" + " or ".join(parts) + ")"
-
         new_config = {**flow_config}
-        new_config["filter"] = dynamic_filter
 
-        if logger:
-            logger.info(f"Resolve Masters | Filtro OData dinámico: {len(faltantes)} valores")
+        if flow_config.get("query_desc"):
+            # Connekta: reemplazar parametros
+            dynamic_filter = "|".join(parts)
+            new_config["parametros"] = dynamic_filter
+            if logger:
+                logger.info(f"Resolve Masters | Filtro Connekta dinámico: {len(faltantes)} valores")
+        else:
+            # SAP: reemplazar filter OData
+            dynamic_filter = "(" + " or ".join(parts) + ")"
+            new_config["filter"] = dynamic_filter
+            if logger:
+                logger.info(f"Resolve Masters | Filtro OData dinámico: {len(faltantes)} valores")
+
         return new_config
 
     # Caso WS: inyección SQL dinámica
