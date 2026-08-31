@@ -614,7 +614,7 @@ class TestFlows:
         cursor.fetchone.return_value = {"id": 1}
         cursor.fetchall.return_value = [
             {"id": 1, "client_id": 1, "flow_name": "items", "flow_type": "items",
-              "flow_config": {}, "schedule_cron": "0 * * * *", "execution_order": 1,
+              "flow_config": {}, "schedule_cron": "0 * * * *",
               "is_active": True, "created_by": 1, "updated_by": 1,
               "created_at": "2026-01-01T00:00:00", "updated_at": "2026-01-01T00:00:00"},
         ]
@@ -631,20 +631,11 @@ class TestFlows:
         sql_calls = [str(c) for c in cursor.execute.call_args_list]
         assert any("flow_type" in s for s in sql_calls)
 
-    def test_get_flows_ordenados_execution_order(self, app_client):
-        client, cursor, conn = app_client
-        cursor.fetchone.return_value = {"id": 1}
-        cursor.fetchall.return_value = []
-        resp = client.get("/clients/1/flows/")
-        assert resp.status_code == 200
-        sql_calls = [str(c) for c in cursor.execute.call_args_list]
-        assert any("execution_order" in s for s in sql_calls)
-
     def test_get_flow_por_id(self, app_client):
         client, cursor, conn = app_client
         cursor.fetchone.return_value = {
             "id": 10, "client_id": 1, "flow_name": "items", "flow_type": "items",
-            "flow_config": {"sql": "SELECT 1"}, "schedule_cron": None, "execution_order": 1,
+            "flow_config": {"sql": "SELECT 1"}, "schedule_cron": None,
             "is_active": True, "created_by": 1, "updated_by": 1,
             "created_at": "2026-01-01T00:00:00", "updated_at": "2026-01-01T00:00:00"
         }
@@ -665,13 +656,12 @@ class TestFlows:
             None,
             {"id": 20, "client_id": 1, "flow_name": "items", "flow_type": "items",
               "flow_config": {"sql": "SELECT 1"}, "schedule_cron": "0 * * * *",
-              "execution_order": 1, "is_active": True, "created_by": 1, "updated_by": 1,
+              "is_active": True, "created_by": 1, "updated_by": 1,
               "created_at": "2026-08-19T00:00:00", "updated_at": "2026-08-19T00:00:00"},
         ]
         resp = client.post("/clients/1/flows/", json={
             "flow_name": "items", "flow_type": "items",
-            "flow_config": {"sql": "SELECT 1"}, "schedule_cron": "0 * * * *",
-            "execution_order": 1
+            "flow_config": {"sql": "SELECT 1"}, "schedule_cron": "0 * * * *"
         })
         assert resp.status_code == 201
         assert resp.json()["flow_name"] == "items"
@@ -703,7 +693,7 @@ class TestFlows:
             {"id": 1},
             None,
             {"id": 20, "client_id": 1, "flow_name": "items", "flow_type": "items",
-              "flow_config": {}, "schedule_cron": None, "execution_order": 99,
+              "flow_config": {}, "schedule_cron": None,
               "is_active": True, "created_by": 1, "updated_by": 1,
               "created_at": "2026-08-19T00:00:00", "updated_at": "2026-08-19T00:00:00"},
         ]
@@ -718,11 +708,11 @@ class TestFlows:
         client, cursor, conn = app_client
         cursor.fetchone.side_effect = [
             {"id": 10, "client_id": 1, "flow_name": "items", "flow_type": "items",
-              "flow_config": {}, "schedule_cron": None, "execution_order": 99,
+              "flow_config": {}, "schedule_cron": None,
               "is_active": True},
             None,
             {"id": 10, "client_id": 1, "flow_name": "items", "flow_type": "items",
-              "flow_config": {}, "schedule_cron": "*/5 * * * *", "execution_order": 99,
+              "flow_config": {}, "schedule_cron": "*/5 * * * *",
               "is_active": True, "created_by": 1, "updated_by": 1,
               "created_at": "2026-01-01T00:00:00", "updated_at": "2026-08-19T00:00:00"},
         ]
@@ -734,11 +724,11 @@ class TestFlows:
         client, cursor, conn = app_client
         cursor.fetchone.side_effect = [
             {"id": 10, "client_id": 1, "flow_name": "items", "flow_type": "items",
-              "flow_config": {}, "schedule_cron": None, "execution_order": 99,
+              "flow_config": {}, "schedule_cron": None,
               "is_active": True},
             None,
             {"id": 10, "client_id": 1, "flow_name": "items_v2", "flow_type": "items",
-              "flow_config": {}, "schedule_cron": None, "execution_order": 99,
+              "flow_config": {}, "schedule_cron": None,
               "is_active": True, "created_by": 1, "updated_by": 1,
               "created_at": "2026-01-01T00:00:00", "updated_at": "2026-08-19T00:00:00"},
         ]
@@ -753,7 +743,7 @@ class TestFlows:
         client, cursor, conn = app_client
         cursor.fetchone.side_effect = [
             {"id": 10, "client_id": 1, "flow_name": "items", "flow_type": "items",
-              "flow_config": {}, "schedule_cron": None, "execution_order": 99,
+              "flow_config": {}, "schedule_cron": None,
               "is_active": True},
             {"id": 20},
         ]
@@ -765,7 +755,7 @@ class TestFlows:
         client, cursor, conn = app_client
         cursor.fetchone.return_value = {
             "id": 10, "client_id": 1, "flow_name": "items", "flow_type": "items",
-            "flow_config": {}, "schedule_cron": None, "execution_order": 99,
+            "flow_config": {}, "schedule_cron": None,
             "is_active": True
         }
         resp = client.delete("/clients/1/flows/10")

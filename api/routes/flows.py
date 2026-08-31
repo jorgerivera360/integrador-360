@@ -33,7 +33,7 @@ def get_flows(
         query += " AND is_active = %s"
         params.append(is_active)
 
-    query += " ORDER BY execution_order, flow_name"
+    query += " ORDER BY flow_name"
     cursor.execute(query, params)
     return cursor.fetchall()
 
@@ -52,7 +52,7 @@ def get_flows_summary(
     if not cursor.fetchone():
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
-    query = """SELECT f.id, f.flow_name, f.flow_type, f.is_active, f.schedule_cron, f.execution_order,
+    query = """SELECT f.id, f.flow_name, f.flow_type, f.is_active, f.schedule_cron,
                 (SELECT MAX(e.started_at) FROM executions e WHERE e.flow_id = f.id) AS last_execution
         FROM flows f
         WHERE f.client_id = %s"""
@@ -65,7 +65,7 @@ def get_flows_summary(
         query += " AND f.is_active = %s"
         params.append(is_active)
 
-    query += " ORDER BY f.execution_order, f.flow_name"
+    query += " ORDER BY f.flow_name"
     cursor.execute(query, params)
     return cursor.fetchall()
 
@@ -119,11 +119,11 @@ def create_flow(
 
     cursor.execute(
         """INSERT INTO flows
-        (client_id, flow_name, flow_type, flow_config, schedule_cron, execution_order, created_by, updated_by)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING *""",
+        (client_id, flow_name, flow_type, flow_config, schedule_cron created_by, updated_by)
+        VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *""",
         (
             client_id, flow.flow_name, flow.flow_type,
-            json.dumps(flow.flow_config), flow.schedule_cron, flow.execution_order,
+            json.dumps(flow.flow_config), flow.schedule_cron, 
             current_user["id"], current_user["id"]
         )
     )
@@ -178,9 +178,6 @@ def update_flow(
     if flow.schedule_cron is not None:
         previous_values["schedule_cron"] = existing["schedule_cron"]
         updates["schedule_cron"] = flow.schedule_cron
-    if flow.execution_order is not None:
-        previous_values["execution_order"] = existing["execution_order"]
-        updates["execution_order"] = flow.execution_order
     if flow.is_active is not None:
         previous_values["is_active"] = existing["is_active"]
         updates["is_active"] = flow.is_active

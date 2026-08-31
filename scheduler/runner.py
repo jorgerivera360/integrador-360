@@ -6,7 +6,7 @@ Responsabilidades:
 - _load_flow_configs() — lee flow_configs de maestros para resolve
 - _run_flow()          — verifica is_active, ejecuta main.run()
 - _run_with_retry()    — backoff exponencial (3 intentos: 30s, 60s, 120s)
-- _arranque_ordenado() — ejecuta todos los flows en orden de execution_order
+- _arranque_ordenado() — ejecuta todos los flows en secuencia
 - _register_flows()    — registra crons en APScheduler
 - start()              — arranque ordenado → register → loop infinito
 Patrones: Observer · BlockingScheduler
@@ -189,8 +189,7 @@ class IntegradorScheduler:
                 time.sleep(delay)
 
     def _arranque_ordenado(self):
-        """Ejecuta todos los flows en orden de execution_order.
-        self.flows ya viene ordenado por execution_order desde load_db_config()."""
+        """Ejecuta todos los flows en secuencia."""
         self.logger.info(
             f"Scheduler | Arranque ordenado: {len(self.flows)} flows"
         )

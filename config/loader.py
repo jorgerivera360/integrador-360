@@ -51,13 +51,12 @@ class ConfigLoader:
 
             # flows activos
             cur.execute("""
-                SELECT f.id, f.flow_name, f.flow_type, f.flow_config, f.schedule_cron, f.execution_order
+                SELECT f.id, f.flow_name, f.flow_type, f.flow_config, f.schedule_cron
                 FROM flows f
                 JOIN clients c ON f.client_id = c.id
                 WHERE c.client_id = %s AND f.is_active = true AND c.is_active = true
-                ORDER BY f.execution_order ASC
             """, (self.client_id,))
-            columns = ["flow_id", "flow_name", "flow_type", "flow_config", "schedule_cron", "execution_order"]
+            columns = ["flow_id", "flow_name", "flow_type", "flow_config", "schedule_cron"]
             result["flows"] = [dict(zip(columns, row)) for row in cur.fetchall()]
             self.logger.info(f"BD: {len(result['flows'])} flows activos para {self.client_id}")
 

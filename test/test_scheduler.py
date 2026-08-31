@@ -14,11 +14,11 @@ SAMPLE_CONFIG = {
 }
 
 SAMPLE_FLOWS = [
-    {"flow_id": 1, "flow_name": "items", "flow_type": "items", "flow_config": {"sql": "SELECT 1"}, "schedule_cron": "0 * * * *", "execution_order": 1},
-    {"flow_id": 2, "flow_name": "partners", "flow_type": "customer", "flow_config": {"sql": "SELECT 2"}, "schedule_cron": "0 * * * *", "execution_order": 2},
-    {"flow_id": 3, "flow_name": "partners", "flow_type": "supplier", "flow_config": {"sql": "SELECT 3"}, "schedule_cron": None, "execution_order": 3},
-    {"flow_id": 4, "flow_name": "compras", "flow_type": "purchases", "flow_config": {"sql": "SELECT 4"}, "schedule_cron": "*/2 * * * *", "execution_order": 4},
-    {"flow_id": 5, "flow_name": "ventas", "flow_type": "sales", "flow_config": {"sql": "SELECT 5"}, "schedule_cron": "*/2 * * * *", "execution_order": 5},
+    {"flow_id": 1, "flow_name": "items", "flow_type": "items", "flow_config": {"sql": "SELECT 1"}, "schedule_cron": "0 * * * *"},
+    {"flow_id": 2, "flow_name": "partners", "flow_type": "customer", "flow_config": {"sql": "SELECT 2"}, "schedule_cron": "0 * * * *"},
+    {"flow_id": 3, "flow_name": "partners", "flow_type": "supplier", "flow_config": {"sql": "SELECT 3"}, "schedule_cron": None},
+    {"flow_id": 4, "flow_name": "compras", "flow_type": "purchases", "flow_config": {"sql": "SELECT 4"}, "schedule_cron": "*/2 * * * *"},
+    {"flow_id": 5, "flow_name": "ventas", "flow_type": "sales", "flow_config": {"sql": "SELECT 5"}, "schedule_cron": "*/2 * * * *"},
 ]
 
 
@@ -412,7 +412,7 @@ class TestRegisterFlows(unittest.TestCase):
 
     def test_register_flow_con_cron(self):
         flows = [{"flow_id": 1, "flow_name": "compras", "flow_type": "purchases",
-                  "flow_config": {}, "schedule_cron": "*/2 * * * *", "execution_order": 4}]
+                  "flow_config": {}, "schedule_cron": "*/2 * * * *"}]
         s = _build_scheduler(flows=flows)
 
         s._register_flows()
@@ -422,7 +422,7 @@ class TestRegisterFlows(unittest.TestCase):
 
     def test_register_ignora_flow_sin_cron(self):
         flows = [{"flow_id": 3, "flow_name": "partners", "flow_type": "supplier",
-                  "flow_config": {}, "schedule_cron": None, "execution_order": 3}]
+                  "flow_config": {}, "schedule_cron": None}]
         s = _build_scheduler(flows=flows)
 
         s._register_flows()
@@ -430,7 +430,7 @@ class TestRegisterFlows(unittest.TestCase):
 
     def test_register_flow_inactivo_se_registra(self):
         flows = [{"flow_id": 1, "flow_name": "items", "flow_type": "items",
-                  "flow_config": {}, "schedule_cron": "0 * * * *", "execution_order": 1,
+                  "flow_config": {}, "schedule_cron": "0 * * * *",
                   "is_active": False}]
         s = _build_scheduler(flows=flows)
 
@@ -439,7 +439,7 @@ class TestRegisterFlows(unittest.TestCase):
 
     def test_register_cron_invalido_loguea_error(self):
         flows = [{"flow_id": 1, "flow_name": "items", "flow_type": "items",
-                  "flow_config": {}, "schedule_cron": "invalid_cron", "execution_order": 1}]
+                  "flow_config": {}, "schedule_cron": "invalid_cron"}]
         s = _build_scheduler(flows=flows)
         s.scheduler.add_job.side_effect = ValueError("Invalid cron")
 
@@ -449,9 +449,9 @@ class TestRegisterFlows(unittest.TestCase):
     def test_register_loguea_conteo(self):
         flows = [
             {"flow_id": 1, "flow_name": "items", "flow_type": "items",
-              "flow_config": {}, "schedule_cron": "0 * * * *", "execution_order": 1},
+              "flow_config": {}, "schedule_cron": "0 * * * *"},
             {"flow_id": 3, "flow_name": "partners", "flow_type": "supplier",
-              "flow_config": {}, "schedule_cron": None, "execution_order": 3},
+              "flow_config": {}, "schedule_cron": None},
         ]
         s = _build_scheduler(flows=flows)
 

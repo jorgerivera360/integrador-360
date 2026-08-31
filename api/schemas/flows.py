@@ -8,7 +8,6 @@ class FlowCreate(BaseModel):
     flow_type: str
     flow_config: dict = {}
     schedule_cron: Optional[str] = None
-    execution_order: int = 99
 
 
 class FlowUpdate(BaseModel):
@@ -16,7 +15,6 @@ class FlowUpdate(BaseModel):
     flow_type: Optional[str] = None
     flow_config: Optional[dict] = None
     schedule_cron: Optional[str] = None
-    execution_order: Optional[int] = None
     is_active: Optional[bool] = None
 
 
@@ -27,7 +25,6 @@ class FlowResponse(BaseModel):
     flow_type: str
     flow_config: dict
     schedule_cron: Optional[str] = None
-    execution_order: int
     is_active: bool
     created_by: Optional[int] = None
     updated_by: Optional[int] = None

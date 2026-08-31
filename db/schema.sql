@@ -66,7 +66,6 @@ CREATE TABLE flows (
     flow_config      JSONB        NOT NULL DEFAULT '{}',
     schedule_cron    VARCHAR(50),
     is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
-    execution_order  INTEGER      NOT NULL DEFAULT 99,
     created_by       INTEGER      REFERENCES users(id),
     updated_by       INTEGER      REFERENCES users(id),
     created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
