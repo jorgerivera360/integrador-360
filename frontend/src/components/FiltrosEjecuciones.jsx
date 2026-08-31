@@ -30,7 +30,7 @@ export function hayFiltros(filtros) {
  *
  * Componente controlado: no guarda estado, lo recibe y lo notifica.
  */
-const FiltrosEjecuciones = ({ valor, onChange }) => {
+const FiltrosEjecuciones = ({ valor, onChange, mostrarFecha = true }) => {
     const escribir = (campo) => (evento) =>
         onChange({ ...valor, [campo]: evento.target.value })
 
@@ -38,6 +38,16 @@ const FiltrosEjecuciones = ({ valor, onChange }) => {
 
     return (
         <Space className="filtros-ejecuciones" wrap size={8}>
+            {mostrarFecha && (
+                <RangePicker
+                    value={valor.rango}
+                    onChange={cambiarRango}
+                    format="YYYY-MM-DD"
+                    placeholder={['Desde', 'Hasta']}
+                    allowClear
+                />
+            )}
+
             <Input
                 className="filtros-ejecuciones__campo"
                 placeholder="Cliente"
@@ -59,14 +69,6 @@ const FiltrosEjecuciones = ({ valor, onChange }) => {
                 placeholder="Estado"
                 value={valor.estado}
                 onChange={escribir('estado')}
-                allowClear
-            />
-
-            <RangePicker
-                value={valor.rango}
-                onChange={cambiarRango}
-                format="YYYY-MM-DD"
-                placeholder={['Desde', 'Hasta']}
                 allowClear
             />
 

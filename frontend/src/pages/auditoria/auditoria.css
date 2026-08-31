@@ -204,3 +204,35 @@
 .detalle-btn-expandir:hover {
     color: #40a9ff;
 }
+
+/* ========== Responsive ========== */
+
+@media (max-width: 768px) {
+    .auditoria-filtros__select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .auditoria-filtros__registro {
+        width: 100%;
+    }
+
+    .detalle-tabla__campo {
+        width: auto;
+        white-space: normal;
+    }
+
+    .detalle-tabla th,
+    .detalle-tabla td {
+        padding: 6px 10px;
+        font-size: 12.5px;
+    }
+
+    .detalle-panel {
+        max-width: 100%;
+    }
+
+    .celda-campos {
+        max-width: 160px;
+    }
+}

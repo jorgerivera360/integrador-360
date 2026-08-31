@@ -25,6 +25,24 @@
     box-shadow: 0 1px 2px rgba(0, 21, 41, 0.06);
 }
 
+.tablero__cabecera {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tablero__periodo {
+    margin: 0;
+    font-size: 13.5px;
+    color: #8b93a1;
+    font-weight: 400;
+}
+
+.tablero__filtro-activo {
+    color: #1677ff;
+    font-weight: 500;
+}
+
 /* Aclara que los contadores en cero son ausencia de datos, no una falla. */
 .tablero__sin-datos {
     margin: -4px 2px 0;
@@ -170,4 +188,47 @@
 
 .panel-tabla .celda-num {
     font-variant-numeric: tabular-nums;
+}
+
+/* ========== Responsive ========== */
+
+@media (max-width: 768px) {
+    .tablero__grid-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .tablero__grid-mini {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat {
+        padding: 16px;
+    }
+
+    .stat__valor {
+        font-size: 24px;
+    }
+
+    .panel-tabla__head {
+        flex-wrap: wrap;
+        padding: 12px 16px;
+    }
+
+    .panel-tabla__filtros {
+        padding: 10px 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tablero__grid-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .tablero__grid-mini {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat__valor {
+        font-size: 22px;
+    }
 }

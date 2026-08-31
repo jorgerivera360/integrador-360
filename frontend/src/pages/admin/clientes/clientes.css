@@ -248,3 +248,23 @@
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 768px) {
+    .clientes-filtros__buscador {
+        width: 100%;
+    }
+
+    .clientes-filtros__select,
+    .clientes-filtros__select--corto {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .campo-ancho {
+        max-width: 100%;
+    }
+
+    .detalle-cliente {
+        max-width: 100%;
+    }
+}

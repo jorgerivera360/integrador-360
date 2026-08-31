@@ -93,3 +93,16 @@
     color: rgba(0, 0, 0, 0.45);
     margin-bottom: 10px;
 }
+
+/* ========== Responsive ========== */
+
+@media (max-width: 768px) {
+    .usuarios-filtros__buscador {
+        width: 100%;
+    }
+
+    .usuarios-filtros__select {
+        min-width: 0;
+        width: 100%;
+    }
+}

@@ -19,6 +19,7 @@
     .filtros-ejecuciones__campo,
     .filtros-ejecuciones__campo--corto,
     .filtros-ejecuciones .ant-picker {
+        min-width: 0;
         width: 100%;
     }
 }

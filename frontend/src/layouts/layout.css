@@ -206,3 +206,17 @@
         display: none;
     }
 }
+
+@media (max-width: 768px) {
+    .app-contenido {
+        padding: 16px;
+    }
+
+    .app-header {
+        padding: 0 16px;
+    }
+
+    .breadcrumb {
+        font-size: 13px;
+    }
+}

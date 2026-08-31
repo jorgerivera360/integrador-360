@@ -318,3 +318,37 @@
     max-height: 200px;
     overflow-y: auto;
 }
+
+/* ========== Responsive ========== */
+
+@media (max-width: 768px) {
+    .ejec-filtros__buscador {
+        width: 100%;
+    }
+
+    .ejec-filtros__select,
+    .ejec-filtros__select--corto {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .ejec-cliente-head__nombre {
+        font-size: 22px;
+    }
+
+    .ejec-flow-head {
+        flex-direction: column;
+    }
+
+    .ejec-flow-head__titulo {
+        font-size: 18px;
+    }
+
+    .ejec-tarjetas {
+        grid-template-columns: 1fr;
+    }
+
+    .drawer-grid {
+        grid-template-columns: 1fr;
+    }
+}
