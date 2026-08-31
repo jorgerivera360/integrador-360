@@ -35,7 +35,7 @@ def get_status(
 
     # Últimas 10 ejecuciones
     cursor.execute("""
-        SELECT e.id, e.status, e.started_at, e.finished_at, e.triggered_by,
+        SELECT e.id, e.status, e.started_at, e.finished_at, e.triggered_by, e.result, e.error_message,
             f.flow_name, f.flow_type, c.client_id AS client_slug, c.name AS client_name
         FROM executions e
         JOIN flows f ON e.flow_id = f.id
