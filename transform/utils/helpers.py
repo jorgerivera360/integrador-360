@@ -304,7 +304,7 @@ def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str
             return False, f"cantidad_pedida no numérica: {cantidad}"
     return True, ""
 
-def resolve_parametros(parametros_str, logger=None):
+def resolve_parametros(parametros_str, formato="%Y%m%d", logger=None):
     if not parametros_str or "{" not in parametros_str:
         return parametros_str
 
@@ -316,16 +316,16 @@ def resolve_parametros(parametros_str, logger=None):
         placeholder = match.group(1)
 
         if placeholder == "hoy":
-            return hoy.strftime("%Y%m%d")
+            return hoy.strftime(formato)
         if placeholder.startswith("hoy-"):
             dias = int(placeholder.split("-")[1])
-            return (hoy - timedelta(days=dias)).strftime("%Y%m%d")
+            return (hoy - timedelta(days=dias)).strftime(formato)
         if placeholder.startswith("hoy+"):
             dias = int(placeholder.split("+")[1])
-            return (hoy + timedelta(days=dias)).strftime("%Y%m%d")
+            return (hoy + timedelta(days=dias)).strftime(formato)
 
         if placeholder == "inicio_mes":
-            return hoy.replace(day=1).strftime("%Y%m%d")
+            return hoy.replace(day=1).strftime(formato)
         if placeholder.startswith("inicio_mes-"):
             n = int(placeholder.split("-")[1])
             mes = hoy.month - n
@@ -333,11 +333,11 @@ def resolve_parametros(parametros_str, logger=None):
             while mes <= 0:
                 mes += 12
                 anio -= 1
-            return datetime(anio, mes, 1).strftime("%Y%m%d")
+            return datetime(anio, mes, 1).strftime(formato)
 
         if placeholder == "fin_mes":
             ultimo_dia = calendar.monthrange(hoy.year, hoy.month)[1]
-            return hoy.replace(day=ultimo_dia).strftime("%Y%m%d")
+            return hoy.replace(day=ultimo_dia).strftime(formato)
         if placeholder.startswith("fin_mes-"):
             n = int(placeholder.split("-")[1])
             mes = hoy.month - n
@@ -346,7 +346,7 @@ def resolve_parametros(parametros_str, logger=None):
                 mes += 12
                 anio -= 1
             ultimo_dia = calendar.monthrange(anio, mes)[1]
-            return datetime(anio, mes, ultimo_dia).strftime("%Y%m%d")
+            return datetime(anio, mes, ultimo_dia).strftime(formato)
 
         if logger:
             logger.warning(f"Placeholder no reconocido: {{{placeholder}}}")

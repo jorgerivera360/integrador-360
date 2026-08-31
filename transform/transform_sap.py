@@ -49,7 +49,7 @@ class TransformSAP(Transform):
             filter_str = flow_config.get("filter", "")
             params = {}
             if filter_str:
-                filter_str = resolve_parametros(filter_str)
+                filter_str = resolve_parametros(filter_str, formato="%Y-%m-%d")
                 params["filter"] = filter_str
 
             if flow_type == "items":
