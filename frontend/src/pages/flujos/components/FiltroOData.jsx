@@ -26,11 +26,6 @@ const FiltroOData = ({ condiciones = [], onChange }) => {
         onChange(condiciones.filter((_, i) => i !== indice))
     }
 
-    const preview = condiciones
-        .filter((c) => c.campo && c.valor)
-        .map((c) => `${c.campo} ${c.operador} '${c.valor}'`)
-        .join(' and ')
-
     return (
         <div className="flujo-filtro-odata">
             <div className="flujo-filtro-odata__cabecera">
@@ -83,13 +78,6 @@ const FiltroOData = ({ condiciones = [], onChange }) => {
             >
                 + Agregar condicion
             </Button>
-
-            {preview && (
-                <div className="flujo-filtro-odata__preview">
-                    <span className="flujo-filtro-odata__preview-label">$filter =</span>
-                    <code className="flujo-filtro-odata__preview-valor">{preview}</code>
-                </div>
-            )}
         </div>
     )
 }
