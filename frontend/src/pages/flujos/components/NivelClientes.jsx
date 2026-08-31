@@ -96,7 +96,7 @@ const NivelClientes = ({ onSeleccionar }) => {
                     <h1 className="pagina-head__titulo">
                         Flujos{' '}
                         <Tooltip title="Configuración de los flujos de integración por cliente">
-                            <InfoCircleOutlined style={{ fontSize: 16, color: '#8c8c8c', cursor: 'pointer', verticalAlign: 'middle' }} />
+                            <InfoCircleOutlined className="flujo-seccion__info" />
                         </Tooltip>
                     </h1>
                 </div>

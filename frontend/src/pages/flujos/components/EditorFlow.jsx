@@ -9,7 +9,6 @@ import SeccionSQL from './SeccionSQL'
 import SeccionOrigenConnekta from './SeccionOrigenConnekta'
 import SeccionOrigenSAP from './SeccionOrigenSAP'
 import SeccionMapping from './SeccionMapping'
-import SeccionMappingLineas from './SeccionMappingLineas'
 import SeccionConfigItems from './SeccionConfigItems'
 import SeccionConfigPartners from './SeccionConfigPartners'
 import SeccionConfigTransacciones from './SeccionConfigTransacciones'
@@ -398,13 +397,7 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                 {(erpType === 'connekta' || erpType === 'sap') && flowType !== 'items' && (
                     <SeccionMapping
                         erpType={erpType}
-                        config={config}
-                        onChange={setConfig}
-                    />
-                )}
-
-                {erpType === 'sap' && flowType !== 'items' && (
-                    <SeccionMappingLineas
+                        flowType={flowType}
                         config={config}
                         onChange={setConfig}
                     />
