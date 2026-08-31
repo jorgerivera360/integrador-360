@@ -1,3 +1,4 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from api.dependencies import get_db
 from api.auth import require_role
@@ -111,6 +112,12 @@ def create_client(
         (client.client_id, client.name, client.erp_type, current_user["id"], current_user["id"])
     )
     new_client = cursor.fetchone()
+    cursor.execute(
+        """INSERT INTO change_history
+        (table_name, record_id, action, changed_fields, changed_by)
+        VALUES ('clients', %s, 'create', %s, %s)""",
+        (new_client["id"], json.dumps({"client_id": client.client_id, "name": client.name, "erp_type": client.erp_type}), current_user["id"])
+    )
     db.commit()
     return new_client
 
@@ -152,6 +159,14 @@ def update_client(
     values = list(updates.values()) + [client_id]
     cursor.execute(f"UPDATE clients SET {set_clause} WHERE id = %s RETURNING *", values)
     updated_client = cursor.fetchone()
+    previous_values = {k: str(existing[k]) for k in updates if k != "updated_by"}
+    cursor.execute(
+        """INSERT INTO change_history
+        (table_name, record_id, action, changed_fields, previous_values, changed_by)
+        VALUES ('clients', %s, 'update', %s, %s, %s)""",
+        (client_id, json.dumps({k: v for k, v in updates.items() if k != "updated_by"}),
+        json.dumps(previous_values), current_user["id"])
+    )
     db.commit()
     return updated_client
 
@@ -164,10 +179,17 @@ def delete_client(
 ):
     cursor = db.cursor()
 
-    cursor.execute("SELECT id FROM clients WHERE id = %s", (client_id,))
-    if not cursor.fetchone():
+    cursor.execute("SELECT * FROM clients WHERE id = %s", (client_id,))
+    existing = cursor.fetchone()
+    if not existing:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
-    # CASCADE elimina flows y executions automáticamente
+    cursor.execute(
+        """INSERT INTO change_history
+        (table_name, record_id, action, previous_values, changed_by)
+        VALUES ('clients', %s, 'delete', %s, %s)""",
+        (client_id, json.dumps({"client_id": existing["client_id"], "name": existing["name"], "erp_type": existing["erp_type"]}), current_user["id"])
+    )
+
     cursor.execute("DELETE FROM clients WHERE id = %s", (client_id,))
     db.commit()
