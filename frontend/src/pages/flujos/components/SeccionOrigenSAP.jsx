@@ -43,7 +43,7 @@ const SeccionOrigenSAP = ({ config, onChange }) => {
                         condiciones={config.filter_condiciones || []}
                         onChange={(nuevas) => cambiar('filter_condiciones', nuevas)}
                     />
-                    <VariablesDinamicas />
+                    <VariablesDinamicas erp="sap" />
                 </div>
             </div>
         </div>
