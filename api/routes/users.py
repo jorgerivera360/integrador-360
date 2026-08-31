@@ -1,3 +1,4 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from api.dependencies import get_db
 from api.auth import require_role
@@ -85,6 +86,12 @@ def create_user(
         (user.email, user.name, user.role, current_user["id"])
     )
     new_user = cursor.fetchone()
+    cursor.execute(
+        """INSERT INTO change_history
+        (table_name, record_id, action, changed_fields, changed_by)
+        VALUES ('users', %s, 'create', %s, %s)""",
+        (new_user["id"], json.dumps({"email": user.email, "name": user.name, "role": user.role}), current_user["id"])
+    )
     db.commit()
     return new_user
 
@@ -130,6 +137,14 @@ def update_user(
     values = list(updates.values()) + [user_id]
     cursor.execute(f"UPDATE users SET {set_clause} WHERE id = %s RETURNING *", values)
     updated_user = cursor.fetchone()
+    previous_values = {k: str(existing[k]) for k in updates if k != "updated_by"}
+    cursor.execute(
+        """INSERT INTO change_history
+        (table_name, record_id, action, changed_fields, previous_values, changed_by)
+        VALUES ('users', %s, 'update', %s, %s, %s)""",
+        (user_id, json.dumps({k: v for k, v in updates.items() if k != "updated_by"}),
+        json.dumps(previous_values), current_user["id"])
+    )
     db.commit()
     return updated_user
 
@@ -146,9 +161,17 @@ def delete_user(
     if current_user["id"] == user_id:
         raise HTTPException(status_code=400, detail="No puedes eliminarte a ti mismo")
 
-    cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
-    if not cursor.fetchone():
+    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    existing = cursor.fetchone()
+    if not existing:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    cursor.execute(
+        """INSERT INTO change_history
+        (table_name, record_id, action, previous_values, changed_by)
+        VALUES ('users', %s, 'delete', %s, %s)""",
+        (user_id, json.dumps({"email": existing["email"], "name": existing["name"], "role": existing["role"]}), current_user["id"])
+    )
 
     cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
     db.commit()
