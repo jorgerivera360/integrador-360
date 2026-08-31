@@ -1,6 +1,7 @@
-import { Input, Select, Tooltip } from 'antd'
+import { Input, Tooltip } from 'antd'
 import { InfoCircleOutlined } from '@ant-design/icons'
 import FiltroOData from './FiltroOData'
+import VariablesDinamicas from './VariablesDinamicas'
 
 const SeccionOrigenSAP = ({ config, onChange }) => {
     const cambiar = (campo, valor) => {
@@ -42,6 +43,7 @@ const SeccionOrigenSAP = ({ config, onChange }) => {
                         condiciones={config.filter_condiciones || []}
                         onChange={(nuevas) => cambiar('filter_condiciones', nuevas)}
                     />
+                    <VariablesDinamicas />
                 </div>
             </div>
         </div>
