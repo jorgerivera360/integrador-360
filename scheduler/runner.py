@@ -195,7 +195,8 @@ class IntegradorScheduler:
         )
 
         for flow in self.flows:
-            self._run_with_retry(flow)
+            if flow.get("schedule_cron"):
+                self._run_with_retry(flow)
 
         self.logger.info("Scheduler | Arranque ordenado completado")
 
