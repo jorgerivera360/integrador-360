@@ -620,6 +620,77 @@ class TestRun:
             run(FLOW_PURCHASES, MAIN_CONFIG, "ws", flow_configs=None)
             mock_resolve.assert_not_called()
 
+    # ---- resolve_enabled: apagar el switch debe SALTAR el resolve ----
+    # Antes la clave se escribia en el JSON y no la leia nadie: el resolve
+    # corria igual, y ademas sin filtro, consultando el maestro completo.
+
+    def _correr_con_maestros(self, maestros):
+        """Ejecuta un flow de compras con los flow_configs dados y devuelve el mock del resolve."""
+        from main import run
+        with patch("main.build_connector"), \
+             patch("main.build_transform") as mock_bt, \
+             patch("main.connection_data"), \
+             patch("main._dispatch_flow") as mock_df, \
+             patch("main.resolve_missing_masters") as mock_resolve:
+            mock_bt.return_value.get_flow.return_value = [{"compra": "OC-001"}]
+            mock_df.return_value = {"creados": 1, "fallidos": [], "total": 1}
+            run(FLOW_PURCHASES, MAIN_CONFIG, "ws", flow_configs=maestros)
+            return mock_resolve
+
+    def test_resolve_se_omite_si_todos_los_maestros_lo_tienen_desactivado(self):
+        maestros = {
+            "items":    {"sql": "SELECT 1", "resolve_enabled": False},
+            "customer": {"sql": "SELECT 1", "resolve_enabled": False},
+            "supplier": {"sql": "SELECT 1", "resolve_enabled": False},
+        }
+        self._correr_con_maestros(maestros).assert_not_called()
+
+    def test_resolve_se_llama_si_algun_maestro_esta_activo(self):
+        maestros = {
+            "items":    {"sql": "SELECT 1", "resolve_enabled": False},
+            "supplier": {"sql": "SELECT 1", "resolve_enabled": True},
+        }
+        self._correr_con_maestros(maestros).assert_called_once()
+
+    def test_resolve_recibe_solo_los_maestros_activos(self):
+        maestros = {
+            "items":    {"sql": "SELECT 1", "resolve_enabled": False},
+            "supplier": {"sql": "SELECT 1", "resolve_enabled": True},
+        }
+        mock_resolve = self._correr_con_maestros(maestros)
+        pasados = mock_resolve.call_args[0][5]
+        assert "supplier" in pasados
+        assert "items" not in pasados
+
+    def test_maestro_sin_la_clave_se_considera_activo(self):
+        # Los flujos ya sembrados no tienen resolve_enabled: deben seguir resolviendo.
+        mock_resolve = self._correr_con_maestros(FLOW_CONFIGS_MAESTROS)
+        mock_resolve.assert_called_once()
+        pasados = mock_resolve.call_args[0][5]
+        assert set(pasados) == {"items", "customer", "supplier"}
+
+    def test_soporta_maestros_como_lista_de_configs(self):
+        maestros = {
+            "items": [
+                {"sql": "SELECT 1", "resolve_enabled": True},
+                {"sql": "SELECT 2", "resolve_enabled": False},
+            ],
+        }
+        mock_resolve = self._correr_con_maestros(maestros)
+        pasados = mock_resolve.call_args[0][5]
+        assert len(pasados["items"]) == 1
+        assert pasados["items"][0]["sql"] == "SELECT 1"
+
+    def test_lista_con_todos_desactivados_omite_ese_maestro(self):
+        maestros = {
+            "items":    [{"sql": "SELECT 1", "resolve_enabled": False}],
+            "supplier": {"sql": "SELECT 1"},
+        }
+        mock_resolve = self._correr_con_maestros(maestros)
+        pasados = mock_resolve.call_args[0][5]
+        assert "items" not in pasados
+        assert "supplier" in pasados
+
     @patch("main.build_transform")
     @patch("main.build_connector")
     def test_data_vacia_retorna_sin_procesar(self, mock_bc, mock_bt):

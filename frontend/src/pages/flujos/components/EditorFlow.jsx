@@ -311,12 +311,15 @@ function serializar(base, config, erpType, flowType) {
     if (flowType === 'items' || flowType === 'customer' || flowType === 'supplier') {
         fc.resolve_enabled = config.resolve_enabled !== false
 
-        if ((erpType === 'sap' || erpType === 'connekta') && fc.resolve_enabled) {
+        // El filtro se persiste aunque el resolve este desactivado: quien decide
+        // si se ejecuta es resolve_enabled, no la presencia de estas claves.
+        // Asi apagar y volver a encender no pierde la configuracion escrita.
+        if (erpType === 'sap' || erpType === 'connekta') {
             if (config.resolve_filter_field) fc.resolve_filter_field = config.resolve_filter_field
             if (config.resolve_filter_template) fc.resolve_filter_template = config.resolve_filter_template
         }
 
-        if (erpType === 'ws' && fc.resolve_enabled) {
+        if (erpType === 'ws') {
             if (config.resolve_sql_inject) fc.resolve_sql_inject = config.resolve_sql_inject
         }
     }
