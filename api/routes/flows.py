@@ -119,7 +119,7 @@ def create_flow(
 
     cursor.execute(
         """INSERT INTO flows
-        (client_id, flow_name, flow_type, flow_config, schedule_cron created_by, updated_by)
+        (client_id, flow_name, flow_type, flow_config, schedule_cron, created_by, updated_by)
         VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *""",
         (
             client_id, flow.flow_name, flow.flow_type,
