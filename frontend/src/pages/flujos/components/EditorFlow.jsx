@@ -41,7 +41,7 @@ function tablaADict(tabla) {
 function condicionalesATabla(condiciones) {
     if (!Array.isArray(condiciones)) return []
     return condiciones.map((cond) => {
-        if (cond.funcion) {
+        if (cond.tipo === 'funcion' || cond.funcion) {
             return {
                 tipo: 'funcion',
                 campo_destino: cond.campo_destino || '',
@@ -49,12 +49,18 @@ function condicionalesATabla(condiciones) {
                 params: cond.params || {},
             }
         }
+        // El backend guarda `reglas` como lista de {si, entonces}.
+        // Se tolera tambien el formato dict que pudo quedar guardado antes de esta correccion.
+        const crudas = cond.reglas || []
+        const reglas = Array.isArray(crudas)
+            ? crudas.map((r) => ({ clave: String(r.si ?? ''), valor: String(r.entonces ?? '') }))
+            : Object.entries(crudas).map(([clave, valor]) => ({ clave, valor: String(valor) }))
         return {
             tipo: 'regla',
             campo_destino: cond.campo_destino || '',
             campo_origen: cond.campo_origen || '',
-            reglas: Object.entries(cond.reglas || {}).map(([clave, valor]) => ({ clave, valor: String(valor) })),
-            valor_por_defecto: cond.valor_por_defecto || '',
+            reglas,
+            valor_por_defecto: cond.default ?? cond.valor_por_defecto ?? '',
         }
     })
 }
@@ -63,20 +69,21 @@ function tablaACondicionales(tabla) {
     return tabla.map((item) => {
         if (item.tipo === 'funcion') {
             return {
+                tipo: 'funcion',
                 campo_destino: item.campo_destino,
                 funcion: item.nombre,
                 params: item.params || {},
             }
         }
-        const reglas = {}
-        for (const r of (item.reglas || [])) {
-            if (r.clave?.trim()) reglas[r.clave.trim()] = r.valor
-        }
+        const reglas = (item.reglas || [])
+            .filter((r) => r.clave?.trim())
+            .map((r) => ({ si: r.clave.trim(), entonces: r.valor }))
         return {
+            tipo: 'reglas',
             campo_destino: item.campo_destino,
             campo_origen: item.campo_origen,
             reglas,
-            valor_por_defecto: item.valor_por_defecto || '',
+            default: item.valor_por_defecto || '',
         }
     })
 }
@@ -147,9 +154,24 @@ function deserializar(flow, erpType, flowType) {
     }
 
     if (erpType === 'sap' && flowType !== 'items') {
-        estado.config.mapping_lineas_campo = fc.mapping_lineas ? Object.keys(fc.mapping_lineas)[0] || '' : ''
-        const firstKey = fc.mapping_lineas ? Object.keys(fc.mapping_lineas)[0] : null
-        estado.config.mapping_lineas_tabla = firstKey ? dictATabla(fc.mapping_lineas[firstKey]) : []
+        // El backend espera { origen: "DocumentLines", campos: { campo: alias } }.
+        // Se tolera tambien el formato { "DocumentLines": { campo: alias } } que
+        // pudo quedar guardado antes de esta correccion.
+        const ml = fc.mapping_lineas || {}
+        let origen = ''
+        let campos = {}
+        if (typeof ml.origen === 'string') {
+            origen = ml.origen
+            campos = ml.campos || {}
+        } else {
+            const primera = Object.keys(ml)[0]
+            if (primera) {
+                origen = primera
+                campos = ml[primera] || {}
+            }
+        }
+        estado.config.mapping_lineas_campo = origen
+        estado.config.mapping_lineas_tabla = dictATabla(campos)
     }
 
     if (flowType === 'items') {
@@ -210,7 +232,10 @@ function serializar(base, config, erpType, flowType) {
     if (erpType === 'sap' && flowType !== 'items') {
         const campo = config.mapping_lineas_campo?.trim()
         if (campo) {
-            fc.mapping_lineas = { [campo]: tablaADict(config.mapping_lineas_tabla || []) }
+            fc.mapping_lineas = {
+                origen: campo,
+                campos: tablaADict(config.mapping_lineas_tabla || []),
+            }
         }
     }
 
