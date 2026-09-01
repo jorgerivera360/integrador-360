@@ -17,7 +17,7 @@ const SeccionConfigPartners = ({ flowType, config, onChange }) => {
         <div className="flujo-seccion">
             <h3 className="flujo-seccion__titulo">
                 {titulo}{' '}
-                <Tooltip title={`Opciones que definen cómo se crean los ${tipoPar} en Odoo: si las sucursales se organizan bajo una sede principal, qué país se les asigna y con qué tipo de documento se registran`}>
+                <Tooltip title={`Opciones que definen cómo se crean los ${tipoPar} en WMS: si las sucursales se organizan bajo una sede principal, qué país se les asigna y con qué tipo de documento se registran`}>
                     <InfoCircleOutlined className="flujo-seccion__info" />
                 </Tooltip>
             </h3>
@@ -54,7 +54,7 @@ const SeccionConfigPartners = ({ flowType, config, onChange }) => {
 
                 <div className="flujo-campo">
                     <label className="flujo-campo__label">
-                        País en Odoo{' '}
+                        País en WMS{' '}
                         <Tooltip title="ID del país que se asigna a todos los contactos creados. También se usa para asociar correctamente los departamentos (ej: Antioquia, Valle del Cauca). El valor por defecto 49 es Colombia. Solo cambiar si el cliente opera en otro país.">
                             <InfoCircleOutlined className="flujo-seccion__info" />
                         </Tooltip>
@@ -70,7 +70,7 @@ const SeccionConfigPartners = ({ flowType, config, onChange }) => {
                 <div className="flujo-campo">
                     <label className="flujo-campo__label">
                         Tipo de identificación{' '}
-                        <Tooltip title="Tipo de documento con el que se registra el contacto en Odoo (NIT, cédula, pasaporte, etc.). El valor por defecto 5 es NIT, que aplica para la mayoría de empresas colombianas. Solo se asigna al crear el contacto por primera vez, no se modifica en actualizaciones posteriores.">
+                        <Tooltip title="Tipo de documento con el que se registra el contacto en WMS (NIT, cédula, pasaporte, etc.). El valor por defecto 5 es NIT, que aplica para la mayoría de empresas colombianas. Solo se asigna al crear el contacto por primera vez, no se modifica en actualizaciones posteriores.">
                             <InfoCircleOutlined className="flujo-seccion__info" />
                         </Tooltip>
                     </label>

@@ -13,6 +13,7 @@ import SeccionConfigItems from './SeccionConfigItems'
 import SeccionConfigPartners from './SeccionConfigPartners'
 import SeccionConfigTransacciones from './SeccionConfigTransacciones'
 import SeccionConditionals from './SeccionConditionals'
+import SeccionDocumentos from './SeccionDocumentos'
 import SeccionResolve from './SeccionResolve'
 
 const TITULOS_TIPO = {
@@ -86,6 +87,50 @@ function tablaACondicionales(tabla) {
             default: item.valor_por_defecto || '',
         }
     })
+}
+
+function documentosATabla(documentos) {
+    if (!Array.isArray(documentos)) return []
+    return documentos.map((doc) => {
+        const ident = doc.identificar_por || {}
+        return {
+            ident_campo: ident.campo || '',
+            ident_operador: ident.operador || 'contiene',
+            ident_valor: String(ident.valor ?? ''),
+            filtros: (doc.filtros || []).map((f) => ({
+                campo: f?.campo || '',
+                operador: f?.operador || '=',
+                // el operador `in` guarda una lista; en el formulario se edita separado por comas
+                valor: Array.isArray(f?.valor) ? f.valor.join(', ') : String(f?.valor ?? ''),
+            })),
+            hardcodes: dictATabla(doc.hardcodes),
+        }
+    })
+}
+
+function tablaADocumentos(tabla) {
+    return tabla
+        .filter((d) => d.ident_campo?.trim())
+        .map((d, i) => ({
+            // el nombre del documento se deriva del valor que lo identifica;
+            // el backend lo usa para el resumen por documento en los logs
+            codigo: String(d.ident_valor ?? '').trim() || `#${i}`,
+            identificar_por: {
+                campo: (d.ident_campo || '').trim(),
+                operador: d.ident_operador || 'contiene',
+                valor: d.ident_valor ?? '',
+            },
+            filtros: (d.filtros || [])
+                .filter((f) => f.campo?.trim())
+                .map((f) => ({
+                    campo: f.campo.trim(),
+                    operador: f.operador || '=',
+                    valor: f.operador === 'in'
+                        ? String(f.valor ?? '').split(',').map((v) => v.trim()).filter(Boolean)
+                        : f.valor,
+                })),
+            hardcodes: tablaADict(d.hardcodes || []),
+        }))
 }
 
 function filterStringACondiciones(filterStr) {
@@ -189,6 +234,8 @@ function deserializar(flow, erpType, flowType) {
         estado.config.warehouse_mapping_tabla = dictATabla(fc.warehouse_mapping)
     }
 
+    estado.config.documentos_tabla = documentosATabla(fc.documentos)
+
     if (flowType === 'items' || flowType === 'customer' || flowType === 'supplier') {
         estado.config.resolve_enabled = fc.resolve_enabled !== false
 
@@ -252,6 +299,13 @@ function serializar(base, config, erpType, flowType) {
 
     if (flowType === 'purchases' || flowType === 'sales') {
         fc.warehouse_mapping = tablaADict(config.warehouse_mapping_tabla || [])
+    }
+
+    // Solo se escribe la clave si hay al menos un documento: un flujo sin
+    // documentos debe guardar exactamente el mismo JSON que antes.
+    if (config.documentos_tabla?.length) {
+        const documentos = tablaADocumentos(config.documentos_tabla)
+        if (documentos.length) fc.documentos = documentos
     }
 
     if (flowType === 'items' || flowType === 'customer' || flowType === 'supplier') {
@@ -455,6 +509,11 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                         onChange={(nuevos) => setConfig({ ...config, conditionals_tabla: nuevos })}
                     />
                 )}
+
+                <SeccionDocumentos
+                    config={config}
+                    onChange={setConfig}
+                />
 
                 <SeccionResolve
                     erpType={erpType}

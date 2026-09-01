@@ -35,7 +35,7 @@ const SeccionResolve = ({ erpType, flowType, config, onChange }) => {
         <div className="flujo-seccion">
             <h3 className="flujo-seccion__titulo">
                 Resolución de maestros faltantes{' '}
-                <Tooltip title="Cuando una transacción referencia un producto, cliente o proveedor que no existe en Odoo, el sistema consulta el ERP y lo crea automáticamente antes de procesar la transacción. Esta configuración define cómo se arma la consulta al ERP para buscar solo los registros faltantes.">
+                <Tooltip title="Cuando una transacción referencia un producto, cliente o proveedor que no existe en WMS, el sistema consulta el ERP y lo crea automáticamente antes de procesar la transacción. Esta configuración define cómo se arma la consulta al ERP para buscar solo los registros faltantes.">
                     <InfoCircleOutlined className="flujo-seccion__info" />
                 </Tooltip>
             </h3>
@@ -47,7 +47,7 @@ const SeccionResolve = ({ erpType, flowType, config, onChange }) => {
                 />
                 <span className="flujo-resolve-toggle__texto">
                     {config.resolve_enabled !== false
-                        ? 'Activo — cuando una transacción referencia un maestro que no existe en Odoo, se consulta el ERP y se crea automáticamente.'
+                        ? 'Activo — cuando una transacción referencia un maestro que no existe en WMS, se consulta el ERP y se crea automáticamente.'
                         : 'Desactivado — los maestros faltantes no se resolverán automáticamente. Las transacciones que referencien maestros inexistentes fallarán.'
                     }
                 </span>
@@ -58,7 +58,7 @@ const SeccionResolve = ({ erpType, flowType, config, onChange }) => {
                     <div className="flujo-campo flujo-campo--ancho">
                         <label className="flujo-campo__label">
                             Cláusula de filtro SQL{' '}
-                            <Tooltip title="Fragmento SQL que se inyecta en el WHERE de la consulta del maestro para traer solo los registros faltantes. El placeholder {refs} se reemplaza automáticamente por la lista de valores que faltan en Odoo. Usa comillas dobles porque SIESA trabaja con QUOTED_IDENTIFIER OFF.">
+                            <Tooltip title="Fragmento SQL que se inyecta en el WHERE de la consulta del maestro para traer solo los registros faltantes. El placeholder {refs} se reemplaza automáticamente por la lista de valores que faltan en WMS. Usa comillas dobles porque SIESA trabaja con QUOTED_IDENTIFIER OFF.">
                                 <InfoCircleOutlined className="flujo-seccion__info" />
                             </Tooltip>
                         </label>

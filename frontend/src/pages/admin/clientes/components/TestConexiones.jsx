@@ -55,7 +55,7 @@ const TestConexiones = ({ cliente }) => (
     <div className="seccion" style={{ marginBottom: 0 }}>
         <div className="seccion__titulo">Verificar conectividad</div>
         <p className="seccion__sub">
-            Prueba la conexión con el ERP del cliente y con su instancia de Odoo. Las
+            Prueba la conexión con el ERP del cliente y con su instancia de WMS. Las
             credenciales se obtienen de GCP Secret Manager.
         </p>
         <div className="seccion__linea" />
@@ -74,11 +74,11 @@ const TestConexiones = ({ cliente }) => (
             <TarjetaTest
                 clienteId={cliente.id}
                 tipo="odoo"
-                titulo="Odoo WMS"
-                subtitulo="Prueba que el integrador puede autenticarse en la instancia de Odoo"
+                titulo="WMS"
+                subtitulo="Prueba que el integrador puede autenticarse en la instancia de WMS"
                 icono={<IconNube />}
                 tonoIcono="verde"
-                textoBoton="Probar conexión Odoo"
+                textoBoton="Probar conexión WMS"
                 botonVerde
             />
         </div>

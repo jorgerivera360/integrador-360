@@ -555,6 +555,10 @@
     border-left: 3px solid #52c41a;
 }
 
+.flujo-condicional--documento {
+    border-left: 3px solid #722ed1;
+}
+
 .flujo-condicional__cabecera {
     display: flex;
     align-items: center;
@@ -840,4 +844,81 @@
         flex-direction: column;
         gap: 8px;
     }
+}
+
+/* ========== Documentos ========== */
+
+.flujo-doc__grupo {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #d0d5dd;
+}
+
+.flujo-doc__bloque {
+    margin-top: 16px;
+}
+
+.flujo-doc__bloque:first-child {
+    margin-top: 0;
+}
+
+.flujo-doc__tabla {
+    max-width: 520px;
+}
+
+.flujo-doc__vacio {
+    font-size: 12.5px;
+    color: #8c8c8c;
+    padding: 6px 0;
+}
+
+.flujo-condicional__tipo--doc {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #434343;
+}
+
+.flujo-doc__etiqueta {
+    font-size: 13px;
+    font-weight: 500;
+    color: #434343;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.flujo-doc__tabla .flujo-tcv {
+    border: none;
+    border-radius: 0;
+}
+
+.flujo-doc__tabla .flujo-tcv__cabecera {
+    background: transparent;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.flujo-doc__tabla .flujo-tcv__fila {
+    background: transparent;
+    border-top: none;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.flujo-doc__tabla .flujo-tcv__agregar {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.flujo-doc__cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flujo-doc__cabecera .flujo-seccion__subtitulo {
+    margin: 0;
 }

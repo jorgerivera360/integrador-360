@@ -91,7 +91,7 @@ const BloqueRegla = ({ regla, indice, onChange, onEliminar }) => {
                         onChange={(e) => cambiar('campo_destino', e.target.value)}
                         placeholder="ej: tracking"
                     />
-                    <Tooltip title="Campo que recibirá el valor resultante. Puede ser un campo que ya existe (vino del ERP o de un valor fijo) y la regla lo sobreescribe, o un campo completamente nuevo que se crea en ese momento. El resultado viaja junto con los demás campos hacia Odoo.">
+                    <Tooltip title="Campo que recibirá el valor resultante. Puede ser un campo que ya existe (vino del ERP o de un valor fijo) y la regla lo sobreescribe, o un campo completamente nuevo que se crea en ese momento. El resultado viaja junto con los demás campos hacia WMS.">
                         <InfoCircleOutlined className="flujo-seccion__info" />
                     </Tooltip>
                 </div>

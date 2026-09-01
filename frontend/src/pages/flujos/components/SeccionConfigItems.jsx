@@ -10,7 +10,7 @@ const SeccionConfigItems = ({ erpType, config, onChange }) => {
         <div className="flujo-seccion">
             <h3 className="flujo-seccion__titulo">
                 Configuración del flujo — Productos{' '}
-                <Tooltip title="Parámetros que definen cómo se procesan los productos antes de crearlos o actualizarlos en Odoo. Incluye la transformación de campos del ERP, valores constantes y la equivalencia de unidades de medida">
+                <Tooltip title="Parámetros que definen cómo se procesan los productos antes de crearlos o actualizarlos en WMS. Incluye la transformación de campos del ERP, valores constantes y la equivalencia de unidades de medida">
                     <InfoCircleOutlined className="flujo-seccion__info" />
                 </Tooltip>
             </h3>
@@ -53,14 +53,14 @@ const SeccionConfigItems = ({ erpType, config, onChange }) => {
 
             <h4 className="flujo-seccion__subtitulo" style={tieneMapping ? { marginTop: 24 } : undefined}>
                 Mapeo de unidades de medida{' '}
-                <Tooltip title="Convierte el nombre de la unidad del ERP al nombre exacto en Odoo. Sin este mapeo el producto no se puede crear porque la UOM es obligatoria. Ejemplo: UND → Unidades, KG → kg">
+                <Tooltip title="Convierte el nombre de la unidad del ERP al nombre exacto en WMS. Sin este mapeo el producto no se puede crear porque la UOM es obligatoria. Ejemplo: UND → Unidades, KG → kg">
                     <InfoCircleOutlined className="flujo-seccion__info" />
                 </Tooltip>
             </h4>
 
             <div className="flujo-campo flujo-campo--ancho">
                 <TablaClaveValor
-                    columnas={['Unidad ERP', 'Unidad Odoo']}
+                    columnas={['Unidad ERP', 'Unidad WMS']}
                     datos={config.uom_mapping_tabla || []}
                     onChange={(nuevos) => onChange({ ...config, uom_mapping_tabla: nuevos })}
                     placeholders={['UND', 'Unidades']}
