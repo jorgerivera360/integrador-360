@@ -3,16 +3,14 @@ TransformSAP — Transform SAP B1
 Responsabilidades:
   - get_flow() — login SAP, llama al conector y normaliza los datos
   - _flatten_lines() — aplana arrays anidados (DocumentLines, StockTransferLines, BPAddresses)
-  - _apply_mapping() — renombra keys del dict según mapping combinado (header + líneas)
-  - _apply_hardcodes() — inyecta valores fijos según flow_config["hardcodes"]
-  - _apply_conditionals() — evalúa reglas simples o funciones del catálogo
-Hereda: Transform
+  -
 Fase: 3 — Transform Layer
 """
 from config.logger import IntegradorLogger
 from transform.base import Transform
 from transform.utils.determination_functions import get_determination_function
 from transform.utils.helpers import (clean_row, validate_record, to_float, to_int, parse_fecha, resolve_parametros)
+from transform.utils.documentos import preparar_documentos, procesar_fila
 
 
 class TransformSAP(Transform):
@@ -89,9 +87,9 @@ class TransformSAP(Transform):
         self.logger.error(
           "No se pudieron obtener las categorías de SAP después de "
           f"{max_retries} intentos — Service Layer posiblemente caído"
-        ) 
+        )
         self._categorias = {}
-        return False        
+        return False
 
     def _flatten_lines(self, raw: list, mapping_lineas: dict) -> list:
         if not mapping_lineas:
@@ -193,6 +191,10 @@ class TransformSAP(Transform):
         campos_int = {"vence", "use_expiration_date", "expiration_time",
                       "ind_compra", "ind_venta", "ind_manufactura"}
 
+        docs_activos, stats_docs = preparar_documentos(
+            flow_config.get("documentos"), logger=self.logger
+        )
+
         results = []
         fallidos = []
 
@@ -208,6 +210,11 @@ class TransformSAP(Transform):
                 row = self._apply_mapping(row, mapping)
                 row = self._apply_hardcodes(row, hardcodes)
                 row = self._apply_conditionals(row, conditionals)
+
+                row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
+                if row is None:
+                    continue
+
                 row = clean_row(row)
 
                 valid, reason = validate_record(row, "items", logger=self.logger)
@@ -234,6 +241,15 @@ class TransformSAP(Transform):
             self.logger.warning(f"_normalize_items: {len(fallidos)} registros descartados:")
             for f in fallidos:
                 self.logger.warning(f"  - {f['ref']} ({f['desc']}): {f['razon']}")
+        if docs_activos:
+            detalle = ", ".join(
+                f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
+                for cod, d in stats_docs.items() if not cod.startswith("_")
+            )
+            self.logger.info(
+                f"_normalize_items: documentos — {detalle}, "
+                f"sin documento: {stats_docs['_sin_documento']}"
+            )
         return results
 
     def _normalize_partners(self, raw: list, flow_config: dict) -> list:
@@ -250,6 +266,10 @@ class TransformSAP(Transform):
         # Aplanar si hay mapping_lineas (clientes con BPAddresses)
         rows = self._flatten_lines(raw, mapping_lineas)
 
+        docs_activos, stats_docs = preparar_documentos(
+            flow_config.get("documentos"), logger=self.logger
+        )
+
         results = []
         fallidos = []
 
@@ -258,6 +278,11 @@ class TransformSAP(Transform):
                 row = self._apply_mapping(row, combined_mapping)
                 row = self._apply_hardcodes(row, hardcodes)
                 row = self._apply_conditionals(row, conditionals)
+
+                row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
+                if row is None:
+                    continue
+
                 row = clean_row(row)
 
                 valid, reason = validate_record(row, "partners", logger=self.logger)
@@ -278,6 +303,15 @@ class TransformSAP(Transform):
             self.logger.warning(f"_normalize_partners: {len(fallidos)} registros descartados:")
             for f in fallidos:
                 self.logger.warning(f"  - {f['nombre']} ({f['id']}): {f['razon']}")
+        if docs_activos:
+            detalle = ", ".join(
+                f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
+                for cod, d in stats_docs.items() if not cod.startswith("_")
+            )
+            self.logger.info(
+                f"_normalize_partners: documentos — {detalle}, "
+                f"sin documento: {stats_docs['_sin_documento']}"
+            )
         return results
 
     def _normalize_purchases(self, raw: list, flow_config: dict) -> list:
@@ -294,6 +328,10 @@ class TransformSAP(Transform):
 
         rows = self._flatten_lines(raw, mapping_lineas)
 
+        docs_activos, stats_docs = preparar_documentos(
+            flow_config.get("documentos"), logger=self.logger
+        )
+
         results = []
         fallidos = []
 
@@ -302,6 +340,11 @@ class TransformSAP(Transform):
                 row = self._apply_mapping(row, combined_mapping)
                 row = self._apply_hardcodes(row, hardcodes)
                 row = self._apply_conditionals(row, conditionals)
+
+                row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
+                if row is None:
+                    continue
+
                 row = clean_row(row)
 
                 valid, reason = validate_record(row, "purchases", logger=self.logger)
@@ -328,6 +371,15 @@ class TransformSAP(Transform):
             self.logger.warning(f"_normalize_purchases: {len(fallidos)} registros descartados:")
             for f in fallidos:
                 self.logger.warning(f"  - Compra {f['compra']}, producto {f['producto']}: {f['razon']}")
+        if docs_activos:
+            detalle = ", ".join(
+                f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
+                for cod, d in stats_docs.items() if not cod.startswith("_")
+            )
+            self.logger.info(
+                f"_normalize_purchases: documentos — {detalle}, "
+                f"sin documento: {stats_docs['_sin_documento']}"
+            )
         return results
 
     def _normalize_sales(self, raw: list, flow_config: dict) -> list:
@@ -344,6 +396,10 @@ class TransformSAP(Transform):
 
         rows = self._flatten_lines(raw, mapping_lineas)
 
+        docs_activos, stats_docs = preparar_documentos(
+            flow_config.get("documentos"), logger=self.logger
+        )
+
         results = []
         fallidos = []
 
@@ -352,6 +408,11 @@ class TransformSAP(Transform):
                 row = self._apply_mapping(row, combined_mapping)
                 row = self._apply_hardcodes(row, hardcodes)
                 row = self._apply_conditionals(row, conditionals)
+
+                row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
+                if row is None:
+                    continue
+
                 row = clean_row(row)
 
                 valid, reason = validate_record(row, "sales", logger=self.logger)
@@ -378,4 +439,13 @@ class TransformSAP(Transform):
             self.logger.warning(f"_normalize_sales: {len(fallidos)} registros descartados:")
             for f in fallidos:
                 self.logger.warning(f"  - Pedido {f['pedido']}, producto {f['producto']}: {f['razon']}")
+        if docs_activos:
+            detalle = ", ".join(
+                f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
+                for cod, d in stats_docs.items() if not cod.startswith("_")
+            )
+            self.logger.info(
+                f"_normalize_sales: documentos — {detalle}, "
+                f"sin documento: {stats_docs['_sin_documento']}"
+            )
         return results
