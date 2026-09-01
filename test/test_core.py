@@ -577,8 +577,72 @@ class TestLookups:
         odoo = MagicMock()
         odoo.search_read.return_value = (True, [])
         lookup_partner(odoo, "900123", None)
-        domain = odoo.search_read.call_args[0][1]
+        # La PRIMERA busqueda es la que lleva vat + sucursal.
+        # La segunda es el fallback solo por vat, y no la incluye.
+        domain = odoo.search_read.call_args_list[0][0][1]
         assert ["sucursal", "=", ""] in domain
+
+    def test_lookup_partner_primera_busqueda_incluye_sucursal(self):
+        from core.utils.lookups import lookup_partner
+        odoo = MagicMock()
+        odoo.search_read.return_value = (True, [])
+        lookup_partner(odoo, "900123", "001")
+        domain = odoo.search_read.call_args_list[0][0][1]
+        assert ["vat", "=", "900123"] in domain
+        assert ["sucursal", "=", "001"] in domain
+
+    def test_lookup_partner_encontrado_por_sucursal_no_hace_fallback(self):
+        from core.utils.lookups import lookup_partner
+        odoo = MagicMock()
+        odoo.search_read.return_value = (True, [{"id": 1, "customer_rank": 1, "supplier_rank": 0}])
+        lookup_partner(odoo, "900123", "001")
+        assert odoo.search_read.call_count == 1
+
+    def test_lookup_partner_no_encontrado_hace_fallback_solo_por_vat(self):
+        from core.utils.lookups import lookup_partner
+        odoo = MagicMock()
+        odoo.search_read.side_effect = [
+            (True, []),
+            (True, [{"id": 7, "customer_rank": 1, "supplier_rank": 0}]),
+        ]
+        resultado = lookup_partner(odoo, "900123", "999")
+        assert odoo.search_read.call_count == 2
+        assert resultado["id"] == 7
+
+    def test_lookup_partner_fallback_busca_solo_por_vat(self):
+        from core.utils.lookups import lookup_partner
+        odoo = MagicMock()
+        odoo.search_read.side_effect = [(True, []), (True, [])]
+        lookup_partner(odoo, "900123", "999")
+        domain = odoo.search_read.call_args_list[1][0][1]
+        assert domain == [["vat", "=", "900123"]]
+
+    def test_lookup_partner_error_en_primera_busqueda_no_hace_fallback(self):
+        from core.utils.lookups import lookup_partner
+        odoo = MagicMock()
+        odoo.search_read.return_value = (False, "timeout")
+        assert lookup_partner(odoo, "900123", "001") is None
+        assert odoo.search_read.call_count == 1
+
+    def test_lookup_partner_cachea_el_resultado_del_fallback(self):
+        from core.utils.lookups import lookup_partner
+        odoo = MagicMock()
+        odoo.search_read.side_effect = [
+            (True, []),
+            (True, [{"id": 7, "customer_rank": 1, "supplier_rank": 0}]),
+        ]
+        cache = {}
+        lookup_partner(odoo, "900123", "999", cache=cache)
+        # La clave conserva la sucursal pedida, aunque el partner se hallo por vat
+        assert cache[("900123", "999")]["id"] == 7
+
+    def test_lookup_partner_cachea_el_none(self):
+        from core.utils.lookups import lookup_partner
+        odoo = MagicMock()
+        odoo.search_read.return_value = (True, [])
+        cache = {}
+        lookup_partner(odoo, "900123", "001", cache=cache)
+        assert cache[("900123", "001")] is None
 
     def test_lookup_partner_returns_full_dict_with_ranks(self):
         from core.utils.lookups import lookup_partner
@@ -1797,7 +1861,8 @@ class TestProcessPurchases:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 7}]),                                            # default picking type
-            (True, []),                                                     # proveedor no existe
+            (True, []),                                                     # proveedor: busqueda por vat+sucursal
+            (True, []),                                                     # proveedor: fallback solo por vat
             (True, [{"id": 50, "uom_id": [1, "U"]}]),
         ]
         result = self._make(odoo).process([self._line()])
@@ -1894,7 +1959,8 @@ class TestProcessPurchases:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 7}]),                                            # default picking type
-            (True, []),                                                     # proveedor no existe
+            (True, []),                                                     # proveedor: busqueda por vat+sucursal
+            (True, []),                                                     # proveedor: fallback solo por vat
             (True, [{"id": 50, "uom_id": [1, "U"]}]),
         ]
         result = self._make(odoo).process([self._line()])
@@ -1916,10 +1982,12 @@ class TestProcessPurchases:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 7}]),                                            # default picking type
-            (True, []),                                                     # proveedor no existe
-            (True, []),                                                     # producto no existe
-            (True, []),
-            (True, []),
+            (True, []),                                                     # proveedor A: vat+sucursal
+            (True, []),                                                     # proveedor A: fallback por vat
+            (True, []),                                                     # proveedor B: vat+sucursal
+            (True, []),                                                     # proveedor B: fallback por vat
+            (True, []),                                                     # producto X no existe
+            (True, []),                                                     # producto Y no existe
         ]
         result = self._make(odoo).process([
             self._line(proveedor="A", producto="X"),
@@ -2081,7 +2149,8 @@ class TestProcessPurchases:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 7}]),                                            # default picking type
-            (True, []),                                                     # proveedor no existe
+            (True, []),                                                     # proveedor: busqueda por vat+sucursal
+            (True, []),                                                     # proveedor: fallback solo por vat
             (True, [{"id": 50, "uom_id": [1, "U"]}]),
         ]
         from core.process_purchases import ProcessPurchases
@@ -2137,7 +2206,8 @@ class TestProcessPurchases:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 7}]),                                            # default picking type
-            (True, []),                                                     # proveedor no existe
+            (True, []),                                                     # proveedor: busqueda por vat+sucursal
+            (True, []),                                                     # proveedor: fallback solo por vat
             (True, [{"id": 50, "uom_id": [1, "U"]}]),
         ]
         from core.process_purchases import ProcessPurchases
@@ -2294,7 +2364,8 @@ class TestProcessSales:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 3}]),                                            # default warehouse
-            (True, []),                                                     # cliente no existe
+            (True, []),                                                     # cliente: busqueda por vat+sucursal
+            (True, []),                                                     # cliente: fallback solo por vat
             (True, [{"id": 50, "uom_id": [1, "U"]}]),
             (True, [{"id": 5}]),
         ]
@@ -2444,7 +2515,8 @@ class TestProcessSales:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 3}]),                                            # default warehouse
-            (True, []),                                                     # cliente no existe
+            (True, []),                                                     # cliente: busqueda por vat+sucursal
+            (True, []),                                                     # cliente: fallback solo por vat
             (True, [{"id": 50, "uom_id": [1, "U"]}]),
             (True, [{"id": 5}]),
         ]
@@ -2468,8 +2540,10 @@ class TestProcessSales:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 3}]),                                            # default warehouse
-            (True, []),                                                     # cliente A no existe
-            (True, []),                                                     # cliente B no existe
+            (True, []),                                                     # cliente A: vat+sucursal
+            (True, []),                                                     # cliente A: fallback por vat
+            (True, []),                                                     # cliente B: vat+sucursal
+            (True, []),                                                     # cliente B: fallback por vat
             (True, []),                                                     # producto X no existe
             (True, []),                                                     # producto Y no existe
             (True, [{"id": 5}]),                                            # zona
@@ -2657,7 +2731,8 @@ class TestProcessSales:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 3}]),                                            # default warehouse
-            (True, []),                                                     # cliente no existe
+            (True, []),                                                     # cliente: busqueda por vat+sucursal
+            (True, []),                                                     # cliente: fallback solo por vat
             (True, [{"id": 50, "uom_id": [1, "U"]}]),
             (True, [{"id": 5}]),
         ]
@@ -2716,7 +2791,8 @@ class TestProcessSales:
         odoo.search_read.side_effect = [
             (True, []),
             (True, [{"id": 3}]),                                            # default warehouse
-            (True, []),                                                     # cliente no existe
+            (True, []),                                                     # cliente: busqueda por vat+sucursal
+            (True, []),                                                     # cliente: fallback solo por vat
             (True, [{"id": 50, "uom_id": [1, "U"]}]),
             (True, [{"id": 5}]),
         ]

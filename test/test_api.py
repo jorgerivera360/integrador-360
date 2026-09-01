@@ -595,12 +595,34 @@ class TestClients:
 
     def test_delete_client_cascade(self, app_client):
         client, cursor, conn = app_client
-        cursor.fetchone.return_value = {"id": 1}
+        # El endpoint hace SELECT * y guarda client_id, name y erp_type en
+        # change_history antes de borrar, asi que el mock debe traer esas columnas.
+        cursor.fetchone.return_value = {
+            "id": 1, "client_id": "fenix", "name": "Fenix", "erp_type": "ws"
+        }
         resp = client.delete("/clients/1")
         assert resp.status_code == 204
         delete_calls = [c for c in cursor.execute.call_args_list if "DELETE" in str(c)]
         assert len(delete_calls) >= 1
         conn.commit.assert_called_once()
+
+    def test_delete_client_registra_change_history(self, app_client):
+        client, cursor, conn = app_client
+        cursor.fetchone.return_value = {
+            "id": 1, "client_id": "fenix", "name": "Fenix", "erp_type": "ws"
+        }
+        client.delete("/clients/1")
+        historial = [c for c in cursor.execute.call_args_list if "change_history" in str(c)]
+        assert len(historial) >= 1
+
+    def test_delete_client_guarda_los_valores_previos(self, app_client):
+        client, cursor, conn = app_client
+        cursor.fetchone.return_value = {
+            "id": 1, "client_id": "fenix", "name": "Fenix", "erp_type": "ws"
+        }
+        client.delete("/clients/1")
+        historial = [c for c in cursor.execute.call_args_list if "change_history" in str(c)]
+        assert "fenix" in str(historial[0])
 
 
 # ===========================================================================
@@ -1117,3 +1139,170 @@ class TestTestConnections:
         body = resp.json()
         assert body["success"] is False
         assert body["code"] == 400
+
+# --- TestCatalog: endpoints de catalogo (sin autenticacion) ---
+
+class TestCatalog:
+    """GET /catalog/* — enumeraciones que consume el frontend.
+    Son publicos: no llevan Authorization."""
+
+    def _cliente_sin_auth(self):
+        from fastapi.testclient import TestClient
+        from api.app import app
+        app.dependency_overrides.clear()
+        return TestClient(app)
+
+    # ---- determination-functions ----
+
+    def test_determination_functions_responde_200(self):
+        resp = self._cliente_sin_auth().get("/catalog/determination-functions")
+        assert resp.status_code == 200
+
+    def test_determination_functions_no_requiere_token(self):
+        # Sin header Authorization debe funcionar igual
+        resp = self._cliente_sin_auth().get("/catalog/determination-functions")
+        assert resp.status_code != 401
+        assert resp.status_code != 403
+
+    def test_determination_functions_estructura_de_respuesta(self):
+        body = self._cliente_sin_auth().get("/catalog/determination-functions").json()
+        assert body["code"] == 200
+        assert isinstance(body["result"], list)
+
+    def test_determination_functions_devuelve_siete(self):
+        body = self._cliente_sin_auth().get("/catalog/determination-functions").json()
+        assert len(body["result"]) == 7
+
+    def test_determination_functions_coincide_con_el_catalogo(self):
+        from transform.utils.determination_functions import CATALOG
+        body = self._cliente_sin_auth().get("/catalog/determination-functions").json()
+        assert {f["name"] for f in body["result"]} == set(CATALOG)
+
+    def test_determination_functions_cada_una_trae_label_y_descripcion(self):
+        body = self._cliente_sin_auth().get("/catalog/determination-functions").json()
+        for f in body["result"]:
+            assert f["label"], f["name"]
+            assert f["descripcion"], f["name"]
+
+    def test_determination_functions_cada_param_trae_su_metadata(self):
+        body = self._cliente_sin_auth().get("/catalog/determination-functions").json()
+        for f in body["result"]:
+            assert isinstance(f["params"], list)
+            for p in f["params"]:
+                assert "name" in p and "required" in p and "descripcion" in p
+
+    def test_determination_functions_no_expone_la_funcion_python(self):
+        # El campo `fn` del CATALOG no debe serializarse hacia el front
+        body = self._cliente_sin_auth().get("/catalog/determination-functions").json()
+        for f in body["result"]:
+            assert "fn" not in f
+
+    # ---- flow-types ----
+
+    def test_flow_types_responde_200(self):
+        assert self._cliente_sin_auth().get("/catalog/flow-types").status_code == 200
+
+    def test_flow_types_devuelve_los_cinco(self):
+        body = self._cliente_sin_auth().get("/catalog/flow-types").json()
+        assert {f["value"] for f in body["result"]} == {
+            "items", "customer", "supplier", "purchases", "sales"
+        }
+
+    def test_flow_types_coincide_con_valid_flow_types_de_flows(self):
+        from api.routes.flows import VALID_FLOW_TYPES
+        body = self._cliente_sin_auth().get("/catalog/flow-types").json()
+        assert {f["value"] for f in body["result"]} == set(VALID_FLOW_TYPES)
+
+    def test_flow_types_no_incluye_partners(self):
+        # `partners` dejo de ser flow_type: se partio en customer y supplier
+        body = self._cliente_sin_auth().get("/catalog/flow-types").json()
+        assert "partners" not in {f["value"] for f in body["result"]}
+
+    def test_flow_types_cada_uno_trae_label(self):
+        body = self._cliente_sin_auth().get("/catalog/flow-types").json()
+        assert all(f["label"] for f in body["result"])
+
+    # ---- erp-types ----
+
+    def test_erp_types_responde_200(self):
+        assert self._cliente_sin_auth().get("/catalog/erp-types").status_code == 200
+
+    def test_erp_types_devuelve_los_cuatro_soportados(self):
+        body = self._cliente_sin_auth().get("/catalog/erp-types").json()
+        assert {e["value"] for e in body["result"]} == {"ws", "connekta", "sap", "excel"}
+
+    def test_erp_types_no_incluye_kubapp(self):
+        # kubapp no tiene conector: build_connector() lo rechaza con ValueError
+        body = self._cliente_sin_auth().get("/catalog/erp-types").json()
+        assert "kubapp" not in {e["value"] for e in body["result"]}
+
+    def test_erp_types_todos_tienen_conector_en_build_connector(self):
+        import inspect
+        import main
+        fuente = inspect.getsource(main.build_connector)
+        body = self._cliente_sin_auth().get("/catalog/erp-types").json()
+        for e in body["result"]:
+            assert f'"{e["value"]}"' in fuente, e["value"]
+
+    def test_erp_types_cada_uno_trae_label(self):
+        body = self._cliente_sin_auth().get("/catalog/erp-types").json()
+        assert all(e["label"] for e in body["result"])
+
+
+# --- TestSQLIntegridad: chequeos estaticos sobre las sentencias SQL ---
+
+class TestSQLIntegridad:
+    """Los tests con cursor mockeado no detectan errores de sintaxis SQL,
+    porque la sentencia nunca llega a Postgres. Estas pruebas leen el codigo
+    fuente y verifican que columnas y placeholders cuadren."""
+
+    def _insert_de(self, fuente, tabla):
+        import re
+        m = re.search(
+            r"INSERT INTO\s+" + tabla + r"\s*\((.*?)\)\s*VALUES\s*\((.*?)\)",
+            fuente, re.S | re.I
+        )
+        assert m, f"No se encontro el INSERT de {tabla}"
+        columnas = [c.strip() for c in m.group(1).split(",") if c.strip()]
+        placeholders = m.group(2).count("%s")
+        return columnas, placeholders
+
+    def test_insert_de_flows_columnas_igual_placeholders(self):
+        # Regresion del bug de la coma faltante en `schedule_cron created_by`,
+        # que hacia fallar POST /clients/{id}/flows/ con error de sintaxis.
+        import inspect
+        from api.routes import flows
+        columnas, placeholders = self._insert_de(inspect.getsource(flows), "flows")
+        assert len(columnas) == placeholders, (
+            f"{len(columnas)} columnas contra {placeholders} placeholders: {columnas}"
+        )
+
+    def test_insert_de_flows_no_tiene_columnas_pegadas(self):
+        # Dos identificadores separados solo por espacio dentro de la lista de
+        # columnas significan que falta una coma.
+        import inspect
+        from api.routes import flows
+        columnas, _ = self._insert_de(inspect.getsource(flows), "flows")
+        for col in columnas:
+            assert " " not in col, f"Falta una coma antes de: '{col}'"
+
+    def test_insert_de_flows_no_referencia_execution_order(self):
+        # La columna se elimino del esquema; referenciarla rompe el INSERT.
+        import inspect
+        from api.routes import flows
+        columnas, _ = self._insert_de(inspect.getsource(flows), "flows")
+        assert "execution_order" not in columnas
+
+    def test_insert_de_change_history_columnas_igual_placeholders(self):
+        import inspect
+        from api.routes import flows
+        fuente = inspect.getsource(flows)
+        import re
+        for m in re.finditer(
+            r"INSERT INTO\s+change_history\s*\((.*?)\)\s*VALUES\s*\((.*?)\)",
+            fuente, re.S | re.I
+        ):
+            columnas = [c.strip() for c in m.group(1).split(",") if c.strip()]
+            valores = m.group(2)
+            placeholders = valores.count("%s") + len(re.findall(r"'\w+'", valores))
+            assert len(columnas) == placeholders, columnas

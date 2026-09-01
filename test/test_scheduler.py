@@ -364,13 +364,43 @@ class TestRunWithRetry(unittest.TestCase):
 @patch.dict("os.environ", {"ENV": "dev", "DATABASE_URL": "postgresql://test"})
 class TestArranqueOrdenado(unittest.TestCase):
 
-    def test_arranque_ejecuta_todos_los_flows(self):
+    def test_arranque_ejecuta_solo_los_flows_con_cron(self):
+        # _arranque_ordenado filtra por schedule_cron: los flows sin cron son
+        # de ejecucion manual y no deben correr al arrancar el contenedor.
+        # SAMPLE_FLOWS tiene 5 flows, uno de ellos sin cron.
         flows = [f.copy() for f in SAMPLE_FLOWS]
         s = _build_scheduler(flows=flows)
         s._run_with_retry = MagicMock(return_value=None)
 
         s._arranque_ordenado()
-        self.assertEqual(s._run_with_retry.call_count, 5)
+        self.assertEqual(s._run_with_retry.call_count, 4)
+
+    def test_arranque_omite_el_flow_sin_cron(self):
+        flows = [f.copy() for f in SAMPLE_FLOWS]
+        s = _build_scheduler(flows=flows)
+        ejecutados = []
+        s._run_with_retry = MagicMock(side_effect=lambda f: ejecutados.append(f["flow_id"]))
+
+        s._arranque_ordenado()
+        self.assertNotIn(3, ejecutados)
+
+    def test_arranque_sin_ningun_cron_no_ejecuta_nada(self):
+        flows = [{"flow_id": 9, "flow_name": "manual", "flow_type": "items",
+                  "flow_config": {}, "schedule_cron": None}]
+        s = _build_scheduler(flows=flows)
+        s._run_with_retry = MagicMock()
+
+        s._arranque_ordenado()
+        s._run_with_retry.assert_not_called()
+
+    def test_arranque_con_cron_vacio_tambien_se_omite(self):
+        flows = [{"flow_id": 9, "flow_name": "manual", "flow_type": "items",
+                  "flow_config": {}, "schedule_cron": ""}]
+        s = _build_scheduler(flows=flows)
+        s._run_with_retry = MagicMock()
+
+        s._arranque_ordenado()
+        s._run_with_retry.assert_not_called()
 
     def test_arranque_respeta_orden(self):
         flows = [f.copy() for f in SAMPLE_FLOWS]
@@ -384,6 +414,8 @@ class TestArranqueOrdenado(unittest.TestCase):
         self.assertEqual(executed[-1], "ventas")
 
     def test_arranque_flow_falla_continua_con_siguientes(self):
+      # De los 5 flows de SAMPLE_FLOWS solo 4 tienen cron, asi que el
+      # arranque los recorre a esos 4 aunque alguno devuelva None.
       flows = [f.copy() for f in SAMPLE_FLOWS]
       s = _build_scheduler(flows=flows)
       s._run_with_retry = MagicMock(side_effect=[
@@ -391,11 +423,10 @@ class TestArranqueOrdenado(unittest.TestCase):
           None,  # este flow "falló" (retry agotado, retornó None)
           {"creados": 0, "actualizados": 3, "fallidos": []},
           None,
-          {"creados": 2, "actualizados": 0, "fallidos": []},
       ])
 
       s._arranque_ordenado()
-      self.assertEqual(s._run_with_retry.call_count, 5)
+      self.assertEqual(s._run_with_retry.call_count, 4)
 
     def test_arranque_loguea_inicio_y_fin(self):
         s = _build_scheduler(flows=[])
