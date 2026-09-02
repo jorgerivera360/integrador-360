@@ -15,7 +15,12 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
     const fallidos = resultado.fallidos || []
     const creados = resultado.creados_detalle || []
     const creadosTruncados = resultado.creados_truncado || 0
+    const numFallidos = fallidos.length || resultado.fallidos_count || 0
     const tieneError = Boolean(ejecucion.error_message)
+
+    // Purchases y sales agrupan lineas planas en documentos, y solo ellos
+    // devuelven total_ordenes. En items y partners una fila es un registro.
+    const esTransaccion = resultado.total_ordenes !== undefined
 
     return (
         <Drawer
@@ -65,15 +70,34 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
             <div className="drawer-seccion">
                 <h4 className="drawer-seccion__titulo">Resultado</h4>
                 <div className="drawer-grid">
-                    <CampoResultado label="Total" valor={resultado.total} />
-                    <CampoResultado label="Creados" valor={resultado.creados} />
-                    <CampoResultado label="Actualizados" valor={resultado.actualizados} />
-                    <CampoResultado label="Descartados" valor={resultado.descartados} />
-                    <CampoResultado
-                        label="Fallidos"
-                        valor={resultado.fallidos?.length ?? resultado.fallidos_count ?? 0}
-                        esError={(resultado.fallidos?.length ?? resultado.fallidos_count ?? 0) > 0}
-                    />
+                    {esTransaccion ? (
+                        <>
+                            <CampoResultado label="Lineas recibidas" valor={resultado.total} />
+                            <CampoResultado label="Documentos" valor={resultado.total_ordenes} />
+                            <CampoResultado
+                                label="Documentos creados"
+                                valor={`${resultado.creados ?? 0} de ${resultado.total_ordenes ?? 0}`}
+                                esError={(resultado.creados ?? 0) < (resultado.total_ordenes ?? 0)}
+                            />
+                            <CampoResultado label="Lineas descartadas" valor={resultado.descartados} />
+                            <CampoResultado
+                                label="Lineas fallidas"
+                                valor={numFallidos}
+                                esError={numFallidos > 0}
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <CampoResultado label="Registros" valor={resultado.total} />
+                            <CampoResultado label="Creados" valor={resultado.creados} />
+                            <CampoResultado label="Actualizados" valor={resultado.actualizados} />
+                            <CampoResultado
+                                label="Fallidos"
+                                valor={numFallidos}
+                                esError={numFallidos > 0}
+                            />
+                        </>
+                    )}
                 </div>
             </div>
 
