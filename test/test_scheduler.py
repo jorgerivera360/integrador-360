@@ -445,16 +445,20 @@ class TestRegisterFlows(unittest.TestCase):
         flows = [{"flow_id": 1, "flow_name": "compras", "flow_type": "purchases",
                   "flow_config": {}, "schedule_cron": "*/2 * * * *"}]
         s = _build_scheduler(flows=flows)
+        s._read_flows_for_sync = MagicMock(return_value=flows)
+        s.scheduler.get_jobs.return_value = []
 
         s._register_flows()
         s.scheduler.add_job.assert_called_once()
         args, kwargs = s.scheduler.add_job.call_args
-        self.assertEqual(kwargs["id"], "testclient_compras")
+        self.assertEqual(kwargs["id"], "testclient_flow_1")
 
     def test_register_ignora_flow_sin_cron(self):
         flows = [{"flow_id": 3, "flow_name": "partners", "flow_type": "supplier",
                   "flow_config": {}, "schedule_cron": None}]
         s = _build_scheduler(flows=flows)
+        s._read_flows_for_sync = MagicMock(return_value=flows)
+        s.scheduler.get_jobs.return_value = []
 
         s._register_flows()
         s.scheduler.add_job.assert_not_called()
@@ -464,6 +468,8 @@ class TestRegisterFlows(unittest.TestCase):
                   "flow_config": {}, "schedule_cron": "0 * * * *",
                   "is_active": False}]
         s = _build_scheduler(flows=flows)
+        s._read_flows_for_sync = MagicMock(return_value=flows)
+        s.scheduler.get_jobs.return_value = []
 
         s._register_flows()
         s.scheduler.add_job.assert_called_once()
@@ -472,12 +478,15 @@ class TestRegisterFlows(unittest.TestCase):
         flows = [{"flow_id": 1, "flow_name": "items", "flow_type": "items",
                   "flow_config": {}, "schedule_cron": "invalid_cron"}]
         s = _build_scheduler(flows=flows)
+        s._read_flows_for_sync = MagicMock(return_value=flows)
+        s.scheduler.get_jobs.return_value = []
         s.scheduler.add_job.side_effect = ValueError("Invalid cron")
 
         s._register_flows()
-        s.logger.error.assert_called()
+        error_calls = [c[0][0] for c in s.logger.error.call_args_list]
+        self.assertTrue(any("error registrando" in e for e in error_calls))
 
-    def test_register_loguea_conteo(self):
+    def test_register_loguea_solo_los_que_tienen_cron(self):
         flows = [
             {"flow_id": 1, "flow_name": "items", "flow_type": "items",
               "flow_config": {}, "schedule_cron": "0 * * * *"},
@@ -485,10 +494,13 @@ class TestRegisterFlows(unittest.TestCase):
               "flow_config": {}, "schedule_cron": None},
         ]
         s = _build_scheduler(flows=flows)
+        s._read_flows_for_sync = MagicMock(return_value=flows)
+        s.scheduler.get_jobs.return_value = []
 
         s._register_flows()
+        s.scheduler.add_job.assert_called_once()
         info_calls = [c[0][0] for c in s.logger.info.call_args_list]
-        self.assertTrue(any("1/2 flows registrados" in i for i in info_calls))
+        self.assertTrue(any("'items' registrado" in i for i in info_calls))
 
 
 @patch.dict("os.environ", {"ENV": "dev", "DATABASE_URL": "postgresql://test"})
@@ -496,6 +508,7 @@ class TestStart(unittest.TestCase):
 
     def test_start_llama_arranque_register_scheduler(self):
         s = _build_scheduler()
+        s.arranque_ordenado = True
         s._arranque_ordenado = MagicMock()
         s._register_flows = MagicMock()
         s.scheduler.start = MagicMock()
@@ -507,6 +520,7 @@ class TestStart(unittest.TestCase):
 
     def test_start_arranque_falla_continua_con_register(self):
         s = _build_scheduler()
+        s.arranque_ordenado = True
         s._arranque_ordenado = MagicMock(side_effect=RuntimeError("BD caída"))
         s._register_flows = MagicMock()
         s.scheduler.start = MagicMock()

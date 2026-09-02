@@ -1,14 +1,17 @@
 """
 IntegradorScheduler — Scheduler del sistema
 Responsabilidades:
-- __init__()           — carga config GCP, flows BD, inicializa APScheduler
-- _reload_flow()       — re-lee un flow de BD (config fresco + is_active)
-- _load_flow_configs() — lee flow_configs de maestros para resolve
-- _run_flow()          — verifica is_active, ejecuta main.run()
-- _run_with_retry()    — backoff exponencial (3 intentos: 30s, 60s, 120s)
-- _arranque_ordenado() — ejecuta todos los flows en secuencia
-- _register_flows()    — registra crons en APScheduler
-- start()              — arranque ordenado → register → loop infinito
+- __init__()             — carga config GCP, flows BD, inicializa APScheduler
+- _reload_flow()         — re-lee un flow de BD (config fresco + is_active)
+- _load_flow_configs()   — lee flow_configs de maestros para resolve
+- _run_flow()            — verifica is_active, ejecuta main.run()
+- _run_with_retry()      — backoff exponencial (3 intentos: 30s, 60s, 120s)
+- _arranque_ordenado()   — ejecuta los flows con cron (opt-in: ARRANQUE_ORDENADO=true)
+- _job_id()              — id estable de job, por flow_id
+- _read_flows_for_sync() — lee todos los flows del cliente (None si falla la BD)
+- _sync_flows()          — reconcilia jobs de APScheduler contra la BD
+- _register_flows()      — registro inicial, delega en _sync_flows()
+- start()                — register → sync periódico → loop (arranque ordenado opt-in)
 Patrones: Observer · BlockingScheduler
 Librería: APScheduler · ThreadPoolExecutor
 Fase: 7 — Scheduler
@@ -19,6 +22,7 @@ import time
 import psycopg2
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.executors.pool import ThreadPoolExecutor
 
 from config.loader import ConfigLoader
@@ -28,6 +32,8 @@ from main import run
 
 
 class IntegradorScheduler:
+
+    SYNC_JOB_ID = "__sync_flows__"
 
     def __init__(self, client_id):
         self.client_id = client_id
@@ -70,6 +76,14 @@ class IntegradorScheduler:
             executors={"default": ThreadPoolExecutor(max_workers=6)},
             job_defaults={"max_instances": 1, "coalesce": True}
         )
+
+        # Sync de flows: {job_id: (cron, flow_name)}
+        self._job_state = {}
+        self.sync_seconds = int(os.getenv("FLOW_SYNC_SECONDS", "60"))
+
+        # Arranque ordenado: apagado por defecto. Reiniciar un contenedor
+        # no debe disparar integraciones — de eso se encarga el cron.
+        self.arranque_ordenado = os.getenv("ARRANQUE_ORDENADO", "false").lower() == "true"
 
         self.logger.info("Scheduler | Inicialización completa")
 
@@ -200,51 +214,125 @@ class IntegradorScheduler:
 
         self.logger.info("Scheduler | Arranque ordenado completado")
 
-    def _register_flows(self):
-        """Registra flows con schedule_cron en APScheduler.
-        Registra todos (incluso inactivos) — _run_flow verifica is_active en cada ejecución.
-        Así activar/desactivar desde el front surte efecto sin reiniciar el contenedor."""
-        registrados = 0
-        for flow in self.flows:
-            cron = flow.get("schedule_cron")
-            if not cron:
-                self.logger.info(
-                    f"Scheduler | Flow '{flow['flow_name']}' sin cron — solo manual"
-                )
-                continue
+    def _job_id(self, flow_id):
+        """Id estable de job. Va por flow_id, no por flow_name:
+        flow_name es etiqueta libre y renombrable desde el front."""
+        return f"{self.client_id}_flow_{flow_id}"
 
+    def _read_flows_for_sync(self):
+        """Lee TODOS los flows del cliente, activos e inactivos.
+        Devuelve None si la consulta falló — nunca lista vacía por error,
+        porque una lista vacía significa 'dar de baja todos los jobs'."""
+        conn = None
+        try:
+            conn = psycopg2.connect(self.database_url)
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT f.id, f.flow_name, f.flow_type, f.flow_config,
+                       f.schedule_cron, f.is_active
+                FROM flows f
+                JOIN clients c ON f.client_id = c.id
+                WHERE c.client_id = %s AND c.is_active = true
+            """, (self.client_id,))
+            columns = ["flow_id", "flow_name", "flow_type", "flow_config",
+                       "schedule_cron", "is_active"]
+            flows = [dict(zip(columns, row)) for row in cur.fetchall()]
+            cur.close()
+            return flows
+        except Exception as e:
+            self.logger.error(f"Scheduler | Sync: error leyendo flows: {e}")
+            return None
+        finally:
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def _sync_flows(self):
+        """Reconcilia los jobs de APScheduler contra la BD.
+        Alta, baja, renombrado y cambio de cron surten efecto sin reiniciar."""
+        flows = self._read_flows_for_sync()
+        if flows is None:
+            return
+
+        deseados = {
+            self._job_id(f["flow_id"]): f
+            for f in flows if f.get("schedule_cron")
+        }
+        actuales = {
+            job.id for job in self.scheduler.get_jobs()
+            if job.id != self.SYNC_JOB_ID
+        }
+
+        for job_id in actuales - set(deseados):
+            try:
+                self.scheduler.remove_job(job_id)
+                self._job_state.pop(job_id, None)
+                self.logger.info(f"Scheduler | Sync: job '{job_id}' dado de baja")
+            except Exception as e:
+                self.logger.error(f"Scheduler | Sync: error eliminando '{job_id}': {e}")
+
+        for job_id, flow in deseados.items():
+            estado = (flow["schedule_cron"], flow["flow_name"])
+            if self._job_state.get(job_id) == estado:
+                continue
+            accion = "actualizado" if job_id in actuales else "registrado"
             try:
                 self.scheduler.add_job(
                     self._run_with_retry,
-                    CronTrigger.from_crontab(cron),
+                    CronTrigger.from_crontab(flow["schedule_cron"]),
                     args=[flow],
-                    id=f"{self.client_id}_{flow['flow_name']}",
+                    id=job_id,
                     name=f"{flow['flow_name']} ({flow['flow_type']})",
                     replace_existing=True
                 )
-                registrados += 1
+                self._job_state[job_id] = estado
                 self.logger.info(
-                    f"Scheduler | Registrado '{flow['flow_name']}' → cron '{cron}'"
+                    f"Scheduler | Sync: '{flow['flow_name']}' {accion} "
+                    f"→ cron '{flow['schedule_cron']}'"
                 )
             except Exception as e:
+                self._job_state[job_id] = estado
                 self.logger.error(
-                    f"Scheduler | Error registrando '{flow['flow_name']}': {e}"
+                    f"Scheduler | Sync: error registrando '{flow['flow_name']}': {e}"
                 )
 
-        self.logger.info(f"Scheduler | {registrados}/{len(self.flows)} flows registrados")
+    def _register_flows(self):
+        """Registro inicial. Delega en _sync_flows para no duplicar la lógica."""
+        self._sync_flows()
 
     def start(self):
-        """Arranque ordenado → registrar crons → loop infinito."""
+        """Registrar crons → sync periódico → loop infinito.
+        El arranque ordenado solo corre si ARRANQUE_ORDENADO=true."""
         self.logger.info(f"Scheduler | Iniciando cliente '{self.client_id}'")
 
-        try:
-            self._arranque_ordenado()
-        except Exception as e:
-            self.logger.error(f"Scheduler | Error en arranque ordenado: {e}")
+        if self.arranque_ordenado:
+            self.logger.info("Scheduler | Arranque ordenado ACTIVADO por ARRANQUE_ORDENADO")
+            try:
+                self._arranque_ordenado()
+            except Exception as e:
+                self.logger.error(f"Scheduler | Error en arranque ordenado: {e}")
+        else:
+            self.logger.info(
+                "Scheduler | Arranque ordenado desactivado — los flows corren solo por cron"
+            )
 
         self._register_flows()
 
+        self.scheduler.add_job(
+            self._sync_flows,
+            IntervalTrigger(seconds=self.sync_seconds),
+            id=self.SYNC_JOB_ID,
+            name="Sync de flows desde BD",
+            replace_existing=True
+        )
+        self.logger.info(
+            f"Scheduler | Sync de flows cada {self.sync_seconds}s"
+        )
+
         self.logger.info("Scheduler | Entrando en loop de APScheduler")
+
         try:
             self.scheduler.start()
         except (KeyboardInterrupt, SystemExit):

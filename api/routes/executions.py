@@ -155,10 +155,12 @@ def _execute_flow_background(client_slug, flow_id, user_id):
             logger.error(f"Flow {flow_id} no encontrado en db_config")
             return
 
+        # Todos los maestros de cada tipo, no solo el ultimo.
+        # Debe coincidir con _load_flow_configs() del scheduler.
         flow_configs = {}
         for f in db_config["flows"]:
             if f["flow_type"] in ("items", "customer", "supplier"):
-                flow_configs[f["flow_type"]] = f["flow_config"]
+                flow_configs.setdefault(f["flow_type"], []).append(f["flow_config"])
 
         main_module.run(
             flow=flow,
