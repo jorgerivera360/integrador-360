@@ -19,8 +19,13 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
     const tieneError = Boolean(ejecucion.error_message)
 
     // Purchases y sales agrupan lineas planas en documentos, y solo ellos
-    // devuelven total_ordenes. En items y partners una fila es un registro.
-    const esTransaccion = resultado.total_ordenes !== undefined
+    // devuelven total_ordenes y descartados. En items y partners una fila es
+    // un registro. Se miran los dos campos porque el return temprano de
+    // "no hay nada nuevo" omite total_ordenes.
+    const esTransaccion =
+        resultado.total_ordenes !== undefined || resultado.descartados !== undefined
+
+    const descartados = resultado.descartados || 0
 
     return (
         <Drawer
@@ -79,7 +84,7 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                                 valor={`${resultado.creados ?? 0} de ${resultado.total_ordenes ?? 0}`}
                                 esError={(resultado.creados ?? 0) < (resultado.total_ordenes ?? 0)}
                             />
-                            <CampoResultado label="Lineas descartadas" valor={resultado.descartados} />
+                            <CampoResultado label="Lineas descartadas" valor={descartados} />
                             <CampoResultado
                                 label="Lineas fallidas"
                                 valor={numFallidos}
@@ -99,6 +104,13 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                         </>
                     )}
                 </div>
+                {esTransaccion && descartados > 0 && (
+                    <p className="drawer-nota">
+                        {descartados} linea{descartados === 1 ? '' : 's'} pertenecen a documentos
+                        que ya existen en Odoo. No se recrean: estos flujos solo crean documentos
+                        nuevos, nunca actualizan los que ya estan cargados.
+                    </p>
+                )}
             </div>
 
             {creados.length > 0 && (
@@ -120,7 +132,7 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                         ))}
                     </div>
                     {creadosTruncados > 0 && (
-                        <p className="drawer-truncado">
+                        <p className="drawer-nota">
                             Se listan los primeros {creados.length}. Otros {creadosTruncados} se
                             crearon pero no quedaron en el detalle; estan en el log del cliente.
                         </p>
