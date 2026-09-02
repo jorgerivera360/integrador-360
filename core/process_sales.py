@@ -191,6 +191,7 @@ class ProcessSales(CoreProcessor):
 
             # ---- Fase 7: Crear órdenes ----
             creados = 0
+            creados_detalle = []
 
             for header_key, lineas in ordenes.items():
                 pedido, customer_id, zone_id, vendedor, condicion, warehouse_id, observacion, fecha = header_key
@@ -224,6 +225,9 @@ class ProcessSales(CoreProcessor):
                     ok, res = self.odoo.create("sale.order", payload)
                     if ok:
                         creados += 1
+                        self.logger.info(f"Sales | Pedido '{pedido}' creado — odoo_id={res}")
+                        if len(creados_detalle) < self.MAX_DETALLE:
+                            creados_detalle.append({"pedido": pedido, "odoo_id": res})
                     else:
                         fallidos.append({
                             "pedido": pedido, "linea": "",
@@ -259,6 +263,8 @@ class ProcessSales(CoreProcessor):
                 "creados": creados, "fallidos": fallidos,
                 "descartados": descartados, "total": len(data),
                 "total_ordenes": len(ordenes)
+                "creados_detalle": creados_detalle,
+                "creados_truncado": max(0, creados - len(creados_detalle))
             }
 
         except Exception as e:

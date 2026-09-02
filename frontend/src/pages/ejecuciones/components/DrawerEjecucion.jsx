@@ -13,6 +13,8 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
 
     const resultado = ejecucion.result || {}
     const fallidos = resultado.fallidos || []
+    const creados = resultado.creados_detalle || []
+    const creadosTruncados = resultado.creados_truncado || 0
     const tieneError = Boolean(ejecucion.error_message)
 
     return (
@@ -75,6 +77,33 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                 </div>
             </div>
 
+            {creados.length > 0 && (
+                <div className="drawer-seccion">
+                    <h4 className="drawer-seccion__titulo">
+                        Creados ({creados.length}
+                        {creadosTruncados > 0 && ` de ${creados.length + creadosTruncados}`})
+                    </h4>
+                    <div className="drawer-creados">
+                        {creados.map((item, i) => (
+                            <div key={i} className="drawer-creado">
+                                <span className="drawer-creado__ref">
+                                    {etiquetaRegistro(item, i)}
+                                </span>
+                                {item.odoo_id && (
+                                    <span className="drawer-creado__id">Odoo #{item.odoo_id}</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    {creadosTruncados > 0 && (
+                        <p className="drawer-truncado">
+                            Se listan los primeros {creados.length}. Otros {creadosTruncados} se
+                            crearon pero no quedaron en el detalle; estan en el log del cliente.
+                        </p>
+                    )}
+                </div>
+            )}
+
             {fallidos.length > 0 && (
                 <div className="drawer-seccion">
                     <h4 className="drawer-seccion__titulo">
@@ -84,7 +113,7 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                         {fallidos.map((item, i) => (
                             <div key={i} className="drawer-fallido">
                                 <span className="drawer-fallido__ref">
-                                    {item.referencia || item.identificacion || `#${i + 1}`}
+                                    {etiquetaRegistro(item, i)}
                                 </span>
                                 <span className="drawer-fallido__razon">
                                     {item.razon || item.reason || 'Sin detalle'}
@@ -103,6 +132,18 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
             )}
         </Drawer>
     )
+}
+
+// Cada procesador nombra su registro distinto: items usa referencia, partners
+// identificacion + sucursal, purchases compra y sales pedido.
+const etiquetaRegistro = (item, i) => {
+    if (item.referencia) return item.referencia
+    if (item.pedido) return item.pedido
+    if (item.compra) return item.compra
+    if (item.identificacion) {
+        return item.sucursal ? `${item.identificacion} / ${item.sucursal}` : item.identificacion
+    }
+    return `#${i + 1}`
 }
 
 const CampoResultado = ({ label, valor, esError }) => {

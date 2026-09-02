@@ -11,6 +11,10 @@ from abc import ABC, abstractmethod
 
 class CoreProcessor(ABC):
 
+    # Tope de registros en creados_detalle. El resto se cuenta en creados_truncado.
+    # Sin tope, un catalogo completo dejaria megas de JSON en executions.result.
+    MAX_DETALLE = 500
+
     @abstractmethod
     def process(self, data: list) -> dict:
         """Procesa la lista de registros y retorna resumen de resultado"""

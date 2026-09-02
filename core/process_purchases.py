@@ -174,6 +174,7 @@ class ProcessPurchases(CoreProcessor):
 
             # ---- Fase 6: Crear órdenes ----
             creados = 0
+            creados_detalle = []
 
             for header_key, lineas in ordenes.items():
                 compra, supplier_id, referencia, fecha, estado, picking_type_id = header_key
@@ -205,6 +206,9 @@ class ProcessPurchases(CoreProcessor):
                     ok, res = self.odoo.create("purchase.order", payload)
                     if ok:
                         creados += 1
+                        self.logger.info(f"Purchases | Compra '{compra}' creada — odoo_id={res}")
+                        if len(creados_detalle) < self.MAX_DETALLE:
+                            creados_detalle.append({"compra": compra, "odoo_id": res})
                     else:
                         fallidos.append({
                             "compra": compra, "linea": "",
@@ -239,7 +243,9 @@ class ProcessPurchases(CoreProcessor):
             return {
                 "creados": creados, "fallidos": fallidos,
                 "descartados": descartados, "total": len(data),
-                "total_ordenes": len(ordenes)
+                "total_ordenes": len(ordenes),
+                "creados_detalle": creados_detalle,
+                "creados_truncado": max(0, creados - len(creados_detalle))
             }
 
         except Exception as e:

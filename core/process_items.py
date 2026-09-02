@@ -129,6 +129,7 @@ class ProcessItems(CoreProcessor):
             creados = 0
             actualizados = 0
             fallidos = []
+            creados_detalle = []
 
             for row in data:
                 ref = str(row.get("referencia", ""))
@@ -218,6 +219,9 @@ class ProcessItems(CoreProcessor):
 
                         if ok:
                             creados += 1
+                            self.logger.info(f"Items | '{ref}' creado — odoo_id={res}")
+                            if len(creados_detalle) < self.MAX_DETALLE:
+                                creados_detalle.append({"referencia": ref, "odoo_id": res})
                             existing[ref] = res
                             if row.get("codigos_extras"):
                                 self._process_barcode_multi(res, ref, row["codigos_extras"])
@@ -240,7 +244,9 @@ class ProcessItems(CoreProcessor):
 
             return {
                 "creados": creados, "actualizados": actualizados,
-                "fallidos": fallidos, "total": len(data)
+                "fallidos": fallidos, "total": len(data),
+                "creados_detalle": creados_detalle,
+                "creados_truncado": max(0, creados - len(creados_detalle))
             }
 
         except Exception as e:

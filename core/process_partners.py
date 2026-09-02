@@ -94,6 +94,7 @@ class ProcessPartners(CoreProcessor):
             creados = 0
             actualizados = 0
             fallidos = []
+            creados_detalle = []
 
             for row in data:
                 vat = row.get("identificacion", "")
@@ -172,6 +173,11 @@ class ProcessPartners(CoreProcessor):
                         ok, res = self.odoo.create("res.partner", payload)
                         if ok:
                             creados += 1
+                            self.logger.info(f"Partners | '{vat}/{sucursal}' creado — odoo_id={res}")
+                            if len(creados_detalle) < self.MAX_DETALLE:
+                                creados_detalle.append({
+                                    "identificacion": vat, "sucursal": sucursal, "odoo_id": res
+                                })
                             existing[(vat, sucursal)] = {
                                 "id": res,
                                 "customer_rank": payload.get("customer_rank", 0),
@@ -204,7 +210,9 @@ class ProcessPartners(CoreProcessor):
 
             return {
                 "creados": creados, "actualizados": actualizados,
-                "fallidos": fallidos, "total": len(data)
+                "fallidos": fallidos, "total": len(data),
+                "creados_detalle": creados_detalle,
+                "creados_truncado": max(0, creados - len(creados_detalle))
             }
 
         except Exception as e:
