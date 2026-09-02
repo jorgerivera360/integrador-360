@@ -262,7 +262,7 @@ class ProcessSales(CoreProcessor):
             return {
                 "creados": creados, "fallidos": fallidos,
                 "descartados": descartados, "total": len(data),
-                "total_ordenes": len(ordenes)
+                "total_ordenes": len(ordenes),
                 "creados_detalle": creados_detalle,
                 "creados_truncado": max(0, creados - len(creados_detalle))
             }
