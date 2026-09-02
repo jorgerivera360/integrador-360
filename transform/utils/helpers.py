@@ -98,6 +98,16 @@ def clean_row(row: dict) -> dict:
 
 def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str]:
 
+    ENTIDADES_VALIDAS = ("items", "partners", "purchases", "sales")
+
+    if entity_type not in ENTIDADES_VALIDAS:
+        if logger:
+            logger.error(
+                f"validate_record: entity_type desconocido '{entity_type}' — "
+                f"registro descartado. Validos: {', '.join(ENTIDADES_VALIDAS)}"
+            )
+        return False, f"entity_type desconocido: '{entity_type}'"
+
     if entity_type == "items":
         ref = row.get("referencia", "")
         if not ref or not str(ref).strip():

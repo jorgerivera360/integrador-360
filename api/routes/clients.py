@@ -103,8 +103,8 @@ def create_client(
         raise HTTPException(status_code=400, detail="Ya existe un cliente con ese client_id")
 
     # Verificar que el erp_type sea válido
-    if client.erp_type not in ("ws", "connekta", "sap", "kubapp", "excel"):
-        raise HTTPException(status_code=400, detail="erp_type inválido. Opciones: ws, connekta, sap, kubapp, excel")
+    if client.erp_type not in ("ws", "connekta", "sap", "excel"):
+        raise HTTPException(status_code=400, detail="erp_type inválido. Opciones: ws, connekta, sap, excel")
 
     cursor.execute(
         """INSERT INTO clients (client_id, name, erp_type, created_by, updated_by)
@@ -145,8 +145,8 @@ def update_client(
     if client.name is not None:
         updates["name"] = client.name
     if client.erp_type is not None:
-        if client.erp_type not in ("ws", "connekta", "sap", "kubapp", "excel"):
-            raise HTTPException(status_code=400, detail="erp_type inválido. Opciones: ws, connekta, sap, kubapp, excel")
+        if client.erp_type not in ("ws", "connekta", "sap", "excel"):
+            raise HTTPException(status_code=400, detail="erp_type inválido. Opciones: ws, connekta, sap, excel")
         updates["erp_type"] = client.erp_type
     if client.is_active is not None:
         updates["is_active"] = client.is_active

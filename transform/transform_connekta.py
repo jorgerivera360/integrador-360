@@ -9,7 +9,7 @@ Hereda: Transform
 Fase: 3 — Transform Layer
 """
 from config.logger import IntegradorLogger
-from transform.base import Transform
+from transform.base import Transform, TransformError
 from transform.utils.determination_functions import get_determination_function
 from transform.utils.helpers import (clean_row, validate_record, to_float, to_int, parse_fecha, resolve_parametros)
 from transform.utils.documentos import preparar_documentos, procesar_fila
@@ -31,14 +31,16 @@ class TransformConnekta(Transform):
 
         normalize_fn = normalize_map.get(flow_type)
         if not normalize_fn:
-            self.logger.error(f"flow_type no soportado en TransformConnekta: '{flow_type}'")
-            return []
+            raise TransformError(
+                f"flow_type no soportado en TransformConnekta: '{flow_type}'"
+            )
 
         try:
             query_desc = flow_config.get("query_desc", "")
             if not query_desc:
-                self.logger.error(f"No hay query_desc configurado para flow '{flow_name}'")
-                return []
+                raise TransformError(
+                    f"Flow '{flow_name}': no hay query_desc configurado"
+                )
 
             parametros = flow_config.get("parametros", "")
             paginacion = flow_config.get("paginacion", False)
@@ -53,8 +55,9 @@ class TransformConnekta(Transform):
 
             status, raw = connector.get(endpoint=query_desc, params=params)
             if not status:
-                self.logger.error(f"Error obteniendo datos para '{flow_name}': {raw}")
-                return []
+                raise TransformError(
+                    f"Flow '{flow_name}': error obteniendo datos del ERP — {raw}"
+                )
 
             if not raw:
                 self.logger.info(f"Flow '{flow_name}': sin registros del conector")
@@ -62,9 +65,12 @@ class TransformConnekta(Transform):
 
             return normalize_fn(raw, flow_config)
 
+        except TransformError:
+            raise
         except Exception as e:
-            self.logger.error(f"get_flow: error inesperado en '{flow_name}': {e}")
-            return []
+            raise TransformError(
+                f"Flow '{flow_name}': error inesperado en get_flow — {e}"
+            ) from e
 
     def _apply_mapping(self, row: dict, mapping: dict) -> dict:
           if not mapping:

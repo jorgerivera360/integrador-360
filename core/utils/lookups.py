@@ -15,7 +15,7 @@ def lookup_uom(odoo, name, cache=None, logger=None):
     ok, result = odoo.search_read("uom.uom", [["name", "=", name]], ["id"], limit=1)
     if not ok:
         if logger:
-            logger.error(f"lookup_uom: error buEsscando '{name}': {result}")
+            logger.error(f"lookup_uom: error buscando '{name}': {result}")
         return None
 
     if result:

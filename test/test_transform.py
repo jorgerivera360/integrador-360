@@ -70,6 +70,50 @@ class TestTransformBase:
         ]
 
 
+class TestTransformErrorContrato:
+    """El contrato distingue 'fallo' de 'sin datos'.
+
+    Antes get_flow devolvia [] en los dos casos: un ERP caido se veia igual
+    que un dia sin movimiento, main.py marcaba la ejecucion como success y el
+    scheduler no reintentaba. Ahora la falla se propaga como TransformError,
+    main.py la registra como error con traceback, y _run_with_retry reintenta
+    3 veces con backoff."""
+
+    def test_transform_error_existe(self):
+        from transform.base import TransformError
+        assert issubclass(TransformError, Exception)
+
+    def test_se_puede_lanzar_con_mensaje(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError, match="algo fallo"):
+            raise TransformError("algo fallo")
+
+    def test_main_la_deja_propagar(self):
+        # run() marca la ejecucion como error, la registra y re-lanza, para que
+        # el scheduler pueda reintentar. Si la tragara, se perderia el retry.
+        import inspect
+        import main
+        fuente = inspect.getsource(main.run)
+        assert "raise" in fuente
+
+    def test_run_marca_error_en_la_ejecucion(self):
+        from transform.base import TransformError
+        from main import run
+        flow = {"flow_id": 1, "flow_name": "compras", "flow_type": "purchases",
+                "flow_config": {"sql": "SELECT 1"}, "schedule_cron": None}
+        config = {"client_id": "test_client", "odoo": {"url": "http://x"}}
+        db_writer = MagicMock()
+
+        with patch("main.build_connector"), \
+             patch("main.build_transform") as mock_bt:
+            mock_bt.return_value.get_flow.side_effect = TransformError("ERP caido")
+            with pytest.raises(TransformError):
+                run(flow, config, "ws", db_writer=db_writer)
+
+        estado = db_writer.finish_execution.call_args[0][1]
+        assert estado == "error"
+
+
 # ==========================================================
 # helpers.py — parse_fecha
 # ==========================================================
@@ -448,16 +492,43 @@ class TestValidateRecordSales:
 
 
 class TestValidateRecordEntidadDesconocida:
+    """Fail-closed: si el entity_type no se reconoce, el registro se descarta.
+    Antes dejaba pasar todo sin validar, en silencio (defecto #5 / bug 56)."""
 
-    def test_entity_type_desconocido_deja_pasar(self):
-        # Comportamiento actual: fail-open. Documentado como defecto #5 del
-        # informe de correcciones; el test fija la conducta real, no la deseada.
+    def test_entity_type_desconocido_descarta(self):
         from transform.utils.helpers import validate_record
-        assert validate_record({"cualquier": "cosa"}, "no_existe")[0] is True
+        assert validate_record({"cualquier": "cosa"}, "no_existe")[0] is False
 
-    def test_entity_type_vacio_deja_pasar(self):
+    def test_entity_type_desconocido_explica_el_motivo(self):
         from transform.utils.helpers import validate_record
-        assert validate_record({}, "")[0] is True
+        _, razon = validate_record({}, "no_existe")
+        assert "entity_type" in razon
+
+    def test_entity_type_desconocido_loguea_error(self):
+        from transform.utils.helpers import validate_record
+        logger = MagicMock()
+        validate_record({}, "no_existe", logger=logger)
+        assert logger.error.called
+
+    def test_entity_type_vacio_descarta(self):
+        from transform.utils.helpers import validate_record
+        assert validate_record({}, "")[0] is False
+
+    def test_entity_type_none_descarta(self):
+        from transform.utils.helpers import validate_record
+        assert validate_record({}, None)[0] is False
+
+    def test_los_cuatro_validos_siguen_funcionando(self):
+        from transform.utils.helpers import validate_record
+        assert validate_record(item_ok(), "items")[0] is True
+        assert validate_record(partner_ok(), "partners")[0] is True
+        assert validate_record(purchase_ok(), "purchases")[0] is True
+        assert validate_record(sale_ok(), "sales")[0] is True
+
+    def test_es_sensible_a_mayusculas(self):
+        # "Items" no es "items": el literal debe coincidir exacto
+        from transform.utils.helpers import validate_record
+        assert validate_record(item_ok(), "Items")[0] is False
 
 
 # ==========================================================
@@ -875,11 +946,15 @@ class TestTransformWSGetFlow:
         from transform.transform_ws import TransformWS
         return TransformWS(WS_CONFIG)
 
-    def test_flow_type_invalido_devuelve_vacio(self):
-        assert self._t().get_flow(conector(), "x", "no_existe", {}) == []
+    def test_flow_type_invalido_lanza(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError):
+            self._t().get_flow(conector(), "x", "no_existe", {})
 
-    def test_sin_sql_ni_endpoint_devuelve_vacio(self):
-        assert self._t().get_flow(conector(), "items", "items", {}) == []
+    def test_sin_sql_ni_endpoint_lanza(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError):
+            self._t().get_flow(conector(), "items", "items", {})
 
     def test_con_sql_llama_al_conector(self):
         c = conector(True, [{"referencia": "A1", "descripcion": "P"}])
@@ -901,16 +976,35 @@ class TestTransformWSGetFlow:
         self._t().get_flow(c, "items", "items", {"endpoint": "productos", "sql": "SELECT 1"})
         assert c.get.call_args.kwargs["endpoint"] == "productos"
 
-    def test_conector_falla_devuelve_vacio(self):
-        assert self._t().get_flow(conector(False, "error"), "items", "items", {"sql": "S"}) == []
+    def test_conector_falla_lanza(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError):
+            self._t().get_flow(conector(False, "error"), "items", "items", {"sql": "S"})
+
+    def test_conector_falla_incluye_el_motivo_del_erp(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError, match="timeout"):
+            self._t().get_flow(conector(False, "timeout"), "items", "items", {"sql": "S"})
 
     def test_raw_vacio_devuelve_vacio(self):
+        # El ERP respondio bien y no habia registros: no es una falla.
         assert self._t().get_flow(conector(True, []), "items", "items", {"sql": "S"}) == []
 
-    def test_excepcion_devuelve_vacio(self):
+    def test_excepcion_inesperada_se_envuelve(self):
+        from transform.base import TransformError
         c = MagicMock()
         c.get.side_effect = Exception("boom")
-        assert self._t().get_flow(c, "items", "items", {"sql": "S"}) == []
+        with pytest.raises(TransformError):
+            self._t().get_flow(c, "items", "items", {"sql": "S"})
+
+    def test_excepcion_inesperada_conserva_la_causa(self):
+        from transform.base import TransformError
+        original = ValueError("boom")
+        c = MagicMock()
+        c.get.side_effect = original
+        with pytest.raises(TransformError) as exc:
+            self._t().get_flow(c, "items", "items", {"sql": "S"})
+        assert exc.value.__cause__ is original
 
     def test_normalize_map_tiene_cinco_flow_types(self):
         from transform.transform_ws import TransformWS
@@ -1033,11 +1127,15 @@ class TestTransformConnektaGetFlow:
         from transform.transform_connekta import TransformConnekta
         return TransformConnekta(CONNEKTA_CONFIG)
 
-    def test_flow_type_invalido_devuelve_vacio(self):
-        assert self._t().get_flow(conector(), "x", "no_existe", {}) == []
+    def test_flow_type_invalido_lanza(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError):
+            self._t().get_flow(conector(), "x", "no_existe", {})
 
-    def test_sin_query_desc_devuelve_vacio(self):
-        assert self._t().get_flow(conector(), "items", "items", {}) == []
+    def test_sin_query_desc_lanza(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError):
+            self._t().get_flow(conector(), "items", "items", {})
 
     def test_pasa_el_query_desc_al_conector(self):
         c = conector(True, [])
@@ -1072,13 +1170,20 @@ class TestTransformConnektaGetFlow:
         self._t().get_flow(c, "items", "items", {"query_desc": "q"})
         assert "parametros" not in c.get.call_args.kwargs["params"]
 
-    def test_conector_falla_devuelve_vacio(self):
-        assert self._t().get_flow(conector(False, "err"), "i", "items", {"query_desc": "q"}) == []
+    def test_conector_falla_lanza(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError):
+            self._t().get_flow(conector(False, "err"), "i", "items", {"query_desc": "q"})
 
-    def test_excepcion_devuelve_vacio(self):
+    def test_raw_vacio_devuelve_vacio(self):
+        assert self._t().get_flow(conector(True, []), "i", "items", {"query_desc": "q"}) == []
+
+    def test_excepcion_inesperada_se_envuelve(self):
+        from transform.base import TransformError
         c = MagicMock()
         c.get.side_effect = Exception("boom")
-        assert self._t().get_flow(c, "i", "items", {"query_desc": "q"}) == []
+        with pytest.raises(TransformError):
+            self._t().get_flow(c, "i", "items", {"query_desc": "q"})
 
 
 @patch.dict(os.environ, {"ENV": "dev"})
@@ -1236,11 +1341,15 @@ class TestTransformSAPGetFlow:
         from transform.transform_sap import TransformSAP
         return TransformSAP(SAP_CONFIG)
 
-    def test_flow_type_invalido_devuelve_vacio(self):
-        assert self._t().get_flow(conector(), "x", "no_existe", {}) == []
+    def test_flow_type_invalido_lanza(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError):
+            self._t().get_flow(conector(), "x", "no_existe", {})
 
-    def test_sin_endpoint_devuelve_vacio(self):
-        assert self._t().get_flow(conector(), "items", "purchases", {}) == []
+    def test_sin_endpoint_lanza(self):
+        from transform.base import TransformError
+        with pytest.raises(TransformError):
+            self._t().get_flow(conector(), "items", "purchases", {})
 
     def test_sin_session_id_hace_login(self):
         c = conector(True, [])
@@ -1249,11 +1358,13 @@ class TestTransformSAPGetFlow:
         self._t().get_flow(c, "x", "purchases", {"endpoint": "PurchaseOrders"})
         assert c.login_api.called
 
-    def test_login_fallido_devuelve_vacio(self):
+    def test_login_fallido_lanza(self):
+        from transform.base import TransformError
         c = conector(True, [])
         c.session_id = None
         c.login_api.return_value = False
-        assert self._t().get_flow(c, "x", "purchases", {"endpoint": "PO"}) == []
+        with pytest.raises(TransformError, match="autenticar"):
+            self._t().get_flow(c, "x", "purchases", {"endpoint": "PO"})
 
     def test_con_session_id_no_hace_login(self):
         c = conector(True, [])
@@ -1283,17 +1394,24 @@ class TestTransformSAPGetFlow:
         endpoints = [ll.kwargs.get("endpoint") for ll in c.get.call_args_list]
         assert "ItemGroups" not in endpoints
 
-    def test_prefetch_fallido_aborta_el_flow(self):
+    def test_prefetch_fallido_lanza(self):
+        from transform.base import TransformError
         c = MagicMock()
         c.session_id = "s"
         c.get.return_value = (False, "error")
-        assert self._t().get_flow(c, "items", "items", {"endpoint": "Items"}) == []
+        with pytest.raises(TransformError, match="categorias"):
+            self._t().get_flow(c, "items", "items", {"endpoint": "Items"})
 
-    def test_excepcion_devuelve_vacio(self):
+    def test_raw_vacio_devuelve_vacio(self):
+        assert self._t().get_flow(conector(True, []), "x", "purchases", {"endpoint": "PO"}) == []
+
+    def test_excepcion_inesperada_se_envuelve(self):
+        from transform.base import TransformError
         c = MagicMock()
         c.session_id = "s"
         c.get.side_effect = Exception("boom")
-        assert self._t().get_flow(c, "x", "purchases", {"endpoint": "PO"}) == []
+        with pytest.raises(TransformError):
+            self._t().get_flow(c, "x", "purchases", {"endpoint": "PO"})
 
 
 @patch.dict(os.environ, {"ENV": "dev"})
@@ -1513,9 +1631,31 @@ class TestConsistenciaEntreTransforms:
         for t in self._todos():
             assert hasattr(t, "_apply_hardcodes"), type(t).__name__
 
-    def test_los_tres_rechazan_un_flow_type_desconocido(self):
+    def test_los_tres_lanzan_ante_un_flow_type_desconocido(self):
+        from transform.base import TransformError
         for t in self._todos():
-            assert t.get_flow(conector(), "x", "inexistente", {}) == []
+            with pytest.raises(TransformError):
+                t.get_flow(conector(), "x", "inexistente", {})
+
+    def test_los_tres_lanzan_cuando_el_conector_falla(self):
+        from transform.base import TransformError
+        configs = [
+            {"sql": "SELECT 1"},
+            {"query_desc": "q"},
+            {"endpoint": "PO"},
+        ]
+        for t, cfg in zip(self._todos(), configs):
+            with pytest.raises(TransformError):
+                t.get_flow(conector(False, "caido"), "x", "purchases", cfg)
+
+    def test_los_tres_devuelven_vacio_cuando_el_erp_no_trae_datos(self):
+        configs = [
+            {"sql": "SELECT 1"},
+            {"query_desc": "q"},
+            {"endpoint": "PO"},
+        ]
+        for t, cfg in zip(self._todos(), configs):
+            assert t.get_flow(conector(True, []), "x", "purchases", cfg) == []
 
     def test_los_tres_heredan_de_transform(self):
         from transform.base import Transform

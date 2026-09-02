@@ -1236,6 +1236,27 @@ class TestCatalog:
         body = self._cliente_sin_auth().get("/catalog/erp-types").json()
         assert "kubapp" not in {e["value"] for e in body["result"]}
 
+    def test_erp_types_coincide_con_la_validacion_de_clients(self):
+        # Los tres lugares deben ofrecer los mismos ERPs: el catalogo, la
+        # validacion de POST/PUT /clients y build_connector(). Si se agrega
+        # uno nuevo hay que tocarlos los tres, y esta prueba lo recuerda.
+        import inspect
+        import re
+        from api.routes import clients
+        fuente = inspect.getsource(clients)
+        tuplas = re.findall(r'erp_type not in \(([^)]*)\)', fuente)
+        assert tuplas, "No se encontro la validacion de erp_type en clients.py"
+
+        body = self._cliente_sin_auth().get("/catalog/erp-types").json()
+        del_catalogo = {e["value"] for e in body["result"]}
+
+        for t in tuplas:
+            validos = set(re.findall(r'"([^"]+)"', t))
+            assert validos == del_catalogo, (
+                f"clients.py valida {sorted(validos)} pero el catalogo "
+                f"ofrece {sorted(del_catalogo)}"
+            )
+
     def test_erp_types_todos_tienen_conector_en_build_connector(self):
         import inspect
         import main

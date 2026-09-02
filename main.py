@@ -110,13 +110,29 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
 
         # 4. Resolve missing masters (solo para transacciones)
         if flow_type in ("purchases", "sales") and flow_configs:
-            data_purchases = data if flow_type == "purchases" else None
-            data_sales     = data if flow_type == "sales" else None
-            resolve_missing_masters(
-                odoo, connector, transform,
-                data_purchases, data_sales,
-                flow_configs, config, logger
-            )
+            maestros_activos = {}
+            for tipo, configs in flow_configs.items():
+                lista = configs if isinstance(configs, list) else [configs]
+                habilitados = [c for c in lista if c.get("resolve_enabled", True)]
+                if habilitados:
+                    maestros_activos[tipo] = habilitados
+                else:
+                    logger.info(
+                        f"Main | Resolve desactivado para '{tipo}' — no se consultara el ERP"
+                    )
+            if maestros_activos:
+                data_purchases = data if flow_type == "purchases" else None
+                data_sales     = data if flow_type == "sales" else None
+                resolve_missing_masters(
+                    odoo, connector, transform,
+                    data_purchases, data_sales,
+                    maestros_activos, config, logger
+                )
+            else:
+                logger.info(
+                    f"Main | Flow '{flow_name}': resolucion de maestros desactivada "
+                    f"en todos los maestros, se omite"
+                )
 
         # 5. Ejecutar core
         result = _dispatch_flow(data, flow_type, odoo, config, flow_config)
