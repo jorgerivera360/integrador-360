@@ -109,8 +109,12 @@ def execute_flow(
     if not flow["client_active"]:
         raise HTTPException(status_code=400, detail="El cliente está desactivado")
 
+    # Una fila 'running' de mas de 6 horas es huerfana: el proceso murio sin
+    # llamar a finish_execution. No debe bloquear nuevas ejecuciones.
     cursor.execute(
-        "SELECT id FROM executions WHERE flow_id = %s AND status = 'running'",
+        "SELECT id FROM executions "
+        "WHERE flow_id = %s AND status = 'running' "
+        "AND started_at > NOW() - INTERVAL '6 hours'",
         (flow_id,)
     )
     if cursor.fetchone():
