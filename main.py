@@ -71,7 +71,7 @@ def _dispatch_flow(data, flow_type, odoo, config, flow_config):
     cls = processors.get(flow_type)
     if not cls:
         raise ValueError(f"flow_type no soportado: {flow_type}")
-    processor = cls(odoo, config, flow_config)
+    processor = cls(odoo, config, {**flow_config, "flow_type": flow_type})
     return processor.process(data)
 
 
