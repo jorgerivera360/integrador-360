@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getClientsSummary } from '@/services/clients'
-import { getFlows, getFlowsSummary, getFlow, createFlow, updateFlow, deleteFlow, executeFlow } from '@/services/flows'
+import { getFlows, getFlowsSummary, getFlow, createFlow, updateFlow, deleteFlow, executeFlow, cancelFlow } from '@/services/flows'
 
 export const CLAVES_FLUJOS = {
     clientes: (filtros) => ['flujos', 'clientes', filtros],
@@ -88,6 +88,12 @@ export function useEliminarFlow(clienteId) {
 export function useEjecutarFlow() {
     return useMutation({
         mutationFn: (flowId) => executeFlow(flowId),
+    })
+}
+
+export function useCancelarFlow() {
+    return useMutation({
+        mutationFn: (flowId) => cancelFlow(flowId),
     })
 }
 

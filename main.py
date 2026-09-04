@@ -60,7 +60,7 @@ def connection_data(config):
     return odoo
 
 
-def _dispatch_flow(data, flow_type, odoo, config, flow_config):
+def _dispatch_flow(data, flow_type, odoo, config, flow_config, cancel_check=None):
     processors = {
         "items":     ProcessItems,
         "customer":  ProcessPartners,
@@ -71,7 +71,7 @@ def _dispatch_flow(data, flow_type, odoo, config, flow_config):
     cls = processors.get(flow_type)
     if not cls:
         raise ValueError(f"flow_type no soportado: {flow_type}")
-    processor = cls(odoo, config, {**flow_config, "flow_type": flow_type})
+    processor = cls(odoo, config, {**flow_config, "flow_type": flow_type}, cancel_check=cancel_check)
     return processor.process(data)
 
 
@@ -87,6 +87,9 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
     execution_id = None
     if db_writer:
         execution_id = db_writer.start_execution(flow_id, triggered_by, triggered_user)
+
+    def cancel_check():
+          return db_writer.is_cancelled(execution_id) if db_writer and execution_id else False
 
     try:
         logger.info(f"Main | Iniciando flow '{flow_name}' (tipo: {flow_type})")
@@ -104,6 +107,14 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
             if db_writer:
                 db_writer.finish_execution(execution_id, "success", result)
             return result
+
+        # Chequeo de cancelación antes de Odoo
+        if cancel_check():
+            logger.info(f"Main | Flow '{flow_name}' cancelado antes de conectar a Odoo")
+            if db_writer:
+                db_writer.finish_execution(execution_id, "cancelled",
+                    {"creados": 0, "actualizados": 0, "fallidos": [], "total": len(data)})
+            return {"creados": 0, "actualizados": 0, "fallidos": [], "total": len(data)}
 
         # 3. Autenticar en Odoo
         odoo = connection_data(config)
@@ -134,14 +145,24 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
                     f"en todos los maestros, se omite"
                 )
 
+        # Chequeo de cancelación antes del core
+        if cancel_check():
+            logger.info(f"Main | Flow '{flow_name}' cancelado antes de ejecutar core")
+            if db_writer:
+                db_writer.finish_execution(execution_id, "cancelled",
+                    {"creados": 0, "actualizados": 0, "fallidos": [], "total": len(data)})
+            return {"creados": 0, "actualizados": 0, "fallidos": [], "total": len(data)}
+
         # 5. Ejecutar core
-        result = _dispatch_flow(data, flow_type, odoo, config, flow_config)
+        result = _dispatch_flow(data, flow_type, odoo, config, flow_config, cancel_check=cancel_check)
 
         # 6. Determinar status
         error_core = result.get("error")
         fallidos = result.get("fallidos", [])
 
-        if error_core:
+        if cancel_check():
+            status = "cancelled"
+        elif error_core:
             status = "error"
         elif fallidos:
             status = "partial"
@@ -160,7 +181,7 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
             db_writer.finish_execution(execution_id, "error", None, error_msg)
         raise
 
-    if error_core:
+    if status == "error" and error_core:
         raise RuntimeError(f"Flow '{flow_name}': el core fallo - {error_core}")
 
     return result

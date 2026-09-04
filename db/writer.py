@@ -74,3 +74,24 @@ class DBWriter:
                     conn.close()
                 except Exception:
                     pass
+
+    def is_cancelled(self, execution_id):
+          """Consulta BD para saber si la ejecución fue cancelada."""
+          if execution_id is None:
+              return False
+          conn = None
+          try:
+              conn = self._get_db_connection()
+              cur = conn.cursor()
+              cur.execute("SELECT status FROM executions WHERE id = %s", (execution_id,))
+              row = cur.fetchone()
+              cur.close()
+              return row and row[0] == "cancelled"
+          except Exception:
+              return False
+          finally:
+              if conn:
+                  try:
+                      conn.close()
+                  except Exception:
+                      pass

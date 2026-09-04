@@ -13,14 +13,14 @@ import UserMenu from '@/layouts/UserMenu'
 const HeaderBar = () => {
     const { pathname } = useLocation()
     const base = resolveBreadcrumb(pathname)
-    const extra = useBreadcrumbExtra()
+    const { extra, onNavigate } = useBreadcrumbExtra()
     const nav = resolveNav(pathname)
 
-    const migas = extra ? [...base, extra] : base
+    const extras = extra ? (Array.isArray(extra) ? extra : [extra]) : []
+    const migas = [...base, ...extras]
 
-    // Con un tramo extra, la sección deja de ser el final y pasa a ser un
-    // enlace de vuelta a su listado.
-    const rutaSeccion = extra ? nav?.item?.path : null
+    const tieneExtras = extras.length > 0
+    const rutaSeccion = tieneExtras ? nav?.item?.path : null
 
     return (
         <header className="app-header">
@@ -28,17 +28,34 @@ const HeaderBar = () => {
                 <span>Integrador 360</span>
                 {migas.map((miga, indice) => {
                     const esUltima = indice === migas.length - 1
-                    const esSeccion = Boolean(rutaSeccion) && indice === migas.length - 2
+                    if (esUltima) {
+                        return (
+                            <Fragment key={`${miga}-${indice}`}>
+                                <span className="breadcrumb__sep">/</span>
+                                <span className="breadcrumb__actual">{miga}</span>
+                            </Fragment>
+                        )
+                    }
+
+                    // Todos los tramos no-últimos son clickeables.
+                    // Si la página registró onNavigate → callback con índice.
+                    // Si no (admin con rutas reales) → Link a la ruta base.
+                    const esBase = indice < base.length
+                    const handleClick = onNavigate
+                        ? () => onNavigate(esBase ? -1 : indice - base.length)
+                        : null
 
                     return (
                         <Fragment key={`${miga}-${indice}`}>
                             <span className="breadcrumb__sep">/</span>
-                            {esSeccion ? (
+                            {handleClick ? (
+                                <a className="breadcrumb__link" onClick={handleClick}>
+                                    {miga}
+                                </a>
+                            ) : rutaSeccion && esBase ? (
                                 <Link to={rutaSeccion}>{miga}</Link>
                             ) : (
-                                <span className={esUltima ? 'breadcrumb__actual' : undefined}>
-                                    {miga}
-                                </span>
+                                <span>{miga}</span>
                             )}
                         </Fragment>
                     )

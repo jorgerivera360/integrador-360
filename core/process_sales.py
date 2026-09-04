@@ -18,11 +18,12 @@ from core.utils.lookups import lookup_partner, lookup_product, lookup_zone, reso
 
 class ProcessSales(CoreProcessor):
 
-    def __init__(self, odoo, config, flow_config):
+    def __init__(self, odoo, config, flow_config, cancel_check=None):
         self.odoo = odoo
         self.client_id = config["client_id"]
         self.logger = IntegradorLogger(client_id=self.client_id)
         self.flow_config = flow_config
+        self.cancel_check = cancel_check
 
     def process(self, data):
         if not data:
@@ -194,6 +195,10 @@ class ProcessSales(CoreProcessor):
             creados_detalle = []
 
             for header_key, lineas in ordenes.items():
+                if self.cancel_check and self.cancel_check():
+                    self.logger.info("Sales | Ejecución cancelada por el usuario")
+                    break
+
                 pedido, customer_id, zone_id, vendedor, condicion, warehouse_id, observacion, fecha = header_key
                 try:
                     # Armar order_lines

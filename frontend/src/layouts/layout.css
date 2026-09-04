@@ -148,6 +148,16 @@
     text-overflow: ellipsis;
 }
 
+.breadcrumb__link {
+    color: #1677ff;
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.breadcrumb__link:hover {
+    color: #4096ff;
+}
+
 /* ---------- Menú de usuario ---------- */
 
 .usuario {

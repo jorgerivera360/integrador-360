@@ -10,6 +10,7 @@ import { useSetBreadcrumb } from '@/layouts/BreadcrumbContext'
 import { OPCIONES_ERP } from '@/config/erp'
 import { ROLES } from '@/config/navigation'
 import { formatFechaHora } from '@/utils/format'
+import BotonVolver from '@/components/BotonVolver'
 import ModalEliminarCliente from './components/ModalEliminarCliente'
 import TestConexiones from './components/TestConexiones'
 import { IconAdvertencia, IconInfo, IconPapelera } from './icons'
@@ -230,6 +231,8 @@ const ClienteDetallePage = () => {
 
     return (
         <>
+            <BotonVolver to="/admin/clientes" />
+
             <div className="cliente-head">
                 <div>
                     <div className="cliente-head__linea">

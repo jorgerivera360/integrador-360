@@ -73,6 +73,12 @@ export const IconPlay = (props) => (
     </svg>
 )
 
+export const IconStop = (props) => (
+    <svg {...base} width={14} height={14} strokeWidth={1.8} {...props}>
+        <rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" stroke="none" />
+    </svg>
+)
+
 export const IconEliminar = (props) => (
     <svg {...base} width={14} height={14} strokeWidth={1.8} {...props}>
         <line x1="18" y1="6" x2="6" y2="18" />

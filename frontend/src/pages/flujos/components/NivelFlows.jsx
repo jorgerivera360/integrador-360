@@ -3,9 +3,9 @@ import { Alert, Button, Spin, Table, message } from 'antd'
 import ErpTag from '@/components/ErpTag'
 import ActivoTag from '@/components/ActivoTag'
 import useHasRole from '@/hooks/useHasRole'
-import { useFlowsClienteSummary, useEjecutarFlow, mensajeDeError } from '@/hooks/useFlujos'
+import { useFlowsClienteSummary, useEjecutarFlow, useCancelarFlow, mensajeDeError } from '@/hooks/useFlujos'
 import { formatFechaHora } from '@/utils/format'
-import { IconVolver, IconMas, IconPlay } from '../icons'
+import { IconVolver, IconMas, IconPlay, IconStop } from '../icons'
 
 const TITULOS_TIPO = {
     items: 'Productos',
@@ -18,6 +18,7 @@ const TITULOS_TIPO = {
 const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
     const { data: todosFlows, isPending, isError, error, refetch } = useFlowsClienteSummary(cliente.id)
     const ejecutar = useEjecutarFlow()
+    const cancelar = useCancelarFlow()
     const puedeEditar = useHasRole(['superadmin', 'admin'])
 
     const flows = todosFlows?.filter((f) => f.flow_type === flowType) || []
@@ -28,6 +29,14 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
         ejecutar.mutate(flow.id, {
             onSuccess: () => message.success(`Ejecución de "${flow.flow_name}" iniciada`),
             onError: (err) => message.error(mensajeDeError(err, 'No se pudo iniciar la ejecución')),
+        })
+    }
+
+    const handleCancelar = (e, flow) => {
+        e.stopPropagation()
+        cancelar.mutate(flow.id, {
+            onSuccess: () => message.success(`Cancelación de "${flow.flow_name}" solicitada`),
+            onError: (err) => message.error(mensajeDeError(err, 'No se pudo cancelar la ejecución')),
         })
     }
 
@@ -74,22 +83,34 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
             title: 'Acciones',
             key: 'acciones',
             align: 'center',
-            width: 110,
+            width: 200,
             render: (_, flow) => (
-                <Button
-                    size="small"
-                    type="primary"
-                    ghost
-                    disabled={!flow.is_active}
-                    icon={<IconPlay />}
-                    onClick={(e) => handleEjecutar(e, flow)}
-                    loading={ejecutar.isPending && ejecutar.variables === flow.id}
-                >
-                    Ejecutar
-                </Button>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                    <Button
+                        size="small"
+                        type="primary"
+                        ghost
+                        disabled={!flow.is_active}
+                        icon={<IconPlay />}
+                        onClick={(e) => handleEjecutar(e, flow)}
+                        loading={ejecutar.isPending && ejecutar.variables === flow.id}
+                    >
+                        Ejecutar
+                    </Button>
+                    <Button
+                        size="small"
+                        danger
+                        ghost
+                        icon={<IconStop />}
+                        onClick={(e) => handleCancelar(e, flow)}
+                        loading={cancelar.isPending && cancelar.variables === flow.id}
+                    >
+                        Detener
+                    </Button>
+                </div>
             ),
         }] : []),
-    ], [puedeEditar, ejecutar.isPending, ejecutar.variables])
+    ], [puedeEditar, ejecutar.isPending, ejecutar.variables, cancelar.isPending, cancelar.variables])
 
     if (isError) {
         return (

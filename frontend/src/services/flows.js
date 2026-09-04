@@ -27,3 +27,7 @@ export const deleteFlow = (clientId, flowId) => {
 export const executeFlow = (flowId) => {
     return api.post(`/flows/${flowId}/execute`)
 }
+
+export const cancelFlow = (flowId) => {
+    return api.post(`/flows/${flowId}/cancel`)
+}

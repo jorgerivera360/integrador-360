@@ -9,6 +9,7 @@ import { mensajeDeError } from '@/hooks/useClientes'
 import { useSetBreadcrumb } from '@/layouts/BreadcrumbContext'
 import { DOMINIO_CORPORATIVO, OPCIONES_ROL, ROLES_INFO } from '@/config/roles'
 import { formatFechaHora } from '@/utils/format'
+import BotonVolver from '@/components/BotonVolver'
 import ModalEliminarUsuario from './components/ModalEliminarUsuario'
 import { IconPapelera } from './icons'
 import '@/styles/pagina.css'
@@ -96,6 +97,8 @@ const UsuarioDetallePage = () => {
 
     return (
         <>
+            <BotonVolver to="/admin/usuarios" />
+
             <div className="cliente-head">
                 <div>
                     <div className="cliente-head__linea">

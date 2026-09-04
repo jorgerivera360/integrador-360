@@ -16,11 +16,12 @@ from core.utils.lookups import lookup_uom, lookup_category, lookup_tax, lookup_r
 
 class ProcessItems(CoreProcessor):
 
-    def __init__(self, odoo, config, flow_config):
+    def __init__(self, odoo, config, flow_config, cancel_check=None):
         self.odoo = odoo
         self.client_id = config["client_id"]
         self.logger = IntegradorLogger(client_id=self.client_id)
         self.flow_config = flow_config
+        self.cancel_check = cancel_check
 
     def process(self, data):
         if not data:
@@ -131,7 +132,11 @@ class ProcessItems(CoreProcessor):
             fallidos = []
             creados_detalle = []
 
-            for row in data:
+            for i, row in enumerate(data):
+                if self.cancel_check and i % 50 == 0 and i > 0 and self.cancel_check():
+                    self.logger.info("Items | Ejecución cancelada por el usuario")
+                    break
+
                 ref = str(row.get("referencia", ""))
                 try:
                     # Resolver UOM (obligatorio)

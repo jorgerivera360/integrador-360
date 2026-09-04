@@ -178,3 +178,30 @@ def _execute_flow_background(client_slug, flow_id, user_id):
 
     except Exception as e:
         logger.error(f"Error en ejecución manual flow_id={flow_id}: {e}")
+
+@router.post("/flows/{flow_id}/cancel", status_code=200)
+def cancel_flow(
+    flow_id: int,
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    cursor = db.cursor()
+
+    cursor.execute(
+        """SELECT id FROM executions
+        WHERE flow_id = %s AND status = 'running'
+        ORDER BY started_at DESC LIMIT 1""",
+        (flow_id,)
+    )
+    execution = cursor.fetchone()
+
+    if not execution:
+        raise HTTPException(status_code=404, detail="No hay ejecución en curso para este flow")
+
+    cursor.execute(
+        "UPDATE executions SET status = 'cancelled' WHERE id = %s",
+        (execution["id"],)
+    )
+    db.commit()
+
+    return {"msg": "Cancelación solicitada", "execution_id": execution["id"]}
