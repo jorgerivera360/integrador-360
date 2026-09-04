@@ -181,6 +181,7 @@ class ProcessPurchases(CoreProcessor):
                 if self.cancel_check and self.cancel_check():
                     self.logger.info("Purchases | Ejecución cancelada por el usuario")
                     break
+                compra, supplier_id, referencia, fecha, estado, picking_type_id = header_key
                 try:
                     # Armar order_lines
                     order_lines = []
