@@ -190,7 +190,7 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
                             logger.info(
                                 f"Resolve Masters | {len(missing_data)} proveedores encontrados en ERP, creando en Odoo"
                             )
-                            processor = ProcessPartners(odoo, config, sup_cfg)
+                            processor = ProcessPartners(odoo, config, {**sup_cfg, "flow_type": "supplier"} )
                             result = processor.process(missing_data)
                             resumen["proveedores_resueltos"] += result.get("creados", 0)
 
@@ -240,7 +240,7 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
                             logger.info(
                                 f"Resolve Masters | {len(missing_data)} clientes encontrados en ERP, creando en Odoo"
                             )
-                            processor = ProcessPartners(odoo, config, cust_cfg)
+                            processor = ProcessPartners(odoo, config, {**cust_cfg, "flow_type": "customer"})
                             result = processor.process(missing_data)
                             resumen["clientes_resueltos"] += result.get("creados", 0)
 

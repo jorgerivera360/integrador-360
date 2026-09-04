@@ -138,14 +138,20 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
         result = _dispatch_flow(data, flow_type, odoo, config, flow_config)
 
         # 6. Determinar status
+        error_core = result.get("error")
         fallidos = result.get("fallidos", [])
-        status = "success" if not fallidos else "partial"
+
+        if error_core:
+            status = "error"
+        elif fallidos:
+            status = "partial"
+        else:
+            status = "success"
+
         logger.info(f"Main | Flow '{flow_name}' finalizado: status={status}")
 
         if db_writer:
-            db_writer.finish_execution(execution_id, status, result)
-
-        return result
+            db_writer.finish_execution(execution_id, status, result, error_core)
 
     except Exception as e:
         error_msg = traceback.format_exc()
@@ -153,3 +159,8 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
         if db_writer:
             db_writer.finish_execution(execution_id, "error", None, error_msg)
         raise
+
+    if error_core:
+        raise RuntimeError(f"Flow '{flow_name}': el core fallo - {error_core}")
+
+    return result
