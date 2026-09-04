@@ -175,7 +175,7 @@ def update_flow(
     if flow.flow_config is not None:
         previous_values["flow_config"] = existing["flow_config"]
         updates["flow_config"] = json.dumps(flow.flow_config)
-    if flow.schedule_cron is not None:
+    if "schedule_cron" in flow.model_fields_set:
         previous_values["schedule_cron"] = existing["schedule_cron"]
         updates["schedule_cron"] = flow.schedule_cron
     if flow.is_active is not None:
