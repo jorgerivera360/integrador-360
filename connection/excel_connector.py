@@ -15,12 +15,7 @@ from connection.base import ERPConnector
 
 class ExcelConnector(ERPConnector):
     
-    ARCHIVOS_VALIDOS = [
-        "productos",
-        "partners",
-        "entradas",
-        "salidas"
-    ]
+    ARCHIVOS_VALIDOS = ["productos", "clientes", "proveedores", "entradas", "salidas"]
 
     def __init__(self, config: dict):
         self.client_id = config["client_id"]

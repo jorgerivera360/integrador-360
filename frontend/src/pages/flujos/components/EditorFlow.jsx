@@ -15,6 +15,7 @@ import SeccionConfigTransacciones from './SeccionConfigTransacciones'
 import SeccionConditionals from './SeccionConditionals'
 import SeccionDocumentos from './SeccionDocumentos'
 import SeccionResolve from './SeccionResolve'
+import SeccionOrigenExcel from './SeccionOrigenExcel'
 
 const TITULOS_TIPO = {
     items: 'Productos',
@@ -254,6 +255,11 @@ function deserializar(flow, erpType, flowType) {
 function serializar(base, config, erpType, flowType) {
     const fc = {}
 
+    if (erpType === 'excel') {
+        const TIPO_POR_FLOW = { items: 'productos', customer: 'clientes', supplier: 'proveedores', purchases: 'entradas', sales: 'salidas' }
+        fc.endpoint = TIPO_POR_FLOW[flowType] || ''
+    }
+
     if (erpType === 'ws') {
         fc.sql = config.sql || ''
     }
@@ -450,6 +456,13 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                     onChange={setBase}
                     esEdicion={esEdicion}
                 />
+
+                {erpType === 'excel' && (
+                    <SeccionOrigenExcel
+                        clienteId={cliente.id}
+                        flowType={flowType}
+                    />
+                )}
 
                 {erpType === 'ws' && (
                     <SeccionSQL
