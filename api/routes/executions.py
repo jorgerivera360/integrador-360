@@ -13,7 +13,7 @@ def get_executions(
     flow_id: int,
     status: str = None,
     triggered_by: str = None,
-    limit: int = Query(default=50, le=500),
+    limit: int = Query(default=50, le=2000),
     offset: int = Query(default=0, ge=0),
     db=Depends(get_db),
     current_user=Depends(require_role("superadmin", "admin", "viewer"))
