@@ -59,8 +59,8 @@ const Sidebar = () => {
 
     const alHacerClic = ({ key }) => {
         const path = rutas.get(key)
-        if (path && path !== pathname) {
-            navigate(path)
+        if (path) {
+            navigate(path, { replace: path === pathname, state: { reset: Date.now() } })
         }
     }
 
@@ -75,7 +75,7 @@ const Sidebar = () => {
             breakpoint="lg"
             onBreakpoint={(esAngosto) => esAngosto && useUiStore.getState().setSidebarColapsado(true)}
         >
-            <div className="sidebar__marca">
+            <div className="sidebar__marca" onClick={() => navigate('/tablero')} style={{ cursor: 'pointer' }}>
                 <img
                     src={colapsado ? logoMarca : logoCompleto}
                     alt="360 Software"

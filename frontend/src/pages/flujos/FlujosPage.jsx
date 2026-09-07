@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useSetBreadcrumb } from '@/layouts/BreadcrumbContext'
 import NivelClientes from './components/NivelClientes'
 import NivelCategorias from './components/NivelCategorias'
@@ -16,12 +17,18 @@ const TITULOS_TIPO = {
 }
 
 const FlujosPage = () => {
+    const location = useLocation()
     const [nivel, setNivel] = useState(1)
     const [cliente, setCliente] = useState(null)
     const [flowType, setFlowType] = useState(null)
     const [flowId, setFlowId] = useState(null)
     const [flowName, setFlowName] = useState(null)
     const [flowTypeCrear, setFlowTypeCrear] = useState(null)
+
+    useEffect(() => {
+        setNivel(1); setCliente(null); setFlowType(null)
+        setFlowId(null); setFlowName(null); setFlowTypeCrear(null)
+    }, [location.state?.reset])
 
     const breadcrumb = nivel === 1 ? null
         : nivel === 2 ? [cliente?.name]
