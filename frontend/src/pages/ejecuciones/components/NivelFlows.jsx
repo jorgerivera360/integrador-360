@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Alert, Button, Spin, Table } from 'antd'
+import { Alert, Button, Table } from 'antd'
 import ErpTag from '@/components/ErpTag'
 import ActivoTag from '@/components/ActivoTag'
 import { useFlowsCliente, mensajeDeError } from '@/hooks/useEjecuciones'
@@ -79,24 +79,21 @@ const NivelFlows = ({ cliente, flowType, onSeleccionar, onVolver }) => {
                 <ErpTag erpType={cliente.erp_type} />
             </div>
 
-            {isPending ? (
-                <div className="ejec-cargando"><Spin /></div>
-            ) : (
-                <div className="tarjeta-borde">
-                    <Table
-                        className="tabla-panel tabla-panel--clicable"
-                        columns={columnas}
-                        dataSource={flows}
-                        rowKey="id"
-                        scroll={{ x: 500 }}
-                        onRow={(flow) => ({
-                            onClick: () => onSeleccionar(flow),
-                        })}
-                        pagination={false}
-                        locale={{ emptyText: `No hay flujos de tipo ${tituloTipo.toLowerCase()}` }}
-                    />
-                </div>
-            )}
+            <div className="tarjeta-borde">
+                <Table
+                    className="tabla-panel tabla-panel--clicable"
+                    columns={columnas}
+                    dataSource={flows}
+                    rowKey="id"
+                    loading={isPending}
+                    scroll={{ x: 500 }}
+                    onRow={(flow) => ({
+                        onClick: () => onSeleccionar(flow),
+                    })}
+                    pagination={false}
+                    locale={{ emptyText: `No hay flujos de tipo ${tituloTipo.toLowerCase()}` }}
+                />
+            </div>
         </>
     )
 }

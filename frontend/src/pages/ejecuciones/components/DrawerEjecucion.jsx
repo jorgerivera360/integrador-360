@@ -160,6 +160,10 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                 </div>
             )}
 
+            {fallidos.length > 1 && (
+                <ResumenErrores fallidos={fallidos} />
+            )}
+
             {tieneError && (
                 <div className="drawer-error">
                     <div className="drawer-error__titulo">Error</div>
@@ -180,6 +184,34 @@ const etiquetaRegistro = (item, i) => {
         return item.sucursal ? `${item.identificacion} / ${item.sucursal}` : item.identificacion
     }
     return `#${i + 1}`
+}
+
+const ResumenErrores = ({ fallidos }) => {
+    const agrupados = {}
+    for (const item of fallidos) {
+        const razon = item.razon || item.reason || 'Sin detalle'
+        if (!agrupados[razon]) agrupados[razon] = 0
+        agrupados[razon]++
+    }
+
+    const ordenados = Object.entries(agrupados)
+        .sort(([, a], [, b]) => b - a)
+
+    return (
+        <div className="drawer-seccion">
+            <h4 className="drawer-seccion__titulo">
+                Errores agrupados ({ordenados.length})
+            </h4>
+            <div className="drawer-fallidos">
+                {ordenados.map(([razon, cantidad], i) => (
+                    <div key={i} className="drawer-fallido">
+                        <span className="drawer-fallido__cantidad">{cantidad}</span>
+                        <span className="drawer-fallido__razon">{razon}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
 }
 
 const CampoResultado = ({ label, valor, esError }) => {

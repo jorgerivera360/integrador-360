@@ -288,6 +288,14 @@
     line-height: 1.4;
 }
 
+.drawer-fallido__cantidad {
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ff4d4f;
+    min-width: 28px;
+}
+
 /* ---------- Creados en drawer ---------- */
 
 .drawer-creados {

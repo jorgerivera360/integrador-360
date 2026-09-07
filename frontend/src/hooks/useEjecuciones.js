@@ -49,7 +49,7 @@ export function useHistorialEjecuciones(flowId, filtros = {}) {
     const params = {}
     if (filtros.status) params.status = filtros.status
     if (filtros.triggeredBy) params.triggered_by = filtros.triggeredBy
-    params.limit = filtros.limit || 50
+    params.limit = filtros.limit || 2000
 
     return useQuery({
         queryKey: CLAVES_EJECUCIONES.historial(flowId, params),

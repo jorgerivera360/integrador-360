@@ -89,7 +89,7 @@ CREATE TABLE executions (
     started_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     finished_at     TIMESTAMPTZ,
     status          VARCHAR(20)  NOT NULL DEFAULT 'running'
-                    CHECK (status IN ('running', 'success', 'partial', 'error')),
+                    CHECK (status IN ('running', 'success', 'partial', 'error', 'cancelled')),
     result          JSONB,
     error_message   TEXT,
     triggered_by    VARCHAR(20)  NOT NULL DEFAULT 'scheduler'

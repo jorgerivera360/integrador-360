@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Alert, Button, Select, Space, Spin, Table } from 'antd'
+import { Alert, Button, Select, Space, Table } from 'antd'
 import ErpTag from '@/components/ErpTag'
 import EstadoTag from '@/components/EstadoTag'
 import { useHistorialEjecuciones, mensajeDeError } from '@/hooks/useEjecuciones'
@@ -9,7 +9,7 @@ import { IconVolver } from '../icons'
 
 const OPCIONES_ESTADO = [
     { value: null, label: 'Todos' },
-    { value: 'success', label: 'Exito' },
+    { value: 'success', label: 'Éxito' },
     { value: 'partial', label: 'Parcial' },
     { value: 'error', label: 'Error' },
     { value: 'running', label: 'En curso' },
@@ -182,29 +182,26 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
                 />
             </Space>
 
-            {isPending ? (
-                <div className="ejec-cargando"><Spin /></div>
-            ) : (
-                <div className="tarjeta-borde">
-                    <Table
-                        className="tabla-panel tabla-panel--clicable"
-                        columns={columnas}
-                        dataSource={ejecuciones}
-                        rowKey="id"
-                        scroll={{ x: 700 }}
-                        onRow={(ejecucion) => ({
-                            onClick: () => abrirDrawer(ejecucion),
-                        })}
-                        pagination={{
-                            pageSize: 15,
-                            showSizeChanger: false,
-                            showTotal: (total, [desde, hasta]) =>
-                                `Mostrando ${desde}-${hasta} de ${total} ejecuciones`,
-                        }}
-                        locale={{ emptyText: 'No hay ejecuciones registradas' }}
-                    />
-                </div>
-            )}
+            <div className="tarjeta-borde">
+                <Table
+                    className="tabla-panel tabla-panel--clicable"
+                    columns={columnas}
+                    dataSource={ejecuciones}
+                    rowKey="id"
+                    loading={isPending}
+                    scroll={{ x: 700 }}
+                    onRow={(ejecucion) => ({
+                        onClick: () => abrirDrawer(ejecucion),
+                    })}
+                    pagination={{
+                        pageSize: 15,
+                        showSizeChanger: false,
+                        showTotal: (total, [desde, hasta]) =>
+                            `Mostrando ${desde}-${hasta} de ${total} ejecuciones`,
+                    }}
+                    locale={{ emptyText: 'No hay ejecuciones registradas' }}
+                />
+            </div>
 
             <DrawerEjecucion
                 ejecucion={ejecucionActiva}

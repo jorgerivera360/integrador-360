@@ -32,9 +32,8 @@ function dictATabla(obj) {
 function tablaADict(tabla) {
     const dict = {}
     for (const fila of tabla) {
-        if (fila.clave?.trim()) {
-            dict[fila.clave.trim()] = fila.valor
-        }
+        if (fila.clave == null) continue
+        dict[fila.clave] = fila.valor ?? ''
     }
     return dict
 }
