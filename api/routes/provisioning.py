@@ -195,18 +195,32 @@ def provision_container(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error escribiendo docker-compose.yml: {e}")
 
-    # Levantar el contenedor (cwd = directorio del compose para que resuelva ${VARS})
-    compose_dir = os.path.dirname(COMPOSE_PATH)
+    # Levantar el contenedor con docker run
+    env_args = []
+    for env_str in compose["services"][service_name]["environment"]:
+        key, _, val = env_str.partition("=")
+        # Resolver ${VAR} desde el entorno real del host (la API tiene las mismas vars)
+        if val.startswith("${") and val.endswith("}"):
+            val = os.getenv(key, "")
+        env_args.extend(["-e", f"{key}={val}"])
+
+    vol_args = []
+    for vol in compose["services"][service_name]["volumes"]:
+        vol_args.extend(["-v", vol])
+
     try:
         result = subprocess.run(
-            ["docker", "compose", "-f", COMPOSE_PATH, "up", "-d", service_name],
+            ["docker", "run", "-d",
+             "--name", service_name,
+             "--restart", "unless-stopped",
+             *env_args, *vol_args,
+             DOCKER_IMAGE],
             capture_output=True, text=True, timeout=60,
-            cwd=compose_dir,
         )
         if result.returncode != 0:
             return {
                 "success": False,
-                "msg": f"docker compose up falló: {result.stderr.strip()}"
+                "msg": f"docker run falló: {result.stderr.strip()}"
             }
     except subprocess.TimeoutExpired:
         return {
@@ -216,7 +230,7 @@ def provision_container(
     except FileNotFoundError:
         return {
             "success": False,
-            "msg": "docker compose no está disponible en el contenedor API"
+            "msg": "docker no está disponible en el contenedor API"
         }
 
     return {
