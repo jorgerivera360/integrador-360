@@ -186,29 +186,25 @@ def delete_client(
 
     slug = existing["client_id"]
 
-    # Cleanup: GCP + credenciales locales + contenedor Docker
-    from api.routes.provisioning import cleanup_gcp_secret, cleanup_local_credentials, cleanup_container
-
-    gcp_result = cleanup_gcp_secret(slug)
-    local_result = cleanup_local_credentials(slug)
-    container_result = cleanup_container(slug)
-
-    # Registrar en change_history
+    # Primero borrar de BD (rápido, no bloquea)
     cursor.execute(
         """INSERT INTO change_history
         (table_name, record_id, action, previous_values, changed_by)
         VALUES ('clients', %s, 'delete', %s, %s)""",
         (client_id, json.dumps({"client_id": slug, "name": existing["name"], "erp_type": existing["erp_type"]}), current_user["id"])
     )
-
     cursor.execute("DELETE FROM clients WHERE id = %s", (client_id,))
     db.commit()
 
-    return {
-        "msg": f"Cliente '{slug}' eliminado",
-        "cleanup": {
-            "gcp_secret": gcp_result,
-            "local_credentials": local_result,
-            "container": container_result,
-        }
-    }
+    # Cleanup en background (GCP + credenciales locales + contenedor Docker)
+    import threading
+    from api.routes.provisioning import cleanup_gcp_secret, cleanup_local_credentials, cleanup_container
+
+    def _cleanup():
+        cleanup_gcp_secret(slug)
+        cleanup_local_credentials(slug)
+        cleanup_container(slug)
+
+    threading.Thread(target=_cleanup, daemon=True).start()
+
+    return {"msg": f"Cliente '{slug}' eliminado"}
