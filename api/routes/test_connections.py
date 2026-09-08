@@ -139,7 +139,7 @@ def test_erp_connection(
         }
 
 
-@router.post("/odoo")
+@router.post("/clients/{client_id}/test/odoo")
 def test_odoo_connection(
     client_id: int,
     body: Optional[TestConnectionRequest] = None,
