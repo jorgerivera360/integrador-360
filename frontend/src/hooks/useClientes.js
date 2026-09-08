@@ -7,6 +7,11 @@ import {
     deleteClient,
     testErp,
     testOdoo,
+    testErpWithCredentials,
+    testOdooWithCredentials,
+    saveCredentials,
+    provisionContainer,
+    getProvisionStatus,
 } from '@/services/clients'
 
 /**
@@ -94,6 +99,50 @@ export function useProbarConexion(id, tipo) {
             const respuesta = await (tipo === 'odoo' ? testOdoo(id) : testErp(id))
             return respuesta.data
         },
+    })
+}
+
+/**
+ * Prueba de conexión con credenciales del formulario (sin GCP).
+ * `tipo`: 'erp' | 'odoo'. `credentials`: objeto con { erp, odoo }.
+ */
+export function useProbarConexionConCredenciales(id, tipo) {
+    return useMutation({
+        mutationFn: async (credentials) => {
+            const fn = tipo === 'odoo' ? testOdooWithCredentials : testErpWithCredentials
+            const respuesta = await fn(id, credentials)
+            return respuesta.data
+        },
+    })
+}
+
+export function useGuardarCredenciales(id) {
+    return useMutation({
+        mutationFn: async (data) => {
+            const respuesta = await saveCredentials(id, data)
+            return respuesta.data
+        },
+    })
+}
+
+export function useProvisionarContenedor(id) {
+    return useMutation({
+        mutationFn: async () => {
+            const respuesta = await provisionContainer(id)
+            return respuesta.data
+        },
+    })
+}
+
+export function useEstadoProvision(id) {
+    return useQuery({
+        queryKey: ['provision', 'status', String(id)],
+        queryFn: async () => {
+            const respuesta = await getProvisionStatus(id)
+            return respuesta.data
+        },
+        enabled: Boolean(id),
+        refetchInterval: 10_000,
     })
 }
 

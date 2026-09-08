@@ -31,3 +31,25 @@ export const testErp = (id) => {
 export const testOdoo = (id) => {
     return api.post(`/clients/${id}/test/odoo`)
 }
+
+// --- Provisioning (onboarding) ---
+
+export const testErpWithCredentials = (id, credentials) => {
+    return api.post(`/clients/${id}/test/erp`, credentials)
+}
+
+export const testOdooWithCredentials = (id, credentials) => {
+    return api.post(`/clients/${id}/test/odoo`, credentials)
+}
+
+export const saveCredentials = (id, data) => {
+    return api.post(`/clients/${id}/credentials`, data)
+}
+
+export const provisionContainer = (id) => {
+    return api.post(`/clients/${id}/provision`)
+}
+
+export const getProvisionStatus = (id) => {
+    return api.get(`/clients/${id}/provision/status`)
+}

@@ -212,6 +212,19 @@
     .resultado { animation: none; }
 }
 
+/* ---------- Formulario de credenciales ---------- */
+
+.cred-seccion-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+
+.cred-seccion-head .test__icono {
+    margin-bottom: 0;
+}
+
 /* ---------- Modal de eliminación ---------- */
 
 .borrar__cascada {

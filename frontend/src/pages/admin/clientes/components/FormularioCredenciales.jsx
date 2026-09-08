@@ -1,0 +1,300 @@
+import { useState } from 'react'
+import { Alert, App, Button, Form, Input, Switch } from 'antd'
+import { etiquetaErp } from '@/config/erp'
+import {
+    useProbarConexionConCredenciales,
+    useGuardarCredenciales,
+    mensajeDeError,
+} from '@/hooks/useClientes'
+import { IconCheck, IconEquis, IconRayo, IconServidor, IconNube } from '../icons'
+
+// --- Campos ERP por tipo ---
+
+const CAMPOS_WS = [
+    { name: 'url', label: 'URL del Web Service', required: true },
+    { name: 'conexion', label: 'Nombre de conexión', required: true },
+    { name: 'compania', label: 'ID Compañía', required: true },
+    { name: 'usuario', label: 'Usuario', required: true },
+    { name: 'clave', label: 'Clave', required: true, password: true },
+    { name: 'proveedor', label: 'Proveedor', required: true },
+    { name: 'proxy_host', label: 'Proxy Host', required: false },
+    { name: 'proxy_port', label: 'Proxy Port', required: false },
+]
+
+const CAMPOS_CONNEKTA = [
+    { name: 'url', label: 'URL', required: true },
+    { name: 'urlqa', label: 'URL QA', required: false },
+    { name: 'idcompania', label: 'ID Compañía', required: true },
+    { name: 'connikey', label: 'ConniKey', required: true },
+    { name: 'connitoken', label: 'ConniToken', required: true, password: true },
+]
+
+const CAMPOS_SAP = [
+    { name: 'url', label: 'URL Service Layer', required: true },
+    { name: 'compania', label: 'Compañía (base de datos)', required: true },
+    { name: 'usuario', label: 'Usuario', required: true },
+    { name: 'clave', label: 'Clave', required: true, password: true },
+]
+
+const CAMPOS_ODOO = [
+    { name: 'url', label: 'URL de Odoo', required: true },
+    { name: 'database', label: 'Base de datos', required: true },
+    { name: 'usuario', label: 'Usuario', required: true },
+    { name: 'clave', label: 'Clave', required: true, password: true },
+]
+
+const CAMPOS_ERP = {
+    ws: CAMPOS_WS,
+    connekta: CAMPOS_CONNEKTA,
+    sap: CAMPOS_SAP,
+}
+
+// --- Resultado de test ---
+
+const ResultadoTest = ({ resultado, error }) => {
+    const fallo = Boolean(error)
+    const exito = !fallo && resultado?.success === true
+    const hayResultado = fallo || Boolean(resultado)
+
+    if (!hayResultado) return null
+
+    const detalle = fallo ? mensajeDeError(error) : resultado?.msg
+
+    return (
+        <div className={`resultado resultado--${exito ? 'ok' : 'error'}`}>
+            <div className="resultado__head">
+                {exito ? <IconCheck /> : <IconEquis />}
+                {exito ? 'Conexión exitosa' : 'Conexión fallida'}
+            </div>
+            <div className="resultado__cuerpo">
+                <div className="resultado__detalle">{detalle}</div>
+            </div>
+        </div>
+    )
+}
+
+// --- Componente principal ---
+
+const FormularioCredenciales = ({ cliente }) => {
+    const { message } = App.useApp()
+    const [form] = Form.useForm()
+    const [erpTesteado, setErpTesteado] = useState(false)
+    const [odooTesteado, setOdooTesteado] = useState(false)
+
+    const erpType = cliente.erp_type
+    const tieneErp = erpType !== 'excel'
+    const camposErp = CAMPOS_ERP[erpType] || []
+
+    const probarErp = useProbarConexionConCredenciales(cliente.id, 'erp')
+    const probarOdoo = useProbarConexionConCredenciales(cliente.id, 'odoo')
+    const guardar = useGuardarCredenciales(cliente.id)
+
+    const obtenerCredencialesErp = () => {
+        const valores = form.getFieldsValue()
+        const erp = {}
+        camposErp.forEach((campo) => {
+            const val = valores[`erp_${campo.name}`]
+            erp[campo.name] = val || (campo.required ? '' : null)
+        })
+        return erp
+    }
+
+    const obtenerCredencialesOdoo = () => {
+        const valores = form.getFieldsValue()
+        return {
+            url: valores.odoo_url || '',
+            database: valores.odoo_database || '',
+            usuario: valores.odoo_usuario || '',
+            clave: valores.odoo_clave || '',
+        }
+    }
+
+    const handleProbarErp = async () => {
+        const erp = obtenerCredencialesErp()
+        const resultado = await probarErp.mutateAsync({ erp })
+        if (resultado?.success) setErpTesteado(true)
+    }
+
+    const handleProbarOdoo = async () => {
+        const odoo = obtenerCredencialesOdoo()
+        const resultado = await probarOdoo.mutateAsync({ odoo })
+        if (resultado?.success) setOdooTesteado(true)
+    }
+
+    const handleGuardar = async () => {
+        try {
+            await form.validateFields()
+        } catch {
+            message.warning('Completa todos los campos obligatorios')
+            return
+        }
+
+        const erp = tieneErp ? obtenerCredencialesErp() : {}
+        const odoo = obtenerCredencialesOdoo()
+
+        const resultado = await guardar.mutateAsync({ erp, odoo })
+        if (resultado?.success) {
+            message.success('Credenciales guardadas exitosamente')
+        } else {
+            message.error(resultado?.msg || 'Error al guardar credenciales')
+        }
+    }
+
+    // Reset tests cuando cambian los campos
+    const handleValuesChange = () => {
+        setErpTesteado(false)
+        setOdooTesteado(false)
+        probarErp.reset()
+        probarOdoo.reset()
+    }
+
+    return (
+        <div className="seccion" style={{ marginBottom: 0 }}>
+            <div className="seccion__titulo">Credenciales de integración</div>
+            <p className="seccion__sub">
+                Configura las credenciales del ERP y del WMS (Odoo) para este cliente.
+                Prueba ambas conexiones antes de guardar.
+            </p>
+            <div className="seccion__linea" />
+
+            <Form
+                form={form}
+                layout="vertical"
+                onValuesChange={handleValuesChange}
+            >
+                <div className="grid-2">
+                    {/* --- Columna ERP --- */}
+                    <div className="columna">
+                        <div className="cred-seccion-head">
+                            <div className="test__icono test__icono--azul">
+                                <IconServidor />
+                            </div>
+                            <div>
+                                <div className="test__titulo">
+                                    {tieneErp ? `ERP — ${etiquetaErp(erpType)}` : 'ERP — No aplica'}
+                                </div>
+                                <p className="test__sub" style={{ marginBottom: 0 }}>
+                                    {tieneErp
+                                        ? 'Credenciales de conexión al ERP del cliente'
+                                        : 'Excel no requiere credenciales de ERP'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {tieneErp ? (
+                            <>
+                                {camposErp.map((campo) => (
+                                    <Form.Item
+                                        key={campo.name}
+                                        name={`erp_${campo.name}`}
+                                        label={campo.label}
+                                        rules={campo.required ? [{ required: true, message: `${campo.label} es obligatorio` }] : []}
+                                        style={{ marginBottom: 12 }}
+                                    >
+                                        {campo.password
+                                            ? <Input.Password autoComplete="off" />
+                                            : <Input autoComplete="off" />
+                                        }
+                                    </Form.Item>
+                                ))}
+
+                                <Button
+                                    icon={<IconRayo />}
+                                    loading={probarErp.isPending}
+                                    onClick={handleProbarErp}
+                                >
+                                    Probar conexión ERP
+                                </Button>
+
+                                <ResultadoTest
+                                    resultado={probarErp.data}
+                                    error={probarErp.isError ? probarErp.error : null}
+                                />
+                            </>
+                        ) : (
+                            <Alert
+                                type="info"
+                                showIcon
+                                message="Los clientes Excel solo necesitan credenciales de WMS"
+                            />
+                        )}
+                    </div>
+
+                    {/* --- Columna Odoo --- */}
+                    <div className="columna">
+                        <div className="cred-seccion-head">
+                            <div className="test__icono test__icono--verde">
+                                <IconNube />
+                            </div>
+                            <div>
+                                <div className="test__titulo">WMS — Odoo</div>
+                                <p className="test__sub" style={{ marginBottom: 0 }}>
+                                    Credenciales de la instancia de Odoo donde se carga la información
+                                </p>
+                            </div>
+                        </div>
+
+                        {CAMPOS_ODOO.map((campo) => (
+                            <Form.Item
+                                key={campo.name}
+                                name={`odoo_${campo.name}`}
+                                label={campo.label}
+                                rules={[{ required: true, message: `${campo.label} es obligatorio` }]}
+                                style={{ marginBottom: 12 }}
+                            >
+                                {campo.password
+                                    ? <Input.Password autoComplete="off" />
+                                    : <Input autoComplete="off" />
+                                }
+                            </Form.Item>
+                        ))}
+
+                        <Button
+                            icon={<IconRayo />}
+                            loading={probarOdoo.isPending}
+                            onClick={handleProbarOdoo}
+                            style={{ background: '#52c41a', color: '#fff', borderColor: '#52c41a', boxShadow: '0 2px 6px rgba(82,196,26,.24)' }}
+                        >
+                            Probar conexión WMS
+                        </Button>
+
+                        <ResultadoTest
+                            resultado={probarOdoo.data}
+                            error={probarOdoo.isError ? probarOdoo.error : null}
+                        />
+                    </div>
+                </div>
+            </Form>
+
+            {/* --- Botón guardar --- */}
+            <div style={{ marginTop: 24, borderTop: '1px solid #f0f0f0', paddingTop: 20 }}>
+                {guardar.isError && (
+                    <Alert
+                        type="error"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        message={mensajeDeError(guardar.error)}
+                    />
+                )}
+
+                <Button
+                    type="primary"
+                    size="large"
+                    loading={guardar.isPending}
+                    onClick={handleGuardar}
+                    disabled={tieneErp ? (!erpTesteado || !odooTesteado) : !odooTesteado}
+                >
+                    Guardar credenciales
+                </Button>
+
+                {(tieneErp ? (!erpTesteado || !odooTesteado) : !odooTesteado) && (
+                    <span style={{ marginLeft: 12, fontSize: 13, color: '#8b93a1' }}>
+                        Prueba {tieneErp ? 'ambas conexiones' : 'la conexión WMS'} antes de guardar
+                    </span>
+                )}
+            </div>
+        </div>
+    )
+}
+
+export default FormularioCredenciales

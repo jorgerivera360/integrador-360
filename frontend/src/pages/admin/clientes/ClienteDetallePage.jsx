@@ -13,6 +13,8 @@ import { formatFechaHora } from '@/utils/format'
 import BotonVolver from '@/components/BotonVolver'
 import ModalEliminarCliente from './components/ModalEliminarCliente'
 import TestConexiones from './components/TestConexiones'
+import FormularioCredenciales from './components/FormularioCredenciales'
+import ProvisionContenedor from './components/ProvisionContenedor'
 import { IconAdvertencia, IconInfo, IconPapelera } from './icons'
 import '@/styles/pagina.css'
 import './clientes.css'
@@ -260,6 +262,20 @@ const ClienteDetallePage = () => {
                         label: 'Test de conexiones',
                         children: <TestConexiones cliente={cliente} />,
                     },
+                    ...(puedeEditar
+                        ? [
+                              {
+                                  key: 'credentials',
+                                  label: 'Credenciales',
+                                  children: <FormularioCredenciales cliente={cliente} />,
+                              },
+                              {
+                                  key: 'provision',
+                                  label: 'Contenedor',
+                                  children: <ProvisionContenedor cliente={cliente} />,
+                              },
+                          ]
+                        : []),
                 ]}
             />
 
