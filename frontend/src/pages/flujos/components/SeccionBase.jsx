@@ -9,7 +9,7 @@ const OPCIONES_FLOW_TYPE = [
     { value: 'sales', label: 'Ventas (sales)' },
 ]
 
-const SeccionBase = ({ datos, onChange, esEdicion }) => {
+const SeccionBase = ({ datos, onChange }) => {
     const cambiar = (campo) => (valor) => {
         onChange({ ...datos, [campo]: valor })
     }
@@ -44,7 +44,7 @@ const SeccionBase = ({ datos, onChange, esEdicion }) => {
                         onChange={cambiar('flow_type')}
                         options={OPCIONES_FLOW_TYPE}
                         placeholder="Seleccionar tipo"
-                        disabled={esEdicion}
+                        disabled
                         style={{ width: '100%' }}
                     />
                 </div>

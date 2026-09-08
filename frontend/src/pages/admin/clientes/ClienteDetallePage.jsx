@@ -101,6 +101,7 @@ const ClienteDetallePage = () => {
             is_active: valores.is_active,
         })
         message.success('Cambios guardados')
+        navigate('/admin/clientes')
     }
 
     /**

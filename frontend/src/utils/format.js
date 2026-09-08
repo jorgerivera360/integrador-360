@@ -46,8 +46,11 @@ export function formatDuracion(inicio, fin) {
     const segundos = ms / 1000
     if (segundos < 60) return `${segundos.toFixed(1)}s`
 
-    const minutos = Math.floor(segundos / 60)
+    const horas = Math.floor(segundos / 3600)
+    const minutos = Math.floor((segundos % 3600) / 60)
     const resto = Math.round(segundos % 60)
+
+    if (horas > 0) return `${horas}h ${dosDigitos(minutos)}m ${dosDigitos(resto)}s`
     return `${minutos}m ${dosDigitos(resto)}s`
 }
 

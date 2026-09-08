@@ -87,7 +87,7 @@
 .detalle-panel {
     border-radius: 8px;
     overflow: hidden;
-    max-width: 800px;
+    width: 100%;
 }
 
 .detalle-panel--antes  { border: 1px solid #ffccc7; }
@@ -136,10 +136,11 @@
 }
 
 .detalle-tabla td {
-    padding: 7px 14px;
+    padding: 9px 16px;
     border-bottom: 1px solid #f5f5f5;
     vertical-align: top;
     color: rgba(0, 0, 0, 0.75);
+    line-height: 1.6;
 }
 
 .detalle-tabla tbody tr:last-child td {
@@ -150,18 +151,27 @@
     font-weight: 500;
     color: rgba(0, 0, 0, 0.85);
     white-space: nowrap;
-    width: 180px;
+    width: 200px;
+    min-width: 160px;
 }
 
 /* Columnas antes/después en diff */
+.detalle-tabla--diff {
+    table-layout: fixed;
+}
+
 .detalle-tabla__col-antes,
 .detalle-tabla__celda-antes {
     background: #fff9f8;
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 
 .detalle-tabla__col-despues,
 .detalle-tabla__celda-despues {
     background: #f9fff6;
+    word-break: break-word;
+    white-space: pre-wrap;
 }
 
 /* JSON colapsable para objetos complejos */
@@ -185,7 +195,7 @@
     background: #fafafa;
     border: 1px solid #f0f0f0;
     border-radius: 6px;
-    max-height: 300px;
+    max-height: 420px;
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-word;
@@ -229,7 +239,7 @@
     }
 
     .detalle-panel {
-        max-width: 100%;
+        width: 100%;
     }
 
     .celda-campos {

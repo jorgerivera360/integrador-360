@@ -454,7 +454,6 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                 <SeccionBase
                     datos={base}
                     onChange={setBase}
-                    esEdicion={esEdicion}
                 />
 
                 {erpType === 'excel' && (

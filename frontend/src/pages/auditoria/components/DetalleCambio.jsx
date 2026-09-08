@@ -1,6 +1,35 @@
 import { useState } from 'react'
 import { IconAntes, IconCheck, IconDespues, IconEquis } from '../icons'
 
+/** Diccionario de nombres de campos en español. */
+const NOMBRES_CAMPO = {
+    // flows
+    flow_name: 'Nombre del flujo',
+    flow_type: 'Tipo de flujo',
+    flow_config: 'Configuración',
+    schedule_cron: 'Cron',
+    is_active: 'Activo',
+    execution_order: 'Orden de ejecución',
+    client_id: 'Cliente',
+    // clients
+    name: 'Nombre',
+    erp_type: 'Tipo de ERP',
+    // users
+    email: 'Correo electrónico',
+    role: 'Rol',
+    last_login: 'Último acceso',
+    // comunes
+    created_at: 'Fecha de creación',
+    updated_at: 'Última actualización',
+    created_by: 'Creado por',
+    updated_by: 'Actualizado por',
+}
+
+/** Traduce un nombre de campo técnico a español. */
+function traducirCampo(campo) {
+    return NOMBRES_CAMPO[campo] || campo
+}
+
 /** Formatea un valor para mostrarlo legible en la tabla. */
 function formatearValor(valor) {
     if (valor === null || valor === undefined) return '—'
@@ -21,7 +50,7 @@ const JsonColapsable = ({ valor }) => {
     const json = JSON.stringify(valor, null, 2)
     const lineas = json.split('\n').length
 
-    if (lineas <= 3) {
+    if (lineas <= 10) {
         return <pre className="detalle-json-inline">{json}</pre>
     }
 
@@ -74,7 +103,7 @@ const TablaSingle = ({ datos, tono, icono, titulo, subtitulo }) => {
                 <tbody>
                     {campos.map(([campo, valor]) => (
                         <tr key={campo}>
-                            <td className="detalle-tabla__campo">{campo}</td>
+                            <td className="detalle-tabla__campo">{traducirCampo(campo)}</td>
                             <td><CeldaValor valor={valor} /></td>
                         </tr>
                     ))}
@@ -102,6 +131,11 @@ const TablaDiff = ({ antes, despues }) => {
                 titulo="Cambios realizados"
             />
             <table className="detalle-tabla detalle-tabla--diff">
+                <colgroup>
+                    <col style={{ width: '200px' }} />
+                    <col style={{ width: '50%' }} />
+                    <col style={{ width: '50%' }} />
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Campo</th>
@@ -115,7 +149,7 @@ const TablaDiff = ({ antes, despues }) => {
                         const valDespues = despues?.[campo]
                         return (
                             <tr key={campo}>
-                                <td className="detalle-tabla__campo">{campo}</td>
+                                <td className="detalle-tabla__campo">{traducirCampo(campo)}</td>
                                 <td className="detalle-tabla__celda-antes">
                                     <CeldaValor valor={valAntes ?? '—'} />
                                 </td>
