@@ -9,17 +9,22 @@ export const CLAVES_FLUJOS = {
 }
 
 export function useClientesFlujos(filtros = {}) {
-    const params = {}
-    if (filtros.search?.trim()) params.search = filtros.search.trim()
-    if (filtros.erpType) params.erp_type = filtros.erpType
-    if (filtros.isActive !== null && filtros.isActive !== undefined) {
-        params.is_active = filtros.isActive
-    }
-
     return useQuery({
-        queryKey: CLAVES_FLUJOS.clientes(params),
-        queryFn: () => getClientsSummary(params),
-        select: (respuesta) => respuesta.data,
+        queryKey: CLAVES_FLUJOS.clientes({}),
+        queryFn: () => getClientsSummary({}),
+        select: (respuesta) => {
+            let data = respuesta.data
+            if (filtros.search?.length) {
+                data = data.filter((c) => filtros.search.includes(c.name))
+            }
+            if (filtros.erpType?.length) {
+                data = data.filter((c) => filtros.erpType.includes(c.erp_type))
+            }
+            if (filtros.isActive?.length) {
+                data = data.filter((c) => filtros.isActive.includes(c.is_active))
+            }
+            return data
+        },
         placeholderData: (previo) => previo,
     })
 }

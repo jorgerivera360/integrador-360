@@ -1,18 +1,17 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Alert, App, Button, Table, Tooltip } from 'antd'
 import ActivoTag from '@/components/ActivoTag'
 import ErpTag from '@/components/ErpTag'
 import { etiquetaErp } from '@/config/erp'
 import useHasRole from '@/hooks/useHasRole'
-import useDebounce from '@/hooks/useDebounce'
 import { useClientes, mensajeDeError } from '@/hooks/useClientes'
 import { ROLES } from '@/config/navigation'
 import { formatFechaHora } from '@/utils/format'
 import FiltrosClientes, { FILTROS_VACIOS } from './components/FiltrosClientes'
 import ModalCrearCliente from './components/ModalCrearCliente'
 import ModalProbarConexion from './components/ModalProbarConexion'
-import { IconFlecha, IconInfo, IconMas, IconRayo } from './icons'
+import { IconFlecha, IconInfo, IconMas } from './icons'
 import '@/styles/pagina.css'
 import './clientes.css'
 
@@ -81,10 +80,13 @@ const ClientesListPage = () => {
     const [modalAbierto, setModalAbierto] = useState(false)
     const [modalProbar, setModalProbar] = useState(false)
 
-    // Solo la búsqueda se difiere; los selects disparan de inmediato.
-    const busquedaDiferida = useDebounce(filtros.search, 300)
     const { data: clientes, isPending, isError, error, refetch } =
-        useClientes({ ...filtros, search: busquedaDiferida })
+        useClientes(filtros)
+
+    const opcionesCliente = useMemo(() => {
+        if (!clientes) return []
+        return clientes.map((c) => ({ value: c.name, label: c.name }))
+    }, [clientes])
 
     if (isError) {
         return (
@@ -115,7 +117,7 @@ const ClientesListPage = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: 8 }}>
-                    <Button icon={<IconRayo />} onClick={() => setModalProbar(true)}>
+                    <Button onClick={() => setModalProbar(true)}>
                         Probar conexión
                     </Button>
                     {puedeCrear && (
@@ -126,7 +128,7 @@ const ClientesListPage = () => {
                 </div>
             </div>
 
-            <FiltrosClientes valor={filtros} onChange={setFiltros} />
+            <FiltrosClientes valor={filtros} onChange={setFiltros} opcionesCliente={opcionesCliente} />
 
             <div className="tarjeta-borde">
                 <Table

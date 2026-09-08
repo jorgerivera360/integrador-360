@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Alert, App, Button, Input, Select, Space, Table, Tooltip } from 'antd'
+import { Alert, App, Button, Select, Space, Table, Tooltip } from 'antd'
 import RolBadge from '@/components/RolBadge'
 import { useUsuarios } from '@/hooks/useUsuarios'
-import useDebounce from '@/hooks/useDebounce'
 import { mensajeDeError } from '@/hooks/useClientes'
 import { formatFechaHora } from '@/utils/format'
 import ModalCrearUsuario from './components/ModalCrearUsuario'
@@ -18,7 +17,7 @@ const EstadoUsuario = ({ activo }) => (
     </span>
 )
 
-const FILTROS_VACIOS = { search: '', role: null, isActive: null }
+const FILTROS_VACIOS = { search: [], role: [], isActive: [] }
 
 const columnas = [
     {
@@ -88,9 +87,13 @@ const UsuariosPage = () => {
     const [filtros, setFiltros] = useState(FILTROS_VACIOS)
     const [modalAbierto, setModalAbierto] = useState(false)
 
-    const busquedaDiferida = useDebounce(filtros.search, 300)
     const { data: usuarios, isPending, isError, error, refetch } =
-        useUsuarios({ ...filtros, search: busquedaDiferida })
+        useUsuarios(filtros)
+
+    const opcionesUsuario = useMemo(() => {
+        if (!usuarios) return []
+        return usuarios.map((u) => ({ value: u.name, label: u.name }))
+    }, [usuarios])
 
     if (isError) {
         return (
@@ -126,16 +129,23 @@ const UsuariosPage = () => {
             </div>
 
             <Space className="usuarios-filtros" wrap size={8}>
-                <Input
+                <Select
                     className="usuarios-filtros__buscador"
-                    placeholder="Buscar por nombre o email..."
+                    placeholder="Usuario: todos"
+                    mode="multiple"
+                    showSearch
+                    optionFilterProp="label"
                     value={filtros.search}
-                    onChange={(e) => setFiltros({ ...filtros, search: e.target.value })}
+                    onChange={(nuevo) => setFiltros({ ...filtros, search: nuevo ?? [] })}
+                    options={opcionesUsuario}
                     allowClear
                 />
                 <Select
                     className="usuarios-filtros__select"
                     placeholder="Rol: todos"
+                    mode="multiple"
+                    showSearch
+                    optionFilterProp="label"
                     value={filtros.role}
                     onChange={(valor) => setFiltros({ ...filtros, role: valor ?? null })}
                     options={[
@@ -148,6 +158,9 @@ const UsuariosPage = () => {
                 <Select
                     className="usuarios-filtros__select"
                     placeholder="Estado: todos"
+                    mode="multiple"
+                    showSearch
+                    optionFilterProp="label"
                     value={filtros.isActive}
                     onChange={(valor) => setFiltros({ ...filtros, isActive: valor ?? null })}
                     options={[

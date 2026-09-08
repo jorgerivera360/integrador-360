@@ -37,18 +37,23 @@ export const CLAVES_CLIENTES = {
  * `WHERE 1=1` y un parámetro vacío filtraría de más.
  */
 export function useClientes(filtros = {}) {
-    const params = {}
-    if (filtros.search?.trim()) params.search = filtros.search.trim()
-    if (filtros.erpType) params.erp_type = filtros.erpType
-    if (filtros.isActive !== null && filtros.isActive !== undefined) {
-        params.is_active = filtros.isActive
-    }
-
     return useQuery({
-        queryKey: CLAVES_CLIENTES.lista(params),
-        queryFn: () => getClients(params),
-        select: (respuesta) => respuesta.data,
-        placeholderData: (previo) => previo, // evita el parpadeo al filtrar
+        queryKey: CLAVES_CLIENTES.lista({}),
+        queryFn: () => getClients({}),
+        select: (respuesta) => {
+            let data = respuesta.data
+            if (filtros.search?.length) {
+                data = data.filter((c) => filtros.search.includes(c.name))
+            }
+            if (filtros.erpType?.length) {
+                data = data.filter((c) => filtros.erpType.includes(c.erp_type))
+            }
+            if (filtros.isActive?.length) {
+                data = data.filter((c) => filtros.isActive.includes(c.is_active))
+            }
+            return data
+        },
+        placeholderData: (previo) => previo,
     })
 }
 

@@ -17,17 +17,22 @@ export const CLAVES_EJECUCIONES = {
 }
 
 export function useClientesEjecuciones(filtros = {}) {
-    const params = {}
-    if (filtros.search?.trim()) params.search = filtros.search.trim()
-    if (filtros.erpType) params.erp_type = filtros.erpType
-    if (filtros.isActive !== null && filtros.isActive !== undefined) {
-        params.is_active = filtros.isActive
-    }
-
     return useQuery({
-        queryKey: CLAVES_EJECUCIONES.clientes(params),
-        queryFn: () => getClientsSummary(params),
-        select: (respuesta) => respuesta.data,
+        queryKey: CLAVES_EJECUCIONES.clientes({}),
+        queryFn: () => getClientsSummary({}),
+        select: (respuesta) => {
+            let data = respuesta.data
+            if (filtros.search?.length) {
+                data = data.filter((c) => filtros.search.includes(c.name))
+            }
+            if (filtros.erpType?.length) {
+                data = data.filter((c) => filtros.erpType.includes(c.erp_type))
+            }
+            if (filtros.isActive?.length) {
+                data = data.filter((c) => filtros.isActive.includes(c.is_active))
+            }
+            return data
+        },
         placeholderData: (previo) => previo,
     })
 }
@@ -46,17 +51,21 @@ export function mensajeDeError(error, porDefecto = 'Ocurrió un error inesperado
 }
 
 export function useHistorialEjecuciones(flowId, filtros = {}) {
-    const params = {}
-    if (filtros.status) params.status = filtros.status
-    if (filtros.triggeredBy) params.triggered_by = filtros.triggeredBy
-    params.limit = filtros.limit || 2000
+    const params = { limit: filtros.limit || 2000 }
 
     return useQuery({
         queryKey: CLAVES_EJECUCIONES.historial(flowId, params),
         queryFn: () => getFlowExecutions(flowId, params),
         select: (respuesta) => {
-            const data = respuesta.data
-            return data?.result ?? data ?? []
+            let data = respuesta.data
+            data = data?.result ?? data ?? []
+            if (filtros.status?.length) {
+                data = data.filter((e) => filtros.status.includes(e.status))
+            }
+            if (filtros.triggeredBy?.length) {
+                data = data.filter((e) => filtros.triggeredBy.includes(e.triggered_by))
+            }
+            return data
         },
         enabled: Boolean(flowId),
     })

@@ -15,7 +15,7 @@ import { IconCheck, IconEquis, IconServidor, IconNube, IconPapelera } from '../i
 const CAMPOS_WS = [
     { name: 'url', label: 'URL del Web Service', required: true },
     { name: 'conexion', label: 'Nombre de conexión', required: true },
-    { name: 'compania', label: 'ID Compañía', required: true },
+    { name: 'compania', label: 'Compañía', required: true },
     { name: 'usuario', label: 'Usuario', required: true },
     { name: 'clave', label: 'Clave', required: true, password: true },
     { name: 'proveedor', label: 'Proveedor', required: true },
@@ -26,7 +26,7 @@ const CAMPOS_WS = [
 const CAMPOS_CONNEKTA = [
     { name: 'url', label: 'URL', required: true },
     { name: 'urlqa', label: 'URL QA', required: false },
-    { name: 'idcompania', label: 'ID Compañía', required: true },
+    { name: 'idcompania', label: 'Compañía', required: true },
     { name: 'connikey', label: 'ConniKey', required: true },
     { name: 'connitoken', label: 'ConniToken', required: true, password: true },
 ]

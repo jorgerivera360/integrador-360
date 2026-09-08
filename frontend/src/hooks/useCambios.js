@@ -10,14 +10,21 @@ export const CLAVES_CAMBIOS = {
 
 export function useCambios(filtros = {}) {
     const params = { limit: LIMITE }
-    if (filtros.tableName) params.table_name = filtros.tableName
-    if (filtros.action) params.action = filtros.action
     if (filtros.changedBy) params.changed_by = filtros.changedBy
 
     return useQuery({
         queryKey: CLAVES_CAMBIOS.lista(params),
         queryFn: () => getChanges(params),
-        select: (respuesta) => respuesta.data.result,
+        select: (respuesta) => {
+            let data = respuesta.data.result
+            if (filtros.tableName?.length) {
+                data = data.filter((c) => filtros.tableName.includes(c.table_name))
+            }
+            if (filtros.action?.length) {
+                data = data.filter((c) => filtros.action.includes(c.action))
+            }
+            return data
+        },
         placeholderData: (previo) => previo,
     })
 }

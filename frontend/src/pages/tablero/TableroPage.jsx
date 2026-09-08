@@ -2,9 +2,7 @@ import { useMemo, useState } from 'react'
 import { Alert, Button } from 'antd'
 import { useDashboardStatus } from '@/hooks/useDashboard'
 import { formatNumero, formatPorcentaje } from '@/utils/format'
-import { etiquetaEstado } from '@/components/EstadoTag'
 import FiltrosEjecuciones, { FILTROS_VACIOS, hayFiltros } from '@/components/FiltrosEjecuciones'
-import { contiene } from '@/utils/texto'
 import StatCard from './components/StatCard'
 import MiniStat from './components/MiniStat'
 import TablaRecientes from './components/TablaRecientes'
@@ -23,9 +21,9 @@ function aplicarFiltros(filas, filtros) {
     const hasta = filtros.rango?.[1]?.endOf('day').valueOf()
 
     return filas.filter((fila) => {
-        if (!contiene(nombreCliente(fila), filtros.cliente)) return false
-        if (!contiene(fila.flow_name, filtros.flujo)) return false
-        if (!contiene(etiquetaEstado(fila.status), filtros.estado)) return false
+        if (filtros.cliente?.length && !filtros.cliente.includes(nombreCliente(fila))) return false
+        if (filtros.flujo?.length && !filtros.flujo.includes(fila.flow_name)) return false
+        if (filtros.estado?.length && !filtros.estado.includes(fila.status)) return false
 
         if (desde || hasta) {
             const inicio = new Date(fila.started_at).getTime()
@@ -92,7 +90,7 @@ const TableroPage = () => {
                         </span>
                     )}
                 </p>
-                <FiltrosEjecuciones valor={filtros} onChange={setFiltros} mostrarFecha={false} />
+                <FiltrosEjecuciones valor={filtros} onChange={setFiltros} ejecuciones={todasLasEjecuciones} mostrarFecha={false} />
             </div>
 
             <div className="tablero__grid-stats">

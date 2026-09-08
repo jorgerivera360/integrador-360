@@ -1,11 +1,10 @@
-import { Input, Select, Space } from 'antd'
+import { Select, Space } from 'antd'
 import { OPCIONES_ERP } from '@/config/erp'
-import { IconLupa } from '../icons'
 
 export const FILTROS_VACIOS = {
-    search: '',
-    erpType: null,
-    isActive: null,
+    search: [],
+    erpType: [],
+    isActive: [],
 }
 
 /**
@@ -15,23 +14,29 @@ export const FILTROS_VACIOS = {
  * search, erp_type e is_active. Por eso el estado y el debounce del
  * buscador los maneja la página, no este componente.
  */
-const FiltrosClientes = ({ valor, onChange }) => {
-    const cambiar = (campo) => (nuevo) => onChange({ ...valor, [campo]: nuevo ?? null })
+const FiltrosClientes = ({ valor, onChange, opcionesCliente = [] }) => {
+    const cambiar = (campo) => (nuevo) => onChange({ ...valor, [campo]: nuevo ?? [] })
 
     return (
         <Space className="clientes-filtros" wrap size={12}>
-            <Input
+            <Select
                 className="clientes-filtros__buscador"
-                placeholder="Buscar por nombre o ID..."
-                prefix={<IconLupa style={{ color: 'rgba(0,0,0,.3)' }} />}
+                placeholder="Cliente: todos"
+                mode="multiple"
+                showSearch
+                optionFilterProp="label"
                 value={valor.search}
-                onChange={(evento) => onChange({ ...valor, search: evento.target.value })}
+                onChange={cambiar('search')}
+                options={opcionesCliente}
                 allowClear
             />
 
             <Select
                 className="clientes-filtros__select"
                 placeholder="ERP: todos"
+                mode="multiple"
+                showSearch
+                optionFilterProp="label"
                 value={valor.erpType}
                 onChange={cambiar('erpType')}
                 options={OPCIONES_ERP}
@@ -41,6 +46,9 @@ const FiltrosClientes = ({ valor, onChange }) => {
             <Select
                 className="clientes-filtros__select clientes-filtros__select--corto"
                 placeholder="Estado: todos"
+                mode="multiple"
+                showSearch
+                optionFilterProp="label"
                 value={valor.isActive}
                 onChange={cambiar('isActive')}
                 options={[

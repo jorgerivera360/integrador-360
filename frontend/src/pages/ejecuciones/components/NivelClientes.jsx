@@ -1,15 +1,14 @@
-import { useState } from 'react'
-import { Alert, Button, Input, Select, Space, Table, Tooltip } from 'antd'
+import { useMemo, useState } from 'react'
+import { Alert, Button, Select, Space, Table, Tooltip } from 'antd'
 import { InfoCircleOutlined } from '@ant-design/icons'
 import ErpTag from '@/components/ErpTag'
 import ActivoTag from '@/components/ActivoTag'
-import useDebounce from '@/hooks/useDebounce'
 import { useClientesEjecuciones, mensajeDeError } from '@/hooks/useEjecuciones'
 import { OPCIONES_ERP } from '@/config/erp'
 import { formatFechaHora } from '@/utils/format'
-import { IconFlecha, IconLupa } from '../icons'
+import { IconFlecha } from '../icons'
 
-const FILTROS_VACIOS = { search: '', erpType: null, isActive: null }
+const FILTROS_VACIOS = { search: [], erpType: [], isActive: [] }
 
 const columnas = [
     {
@@ -70,12 +69,16 @@ const columnas = [
 
 const NivelClientes = ({ onSeleccionar }) => {
     const [filtros, setFiltros] = useState(FILTROS_VACIOS)
-    const busquedaDiferida = useDebounce(filtros.search, 300)
 
     const { data: clientes, isPending, isError, error, refetch } =
-        useClientesEjecuciones({ ...filtros, search: busquedaDiferida })
+        useClientesEjecuciones(filtros)
 
-    const cambiar = (campo) => (nuevo) => setFiltros({ ...filtros, [campo]: nuevo ?? null })
+    const cambiar = (campo) => (nuevo) => setFiltros({ ...filtros, [campo]: nuevo ?? [] })
+
+    const opcionesCliente = useMemo(() => {
+        if (!clientes) return []
+        return clientes.map((c) => ({ value: c.name, label: c.name }))
+    }, [clientes])
 
     if (isError) {
         return (
@@ -103,17 +106,23 @@ const NivelClientes = ({ onSeleccionar }) => {
             </div>
 
             <Space className="ejec-filtros" wrap size={12}>
-                <Input
+                <Select
                     className="ejec-filtros__buscador"
-                    placeholder="Buscar cliente..."
-                    prefix={<IconLupa style={{ color: 'rgba(0,0,0,.3)' }} />}
+                    placeholder="Cliente: todos"
+                    mode="multiple"
+                    showSearch
+                    optionFilterProp="label"
                     value={filtros.search}
-                    onChange={(e) => setFiltros({ ...filtros, search: e.target.value })}
+                    onChange={cambiar('search')}
+                    options={opcionesCliente}
                     allowClear
                 />
                 <Select
                     className="ejec-filtros__select"
                     placeholder="ERP: todos"
+                    mode="multiple"
+                    showSearch
+                    optionFilterProp="label"
                     value={filtros.erpType}
                     onChange={cambiar('erpType')}
                     options={OPCIONES_ERP}
@@ -122,6 +131,9 @@ const NivelClientes = ({ onSeleccionar }) => {
                 <Select
                     className="ejec-filtros__select ejec-filtros__select--corto"
                     placeholder="Estado: todos"
+                    mode="multiple"
+                    showSearch
+                    optionFilterProp="label"
                     value={filtros.isActive}
                     onChange={cambiar('isActive')}
                     options={[

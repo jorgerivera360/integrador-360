@@ -17,17 +17,22 @@ export const CLAVES_USUARIOS = {
 }
 
 export function useUsuarios(filtros = {}) {
-    const params = {}
-    if (filtros.search?.trim()) params.search = filtros.search.trim()
-    if (filtros.role) params.role = filtros.role
-    if (filtros.isActive !== null && filtros.isActive !== undefined) {
-        params.is_active = filtros.isActive
-    }
-
     return useQuery({
-        queryKey: CLAVES_USUARIOS.lista(params),
-        queryFn: () => getUsers(params),
-        select: (respuesta) => respuesta.data,
+        queryKey: CLAVES_USUARIOS.lista({}),
+        queryFn: () => getUsers({}),
+        select: (respuesta) => {
+            let data = respuesta.data
+            if (filtros.search?.length) {
+                data = data.filter((u) => filtros.search.includes(u.name))
+            }
+            if (filtros.role?.length) {
+                data = data.filter((u) => filtros.role.includes(u.role))
+            }
+            if (filtros.isActive?.length) {
+                data = data.filter((u) => filtros.isActive.includes(u.is_active))
+            }
+            return data
+        },
         placeholderData: (previo) => previo,
     })
 }

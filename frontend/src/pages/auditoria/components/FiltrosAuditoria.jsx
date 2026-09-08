@@ -3,8 +3,8 @@ import useHasRole from '@/hooks/useHasRole'
 import { useUsuarios } from '@/hooks/useUsuarios'
 
 export const FILTROS_VACIOS = {
-    tableName: null,
-    action: null,
+    tableName: [],
+    action: [],
     changedBy: null,
 }
 
@@ -51,6 +51,9 @@ const FiltrosAuditoria = ({ valor, onChange }) => {
             <Select
                 className="auditoria-filtros__select"
                 placeholder="Módulo: todos"
+                mode="multiple"
+                showSearch
+                optionFilterProp="label"
                 value={valor.tableName}
                 onChange={cambiar('tableName')}
                 options={OPCIONES_MODULO}
@@ -60,6 +63,9 @@ const FiltrosAuditoria = ({ valor, onChange }) => {
             <Select
                 className="auditoria-filtros__select"
                 placeholder="Acción: todas"
+                mode="multiple"
+                showSearch
+                optionFilterProp="label"
                 value={valor.action}
                 onChange={cambiar('action')}
                 options={OPCIONES_ACCION}

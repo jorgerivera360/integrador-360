@@ -38,7 +38,7 @@ const DisparadoTag = ({ tipo }) => {
 }
 
 const NivelHistorial = ({ cliente, flow, onVolver }) => {
-    const [filtros, setFiltros] = useState({ status: null, triggeredBy: null })
+    const [filtros, setFiltros] = useState({ status: [], triggeredBy: [] })
     const [drawerAbierto, setDrawerAbierto] = useState(false)
     const [ejecucionActiva, setEjecucionActiva] = useState(null)
 
@@ -167,6 +167,9 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
                 <Select
                     className="ejec-filtros__select"
                     placeholder="Estado: todos"
+                    mode="multiple"
+                    showSearch
+                    optionFilterProp="label"
                     value={filtros.status}
                     onChange={cambiar('status')}
                     options={OPCIONES_ESTADO}
@@ -175,6 +178,9 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
                 <Select
                     className="ejec-filtros__select"
                     placeholder="Disparado por: todos"
+                    mode="multiple"
+                    showSearch
+                    optionFilterProp="label"
                     value={filtros.triggeredBy}
                     onChange={cambiar('triggeredBy')}
                     options={OPCIONES_DISPARADO}
