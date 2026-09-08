@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
 from api.dependencies import get_db
 from api.auth import require_role
+from api.schemas.credentials import TestConnectionRequest
 
 router = APIRouter(prefix="/clients/{client_id}/test", tags=["Test Connections"])
 
@@ -8,12 +10,12 @@ router = APIRouter(prefix="/clients/{client_id}/test", tags=["Test Connections"]
 @router.post("/erp")
 def test_erp_connection(
     client_id: int,
+    body: Optional[TestConnectionRequest] = None,
     db=Depends(get_db),
     current_user=Depends(require_role("superadmin", "admin"))
 ):
     cursor = db.cursor()
 
-    # Obtener client_slug y erp_type de la BD
     cursor.execute(
         "SELECT client_id, erp_type FROM clients WHERE id = %s AND is_active = true",
         (client_id,)
@@ -23,22 +25,29 @@ def test_erp_connection(
         raise HTTPException(status_code=404, detail="Cliente no encontrado o desactivado")
 
     try:
-        from config.loader import ConfigLoader
         from main import build_connector
 
-        # Cargar credenciales de GCP
-        loader = ConfigLoader(client_id=client["client_id"])
-        config = loader.load_config()
-
-        if not config:
-            return {
-                "code": 400,
-                "success": False,
-                "msg": "No se pudieron cargar las credenciales de GCP"
+        # Si vienen credenciales en el body, usar esas
+        if body and body.erp:
+            config = {
+                "erp": body.erp,
+                "odoo": {},
+                "client_id": client["client_id"]
             }
-        config["client_id"] = client["client_id"]
+        else:
+            # Cargar de GCP como siempre
+            from config.loader import ConfigLoader
+            loader = ConfigLoader(client_id=client["client_id"])
+            config = loader.load_config()
 
-        # Instanciar conector y probar
+            if not config:
+                return {
+                    "code": 400,
+                    "success": False,
+                    "msg": "No se pudieron cargar las credenciales de GCP"
+                }
+            config["client_id"] = client["client_id"]
+
         connector = build_connector(client["erp_type"], config)
         status, message = connector.test_connection()
 
@@ -60,6 +69,7 @@ def test_erp_connection(
 @router.post("/odoo")
 def test_odoo_connection(
     client_id: int,
+    body: Optional[TestConnectionRequest] = None,
     db=Depends(get_db),
     current_user=Depends(require_role("superadmin", "admin"))
 ):
@@ -74,22 +84,29 @@ def test_odoo_connection(
         raise HTTPException(status_code=404, detail="Cliente no encontrado o desactivado")
 
     try:
-        from config.loader import ConfigLoader
         from connection.jsonrpc import JsonRPC
 
-        # Cargar credenciales de GCP
-        loader = ConfigLoader(client_id=client["client_id"])
-        config = loader.load_config()
-
-        if not config:
-            return {
-                "code": 400,
-                "success": False,
-                "msg": "No se pudieron cargar las credenciales de GCP"
+        # Si vienen credenciales en el body, usar esas
+        if body and body.odoo:
+            config = {
+                "erp": {},
+                "odoo": body.odoo.model_dump(),
+                "client_id": client["client_id"]
             }
-        config["client_id"] = client["client_id"]
+        else:
+            # Cargar de GCP como siempre
+            from config.loader import ConfigLoader
+            loader = ConfigLoader(client_id=client["client_id"])
+            config = loader.load_config()
 
-        # Instanciar JsonRPC y probar
+            if not config:
+                return {
+                    "code": 400,
+                    "success": False,
+                    "msg": "No se pudieron cargar las credenciales de GCP"
+                }
+            config["client_id"] = client["client_id"]
+
         odoo = JsonRPC(config)
         status, message = odoo.test_connection()
 

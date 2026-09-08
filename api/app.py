@@ -12,6 +12,7 @@ from api.routes.changes import router as changes_router
 from api.routes.test_connections import router as test_router
 from api.routes.catalog import router as catalog_router
 from api.routes.excel import router as excel_router
+from api.routes.provisioning import router as provisioning_router
 
 load_dotenv()
 
@@ -47,3 +48,4 @@ app.include_router(changes_router)
 app.include_router(test_router)
 app.include_router(catalog_router)
 app.include_router(excel_router)
+app.include_router(provisioning_router)
