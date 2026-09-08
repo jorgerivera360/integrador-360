@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Alert, App, Button, Form, Input, Switch } from 'antd'
+import { Alert, App, Button, Form, Input, Popconfirm } from 'antd'
 import { etiquetaErp } from '@/config/erp'
 import {
     useProbarConexionConCredenciales,
     useGuardarCredenciales,
+    useEliminarCredenciales,
+    useEstadoCredenciales,
     mensajeDeError,
 } from '@/hooks/useClientes'
-import { IconCheck, IconEquis, IconRayo, IconServidor, IconNube } from '../icons'
+import { IconCheck, IconEquis, IconRayo, IconServidor, IconNube, IconPapelera } from '../icons'
 
 // --- Campos ERP por tipo ---
 
@@ -85,9 +87,13 @@ const FormularioCredenciales = ({ cliente }) => {
     const tieneErp = erpType !== 'excel'
     const camposErp = CAMPOS_ERP[erpType] || []
 
+    const { data: estadoCred, isLoading: cargandoEstado } = useEstadoCredenciales(cliente.id)
     const probarErp = useProbarConexionConCredenciales(cliente.id, 'erp')
     const probarOdoo = useProbarConexionConCredenciales(cliente.id, 'odoo')
     const guardar = useGuardarCredenciales(cliente.id)
+    const eliminar = useEliminarCredenciales(cliente.id)
+
+    const credencialesExisten = estadoCred?.exists === true
 
     const obtenerCredencialesErp = () => {
         const valores = form.getFieldsValue()
@@ -155,6 +161,20 @@ const FormularioCredenciales = ({ cliente }) => {
                 Configura las credenciales del ERP y del WMS (Odoo) para este cliente.
                 Prueba ambas conexiones antes de guardar.
             </p>
+
+            {!cargandoEstado && (
+                <Alert
+                    type={credencialesExisten ? 'success' : 'info'}
+                    showIcon
+                    style={{ marginTop: 12 }}
+                    message={
+                        credencialesExisten
+                            ? `Credenciales configuradas — GCP: ${estadoCred.gcp ? 'sí' : 'no'} · Local: ${estadoCred.local ? 'sí' : 'no'}`
+                            : 'No hay credenciales guardadas para este cliente'
+                    }
+                />
+            )}
+
             <div className="seccion__linea" />
 
             <Form
@@ -266,7 +286,7 @@ const FormularioCredenciales = ({ cliente }) => {
                 </div>
             </Form>
 
-            {/* --- Botón guardar --- */}
+            {/* --- Acciones --- */}
             <div style={{ marginTop: 24, borderTop: '1px solid #f0f0f0', paddingTop: 20 }}>
                 {guardar.isError && (
                     <Alert
@@ -277,21 +297,49 @@ const FormularioCredenciales = ({ cliente }) => {
                     />
                 )}
 
-                <Button
-                    type="primary"
-                    size="large"
-                    loading={guardar.isPending}
-                    onClick={handleGuardar}
-                    disabled={tieneErp ? (!erpTesteado || !odooTesteado) : !odooTesteado}
-                >
-                    Guardar credenciales
-                </Button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <Button
+                        type="primary"
+                        size="large"
+                        loading={guardar.isPending}
+                        onClick={handleGuardar}
+                        disabled={tieneErp ? (!erpTesteado || !odooTesteado) : !odooTesteado}
+                    >
+                        Guardar credenciales
+                    </Button>
 
-                {(tieneErp ? (!erpTesteado || !odooTesteado) : !odooTesteado) && (
-                    <span style={{ marginLeft: 12, fontSize: 13, color: '#8b93a1' }}>
-                        Prueba {tieneErp ? 'ambas conexiones' : 'la conexión WMS'} antes de guardar
-                    </span>
-                )}
+                    {(tieneErp ? (!erpTesteado || !odooTesteado) : !odooTesteado) && (
+                        <span style={{ fontSize: 13, color: '#8b93a1' }}>
+                            Prueba {tieneErp ? 'ambas conexiones' : 'la conexión WMS'} antes de guardar
+                        </span>
+                    )}
+
+                    <Popconfirm
+                        title="Eliminar credenciales"
+                        description="Se eliminará el secret de GCP y el archivo local. El cliente y sus flujos no se borran."
+                        onConfirm={async () => {
+                            try {
+                                const r = await eliminar.mutateAsync()
+                                if (r?.success) message.success('Credenciales eliminadas')
+                                else message.error(r?.msg || 'No se pudieron eliminar')
+                            } catch (err) {
+                                message.error(mensajeDeError(err))
+                            }
+                        }}
+                        okText="Eliminar"
+                        okButtonProps={{ danger: true }}
+                        cancelText="Cancelar"
+                    >
+                        <Button
+                            danger
+                            icon={<IconPapelera />}
+                            loading={eliminar.isPending}
+                            style={{ marginLeft: 'auto' }}
+                        >
+                            Eliminar credenciales
+                        </Button>
+                    </Popconfirm>
+                </div>
             </div>
         </div>
     )

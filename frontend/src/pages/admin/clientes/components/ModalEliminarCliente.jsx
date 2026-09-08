@@ -7,6 +7,8 @@ const EN_CASCADA = [
     'Todos los flujos configurados del cliente',
     'Todo el historial de ejecuciones',
     'Los registros de auditoría asociados',
+    'Las credenciales en GCP Secret Manager',
+    'El contenedor Docker y su entrada en docker-compose',
 ]
 
 /**
@@ -68,8 +70,8 @@ const ModalEliminarCliente = ({ abierto, cliente, onCerrar, onEliminado }) => {
             </div>
 
             <p className="borrar__aviso">
-                Las credenciales en GCP Secret Manager y el contenedor Docker NO se eliminan
-                automáticamente.
+                Todo se elimina automáticamente: base de datos, credenciales de GCP
+                y contenedor Docker.
             </p>
 
             <label className="campo-label" htmlFor="confirmar-borrado">

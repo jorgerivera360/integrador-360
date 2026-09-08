@@ -53,3 +53,15 @@ export const provisionContainer = (id) => {
 export const getProvisionStatus = (id) => {
     return api.get(`/clients/${id}/provision/status`)
 }
+
+export const getCredentialsStatus = (id) => {
+    return api.get(`/clients/${id}/credentials/status`)
+}
+
+export const deleteCredentials = (id) => {
+    return api.delete(`/clients/${id}/credentials`)
+}
+
+export const deleteProvision = (id) => {
+    return api.delete(`/clients/${id}/provision`)
+}

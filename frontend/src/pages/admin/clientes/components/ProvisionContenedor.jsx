@@ -1,5 +1,5 @@
-import { Alert, App, Button, Tag } from 'antd'
-import { useProvisionarContenedor, useEstadoProvision, mensajeDeError } from '@/hooks/useClientes'
+import { Alert, App, Button, Popconfirm, Tag } from 'antd'
+import { useProvisionarContenedor, useEliminarContenedor, useEstadoProvision, mensajeDeError } from '@/hooks/useClientes'
 
 const ESTADOS_CONTENEDOR = {
     running: { color: 'success', texto: 'Corriendo' },
@@ -19,9 +19,12 @@ const IconContenedor = (props) => (
 const ProvisionContenedor = ({ cliente }) => {
     const { message } = App.useApp()
     const provisionar = useProvisionarContenedor(cliente.id)
+    const eliminarContenedor = useEliminarContenedor(cliente.id)
     const { data: estado, isLoading, refetch } = useEstadoProvision(cliente.id)
 
     const existe = estado?.exists === true
+    const inCompose = estado?.in_compose === true
+    const containerRunning = estado?.container_running === true
     const statusDocker = estado?.status
     const estiloEstado = ESTADOS_CONTENEDOR[statusDocker] || { color: 'default', texto: statusDocker || 'Desconocido' }
     const containerName = estado?.container || `integrador-${cliente.client_id}`
@@ -63,11 +66,13 @@ const ProvisionContenedor = ({ cliente }) => {
                     {isLoading ? (
                         <Tag>Consultando...</Tag>
                     ) : existe ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <Tag color={estiloEstado.color}>{estiloEstado.texto}</Tag>
-                            <span style={{ fontSize: 13, color: '#8b93a1' }}>
-                                El contenedor ya está provisionado
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                            {containerRunning && <Tag color={estiloEstado.color}>{estiloEstado.texto}</Tag>}
+                            {!containerRunning && statusDocker && <Tag color={estiloEstado.color}>{estiloEstado.texto}</Tag>}
+                            {inCompose && <Tag color="blue">En docker-compose</Tag>}
+                            {!containerRunning && !statusDocker && inCompose && (
+                                <Tag color="warning">Sin iniciar</Tag>
+                            )}
                         </div>
                     ) : (
                         <div>
@@ -91,21 +96,50 @@ const ProvisionContenedor = ({ cliente }) => {
             )}
 
             <div style={{ marginTop: 20 }}>
-                {!existe && (
-                    <Button
-                        type="primary"
-                        loading={provisionar.isPending}
-                        onClick={handleProvisionar}
-                    >
-                        Provisionar contenedor
-                    </Button>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    {!existe && (
+                        <Button
+                            type="primary"
+                            loading={provisionar.isPending}
+                            onClick={handleProvisionar}
+                        >
+                            Provisionar contenedor
+                        </Button>
+                    )}
+
+                    {existe && (
+                        <Popconfirm
+                            title="Eliminar contenedor"
+                            description="Se detendrá el contenedor y se quitará de docker-compose.yml. El cliente y sus flujos no se borran."
+                            onConfirm={async () => {
+                                try {
+                                    const r = await eliminarContenedor.mutateAsync()
+                                    if (r?.success) {
+                                        message.success(r.msg)
+                                        refetch()
+                                    } else {
+                                        message.error(r?.msg || 'No se pudo eliminar')
+                                    }
+                                } catch (err) {
+                                    message.error(mensajeDeError(err))
+                                }
+                            }}
+                            okText="Eliminar"
+                            okButtonProps={{ danger: true }}
+                            cancelText="Cancelar"
+                        >
+                            <Button danger loading={eliminarContenedor.isPending}>
+                                Eliminar contenedor
+                            </Button>
+                        </Popconfirm>
+                    )}
+                </div>
 
                 {existe && statusDocker !== 'running' && (
                     <Alert
                         type="warning"
                         showIcon
-                        style={{ marginTop: 8 }}
+                        style={{ marginTop: 12 }}
                         message={`El contenedor existe pero está en estado "${statusDocker}". Revisa los logs en el servidor.`}
                     />
                 )}
@@ -114,6 +148,7 @@ const ProvisionContenedor = ({ cliente }) => {
                     <Alert
                         type="success"
                         showIcon
+                        style={{ marginTop: 12 }}
                         message="El contenedor está corriendo correctamente"
                     />
                 )}

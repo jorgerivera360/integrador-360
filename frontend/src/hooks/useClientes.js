@@ -12,6 +12,9 @@ import {
     saveCredentials,
     provisionContainer,
     getProvisionStatus,
+    getCredentialsStatus,
+    deleteCredentials,
+    deleteProvision,
 } from '@/services/clients'
 
 /**
@@ -117,11 +120,14 @@ export function useProbarConexionConCredenciales(id, tipo) {
 }
 
 export function useGuardarCredenciales(id) {
+    const queryClient = useQueryClient()
+
     return useMutation({
         mutationFn: async (data) => {
             const respuesta = await saveCredentials(id, data)
             return respuesta.data
         },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['credentials', 'status', String(id)] }),
     })
 }
 
@@ -131,6 +137,41 @@ export function useProvisionarContenedor(id) {
             const respuesta = await provisionContainer(id)
             return respuesta.data
         },
+    })
+}
+
+export function useEstadoCredenciales(id) {
+    return useQuery({
+        queryKey: ['credentials', 'status', String(id)],
+        queryFn: async () => {
+            const respuesta = await getCredentialsStatus(id)
+            return respuesta.data
+        },
+        enabled: Boolean(id),
+    })
+}
+
+export function useEliminarCredenciales(id) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async () => {
+            const respuesta = await deleteCredentials(id)
+            return respuesta.data
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['credentials', 'status', String(id)] }),
+    })
+}
+
+export function useEliminarContenedor(id) {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async () => {
+            const respuesta = await deleteProvision(id)
+            return respuesta.data
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['provision', 'status', String(id)] }),
     })
 }
 

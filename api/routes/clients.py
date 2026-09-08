@@ -171,7 +171,7 @@ def update_client(
     return updated_client
 
 
-@router.delete("/{client_id}", status_code=204)
+@router.delete("/{client_id}", status_code=200)
 def delete_client(
     client_id: int,
     db=Depends(get_db),
@@ -184,12 +184,31 @@ def delete_client(
     if not existing:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
 
+    slug = existing["client_id"]
+
+    # Cleanup: GCP + credenciales locales + contenedor Docker
+    from api.routes.provisioning import cleanup_gcp_secret, cleanup_local_credentials, cleanup_container
+
+    gcp_result = cleanup_gcp_secret(slug)
+    local_result = cleanup_local_credentials(slug)
+    container_result = cleanup_container(slug)
+
+    # Registrar en change_history
     cursor.execute(
         """INSERT INTO change_history
         (table_name, record_id, action, previous_values, changed_by)
         VALUES ('clients', %s, 'delete', %s, %s)""",
-        (client_id, json.dumps({"client_id": existing["client_id"], "name": existing["name"], "erp_type": existing["erp_type"]}), current_user["id"])
+        (client_id, json.dumps({"client_id": slug, "name": existing["name"], "erp_type": existing["erp_type"]}), current_user["id"])
     )
 
     cursor.execute("DELETE FROM clients WHERE id = %s", (client_id,))
     db.commit()
+
+    return {
+        "msg": f"Cliente '{slug}' eliminado",
+        "cleanup": {
+            "gcp_secret": gcp_result,
+            "local_credentials": local_result,
+            "container": container_result,
+        }
+    }

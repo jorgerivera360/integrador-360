@@ -222,6 +222,46 @@ def provision_container(
 
 # --- GET /clients/{id}/provision/status ---
 
+# --- GET /clients/{id}/credentials/status ---
+
+@router.get("/credentials/status")
+def get_credentials_status(
+    client_id: int,
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin", "viewer"))
+):
+    cursor = db.cursor()
+    client = _get_client(cursor, client_id)
+    slug = client["client_id"]
+
+    # Verificar GCP
+    gcp_exists = False
+    try:
+        from google.cloud import secretmanager
+
+        gcp_client = secretmanager.SecretManagerServiceClient()
+        project_id = os.getenv("GCP_PROJECT_ID")
+        secret_name = f"projects/{project_id}/secrets/integrador-{slug}/versions/latest"
+        gcp_client.access_secret_version(request={"name": secret_name})
+        gcp_exists = True
+    except Exception:
+        gcp_exists = False
+
+    # Verificar local
+    credentials_path = os.getenv("CREDENTIALS_PATH", "/etc/integrador/credentials")
+    local_path = os.path.join(credentials_path, f"integrador-{slug}.json")
+    local_exists = os.path.exists(local_path)
+
+    return {
+        "exists": gcp_exists or local_exists,
+        "gcp": gcp_exists,
+        "local": local_exists,
+        "secret_name": f"integrador-{slug}",
+    }
+
+
+# --- GET /clients/{id}/provision/status ---
+
 @router.get("/provision/status")
 def get_provision_status(
     client_id: int,
@@ -231,32 +271,148 @@ def get_provision_status(
     cursor = db.cursor()
     client = _get_client(cursor, client_id)
     slug = client["client_id"]
-    container_name = f"integrador-{slug}"
+    service_name = f"integrador-{slug}"
+
+    # Verificar si existe en docker-compose.yml
+    in_compose = False
+    try:
+        with open(COMPOSE_PATH, "r") as f:
+            compose = yaml.safe_load(f)
+        in_compose = service_name in compose.get("services", {})
+    except Exception:
+        pass
 
     # Verificar si el contenedor existe y su estado
+    container_status = None
+    container_exists = False
     try:
         result = subprocess.run(
-            ["docker", "inspect", "--format", "{{.State.Status}}", container_name],
+            ["docker", "inspect", "--format", "{{.State.Status}}", service_name],
             capture_output=True, text=True, timeout=10
         )
-        if result.returncode != 0:
-            return {
-                "exists": False,
-                "status": None,
-                "container": container_name
-            }
-
-        status = result.stdout.strip()
-        return {
-            "exists": True,
-            "status": status,
-            "container": container_name
-        }
-
+        if result.returncode == 0:
+            container_exists = True
+            container_status = result.stdout.strip()
     except (subprocess.TimeoutExpired, FileNotFoundError):
-        return {
-            "exists": False,
-            "status": None,
-            "container": container_name,
-            "msg": "No se pudo consultar Docker"
-        }
+        pass
+
+    return {
+        "exists": in_compose or container_exists,
+        "in_compose": in_compose,
+        "container_running": container_exists,
+        "status": container_status,
+        "container": service_name,
+    }
+
+
+# --- DELETE /clients/{id}/credentials ---
+
+@router.delete("/credentials")
+def delete_credentials(
+    client_id: int,
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    cursor = db.cursor()
+    client = _get_client(cursor, client_id)
+    slug = client["client_id"]
+
+    gcp_result = cleanup_gcp_secret(slug)
+    local_result = cleanup_local_credentials(slug)
+
+    exito = gcp_result.get("success") or local_result.get("success")
+    return {
+        "success": exito,
+        "gcp": gcp_result,
+        "local": local_result,
+        "msg": "Credenciales eliminadas" if exito else "No se pudieron eliminar las credenciales"
+    }
+
+
+# --- DELETE /clients/{id}/provision ---
+
+@router.delete("/provision")
+def delete_provision(
+    client_id: int,
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    cursor = db.cursor()
+    client = _get_client(cursor, client_id)
+    slug = client["client_id"]
+
+    result = cleanup_container(slug)
+    return {
+        "success": result.get("success", False),
+        "detail": result,
+        "msg": f"Contenedor 'integrador-{slug}' eliminado" if result.get("success") else "No se pudo eliminar el contenedor"
+    }
+
+
+# --- Funciones de cleanup (usadas por DELETE /clients/{id} y endpoints individuales) ---
+
+def cleanup_gcp_secret(slug: str) -> dict:
+    """Elimina el secret integrador-{slug} de GCP Secret Manager."""
+    try:
+        from google.cloud import secretmanager
+
+        gcp_client = secretmanager.SecretManagerServiceClient()
+        project_id = os.getenv("GCP_PROJECT_ID")
+        secret_name = f"projects/{project_id}/secrets/integrador-{slug}"
+        gcp_client.delete_secret(request={"name": secret_name})
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def cleanup_local_credentials(slug: str) -> dict:
+    """Elimina el archivo local de credenciales."""
+    try:
+        credentials_path = os.getenv("CREDENTIALS_PATH", "/etc/integrador/credentials")
+        file_path = os.path.join(credentials_path, f"integrador-{slug}.json")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def cleanup_container(slug: str) -> dict:
+    """Baja el contenedor y lo quita del docker-compose.yml."""
+    service_name = f"integrador-{slug}"
+    result_info = {"container": service_name}
+
+    # 1. Bajar el contenedor
+    try:
+        subprocess.run(
+            ["docker", "compose", "-f", COMPOSE_PATH, "stop", service_name],
+            capture_output=True, text=True, timeout=30
+        )
+        subprocess.run(
+            ["docker", "compose", "-f", COMPOSE_PATH, "rm", "-f", service_name],
+            capture_output=True, text=True, timeout=30
+        )
+        result_info["stopped"] = True
+    except Exception as e:
+        result_info["stopped"] = False
+        result_info["stop_error"] = str(e)
+
+    # 2. Quitar del docker-compose.yml
+    with _compose_lock:
+        try:
+            with open(COMPOSE_PATH, "r") as f:
+                compose = yaml.safe_load(f)
+
+            if service_name in compose.get("services", {}):
+                del compose["services"][service_name]
+                with open(COMPOSE_PATH, "w") as f:
+                    yaml.dump(compose, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+                result_info["removed_from_compose"] = True
+            else:
+                result_info["removed_from_compose"] = False
+        except Exception as e:
+            result_info["removed_from_compose"] = False
+            result_info["compose_error"] = str(e)
+
+    result_info["success"] = result_info.get("stopped", False) or result_info.get("removed_from_compose", False)
+    return result_info
