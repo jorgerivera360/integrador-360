@@ -11,7 +11,8 @@ import { ROLES } from '@/config/navigation'
 import { formatFechaHora } from '@/utils/format'
 import FiltrosClientes, { FILTROS_VACIOS } from './components/FiltrosClientes'
 import ModalCrearCliente from './components/ModalCrearCliente'
-import { IconFlecha, IconInfo, IconMas } from './icons'
+import ModalProbarConexion from './components/ModalProbarConexion'
+import { IconFlecha, IconInfo, IconMas, IconRayo } from './icons'
 import '@/styles/pagina.css'
 import './clientes.css'
 
@@ -78,6 +79,7 @@ const ClientesListPage = () => {
 
     const [filtros, setFiltros] = useState(FILTROS_VACIOS)
     const [modalAbierto, setModalAbierto] = useState(false)
+    const [modalProbar, setModalProbar] = useState(false)
 
     // Solo la búsqueda se difiere; los selects disparan de inmediato.
     const busquedaDiferida = useDebounce(filtros.search, 300)
@@ -112,11 +114,16 @@ const ClientesListPage = () => {
                     </h1>
                 </div>
 
-                {puedeCrear && (
-                    <Button type="primary" icon={<IconMas />} onClick={() => setModalAbierto(true)}>
-                        Crear cliente
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <Button icon={<IconRayo />} onClick={() => setModalProbar(true)}>
+                        Probar conexión
                     </Button>
-                )}
+                    {puedeCrear && (
+                        <Button type="primary" icon={<IconMas />} onClick={() => setModalAbierto(true)}>
+                            Crear cliente
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <FiltrosClientes valor={filtros} onChange={setFiltros} />
@@ -151,6 +158,11 @@ const ClientesListPage = () => {
                     message.success(`Cliente "${cliente.name}" creado`)
                     navigate(`/admin/clientes/${cliente.id}`)
                 }}
+            />
+
+            <ModalProbarConexion
+                abierto={modalProbar}
+                onCerrar={() => setModalProbar(false)}
             />
         </>
     )

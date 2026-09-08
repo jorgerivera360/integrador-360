@@ -8,7 +8,7 @@ import {
     useEstadoCredenciales,
     mensajeDeError,
 } from '@/hooks/useClientes'
-import { IconCheck, IconEquis, IconRayo, IconServidor, IconNube, IconPapelera } from '../icons'
+import { IconCheck, IconEquis, IconServidor, IconNube, IconPapelera } from '../icons'
 
 // --- Campos ERP por tipo ---
 
@@ -38,8 +38,8 @@ const CAMPOS_SAP = [
     { name: 'clave', label: 'Clave', required: true, password: true },
 ]
 
-const CAMPOS_ODOO = [
-    { name: 'url', label: 'URL de Odoo', required: true },
+const CAMPOS_WMS = [
+    { name: 'url', label: 'URL del WMS', required: true },
     { name: 'database', label: 'Base de datos', required: true },
     { name: 'usuario', label: 'Usuario', required: true },
     { name: 'clave', label: 'Clave', required: true, password: true },
@@ -81,7 +81,7 @@ const FormularioCredenciales = ({ cliente }) => {
     const { message } = App.useApp()
     const [form] = Form.useForm()
     const [erpTesteado, setErpTesteado] = useState(false)
-    const [odooTesteado, setOdooTesteado] = useState(false)
+    const [wmsTesteado, setWmsTesteado] = useState(false)
 
     const erpType = cliente.erp_type
     const tieneErp = erpType !== 'excel'
@@ -89,7 +89,7 @@ const FormularioCredenciales = ({ cliente }) => {
 
     const { data: estadoCred, isLoading: cargandoEstado } = useEstadoCredenciales(cliente.id)
     const probarErp = useProbarConexionConCredenciales(cliente.id, 'erp')
-    const probarOdoo = useProbarConexionConCredenciales(cliente.id, 'odoo')
+    const probarWms = useProbarConexionConCredenciales(cliente.id, 'odoo')
     const guardar = useGuardarCredenciales(cliente.id)
     const eliminar = useEliminarCredenciales(cliente.id)
 
@@ -105,13 +105,13 @@ const FormularioCredenciales = ({ cliente }) => {
         return erp
     }
 
-    const obtenerCredencialesOdoo = () => {
+    const obtenerCredencialesWms = () => {
         const valores = form.getFieldsValue()
         return {
-            url: valores.odoo_url || '',
-            database: valores.odoo_database || '',
-            usuario: valores.odoo_usuario || '',
-            clave: valores.odoo_clave || '',
+            url: valores.wms_url || '',
+            database: valores.wms_database || '',
+            usuario: valores.wms_usuario || '',
+            clave: valores.wms_clave || '',
         }
     }
 
@@ -121,10 +121,10 @@ const FormularioCredenciales = ({ cliente }) => {
         if (resultado?.success) setErpTesteado(true)
     }
 
-    const handleProbarOdoo = async () => {
-        const odoo = obtenerCredencialesOdoo()
-        const resultado = await probarOdoo.mutateAsync({ odoo })
-        if (resultado?.success) setOdooTesteado(true)
+    const handleProbarWms = async () => {
+        const odoo = obtenerCredencialesWms()
+        const resultado = await probarWms.mutateAsync({ odoo })
+        if (resultado?.success) setWmsTesteado(true)
     }
 
     const handleGuardar = async () => {
@@ -136,7 +136,7 @@ const FormularioCredenciales = ({ cliente }) => {
         }
 
         const erp = tieneErp ? obtenerCredencialesErp() : {}
-        const odoo = obtenerCredencialesOdoo()
+        const odoo = obtenerCredencialesWms()
 
         const resultado = await guardar.mutateAsync({ erp, odoo })
         if (resultado?.success) {
@@ -146,19 +146,18 @@ const FormularioCredenciales = ({ cliente }) => {
         }
     }
 
-    // Reset tests cuando cambian los campos
     const handleValuesChange = () => {
         setErpTesteado(false)
-        setOdooTesteado(false)
+        setWmsTesteado(false)
         probarErp.reset()
-        probarOdoo.reset()
+        probarWms.reset()
     }
 
     return (
         <div className="seccion" style={{ marginBottom: 0 }}>
             <div className="seccion__titulo">Credenciales de integración</div>
             <p className="seccion__sub">
-                Configura las credenciales del ERP y del WMS (Odoo) para este cliente.
+                Configura las credenciales del ERP y del WMS para este cliente.
                 Prueba ambas conexiones antes de guardar.
             </p>
 
@@ -219,7 +218,7 @@ const FormularioCredenciales = ({ cliente }) => {
                                 ))}
 
                                 <Button
-                                    icon={<IconRayo />}
+                                    type="primary"
                                     loading={probarErp.isPending}
                                     onClick={handleProbarErp}
                                 >
@@ -240,24 +239,24 @@ const FormularioCredenciales = ({ cliente }) => {
                         )}
                     </div>
 
-                    {/* --- Columna Odoo --- */}
+                    {/* --- Columna WMS --- */}
                     <div className="columna">
                         <div className="cred-seccion-head">
                             <div className="test__icono test__icono--verde">
                                 <IconNube />
                             </div>
                             <div>
-                                <div className="test__titulo">WMS — Odoo</div>
+                                <div className="test__titulo">WMS</div>
                                 <p className="test__sub" style={{ marginBottom: 0 }}>
-                                    Credenciales de la instancia de Odoo donde se carga la información
+                                    Credenciales de la instancia de WMS donde se carga la información
                                 </p>
                             </div>
                         </div>
 
-                        {CAMPOS_ODOO.map((campo) => (
+                        {CAMPOS_WMS.map((campo) => (
                             <Form.Item
                                 key={campo.name}
-                                name={`odoo_${campo.name}`}
+                                name={`wms_${campo.name}`}
                                 label={campo.label}
                                 rules={[{ required: true, message: `${campo.label} es obligatorio` }]}
                                 style={{ marginBottom: 12 }}
@@ -270,17 +269,16 @@ const FormularioCredenciales = ({ cliente }) => {
                         ))}
 
                         <Button
-                            icon={<IconRayo />}
-                            loading={probarOdoo.isPending}
-                            onClick={handleProbarOdoo}
+                            loading={probarWms.isPending}
+                            onClick={handleProbarWms}
                             style={{ background: '#52c41a', color: '#fff', borderColor: '#52c41a', boxShadow: '0 2px 6px rgba(82,196,26,.24)' }}
                         >
                             Probar conexión WMS
                         </Button>
 
                         <ResultadoTest
-                            resultado={probarOdoo.data}
-                            error={probarOdoo.isError ? probarOdoo.error : null}
+                            resultado={probarWms.data}
+                            error={probarWms.isError ? probarWms.error : null}
                         />
                     </div>
                 </div>
@@ -303,12 +301,12 @@ const FormularioCredenciales = ({ cliente }) => {
                         size="large"
                         loading={guardar.isPending}
                         onClick={handleGuardar}
-                        disabled={tieneErp ? (!erpTesteado || !odooTesteado) : !odooTesteado}
+                        disabled={tieneErp ? (!erpTesteado || !wmsTesteado) : !wmsTesteado}
                     >
                         Guardar credenciales
                     </Button>
 
-                    {(tieneErp ? (!erpTesteado || !odooTesteado) : !odooTesteado) && (
+                    {(tieneErp ? (!erpTesteado || !wmsTesteado) : !wmsTesteado) && (
                         <span style={{ fontSize: 13, color: '#8b93a1' }}>
                             Prueba {tieneErp ? 'ambas conexiones' : 'la conexión WMS'} antes de guardar
                         </span>

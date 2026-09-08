@@ -19,6 +19,10 @@ from api.schemas.credentials import CredentialsSaveRequest, ERP_CREDENTIAL_SCHEM
 router = APIRouter(prefix="/clients/{client_id}", tags=["Provisioning"])
 
 COMPOSE_PATH = os.getenv("COMPOSE_PATH", "/opt/integrador/docker-compose.yml")
+DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "integrador-360")
+GCP_KEY_PATH = os.getenv("GCP_KEY_HOST_PATH", "/etc/integrador/gcp-key.json")
+CREDENTIALS_HOST_PATH = os.getenv("CREDENTIALS_HOST_PATH", "/etc/integrador/credentials")
+LOGS_HOST_PATH = os.getenv("LOGS_HOST_PATH", "/var/log/integrador")
 _compose_lock = threading.Lock()
 
 
@@ -168,20 +172,20 @@ def provision_container(
             raise HTTPException(status_code=409, detail=f"El contenedor '{service_name}' ya existe en docker-compose.yml")
 
         compose["services"][service_name] = {
-            "image": "integrador-360",
+            "image": DOCKER_IMAGE,
             "container_name": service_name,
             "restart": "unless-stopped",
             "environment": [
                 f"CLIENT_ID={slug}",
-                f"DATABASE_URL={os.getenv('DATABASE_URL')}",
-                f"ENV={os.getenv('ENV', 'prod')}",
-                f"GCP_PROJECT_ID={os.getenv('GCP_PROJECT_ID', 'hale-treat-398215')}",
-                "GOOGLE_APPLICATION_CREDENTIALS=/etc/integrador/gcp-key.json",
+                "DATABASE_URL=${DATABASE_URL}",
+                "ENV=${ENV}",
+                "GCP_PROJECT_ID=${GCP_PROJECT_ID}",
+                "GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}",
             ],
             "volumes": [
-                "/etc/integrador/gcp-key.json:/etc/integrador/gcp-key.json:ro",
-                "/etc/integrador/credentials:/etc/integrador/credentials",
-                "/var/log/integrador:/var/log/integrador",
+                f"{GCP_KEY_PATH}:{GCP_KEY_PATH}:ro",
+                f"{CREDENTIALS_HOST_PATH}:{CREDENTIALS_HOST_PATH}",
+                f"{LOGS_HOST_PATH}:{LOGS_HOST_PATH}",
             ],
         }
 
@@ -191,11 +195,13 @@ def provision_container(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error escribiendo docker-compose.yml: {e}")
 
-    # Levantar el contenedor
+    # Levantar el contenedor (cwd = directorio del compose para que resuelva ${VARS})
+    compose_dir = os.path.dirname(COMPOSE_PATH)
     try:
         result = subprocess.run(
             ["docker", "compose", "-f", COMPOSE_PATH, "up", "-d", service_name],
-            capture_output=True, text=True, timeout=60
+            capture_output=True, text=True, timeout=60,
+            cwd=compose_dir,
         )
         if result.returncode != 0:
             return {
@@ -382,17 +388,17 @@ def cleanup_container(slug: str) -> dict:
     service_name = f"integrador-{slug}"
     result_info = {"container": service_name}
 
-    # 1. Bajar el contenedor
+    # 1. Bajar el contenedor (docker directo, no compose — funciona aunque ya no esté en el yml)
     try:
-        subprocess.run(
-            ["docker", "compose", "-f", COMPOSE_PATH, "stop", service_name],
+        stop = subprocess.run(
+            ["docker", "stop", service_name],
             capture_output=True, text=True, timeout=30
         )
-        subprocess.run(
-            ["docker", "compose", "-f", COMPOSE_PATH, "rm", "-f", service_name],
+        rm = subprocess.run(
+            ["docker", "rm", "-f", service_name],
             capture_output=True, text=True, timeout=30
         )
-        result_info["stopped"] = True
+        result_info["stopped"] = stop.returncode == 0 or rm.returncode == 0
     except Exception as e:
         result_info["stopped"] = False
         result_info["stop_error"] = str(e)

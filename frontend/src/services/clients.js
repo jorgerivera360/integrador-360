@@ -42,6 +42,14 @@ export const testOdooWithCredentials = (id, credentials) => {
     return api.post(`/clients/${id}/test/odoo`, credentials)
 }
 
+export const testErpStandalone = (credentials) => {
+    return api.post('/test/erp', credentials)
+}
+
+export const testOdooStandalone = (credentials) => {
+    return api.post('/test/odoo', credentials)
+}
+
 export const saveCredentials = (id, data) => {
     return api.post(`/clients/${id}/credentials`, data)
 }

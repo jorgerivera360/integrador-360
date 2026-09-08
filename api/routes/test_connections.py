@@ -4,10 +4,83 @@ from api.dependencies import get_db
 from api.auth import require_role
 from api.schemas.credentials import TestConnectionRequest
 
-router = APIRouter(prefix="/clients/{client_id}/test", tags=["Test Connections"])
+router = APIRouter(tags=["Test Connections"])
 
 
-@router.post("/erp")
+# --- POST /test/erp (sin cliente, solo con credenciales del body) ---
+
+@router.post("/test/erp")
+def test_erp_standalone(
+    body: TestConnectionRequest,
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    if not body.erp or not body.erp.get("tipo"):
+        raise HTTPException(status_code=400, detail="Se requiere 'erp' con campo 'tipo' en el body")
+
+    try:
+        from main import build_connector
+
+        erp_type = body.erp.pop("tipo")
+        config = {
+            "erp": body.erp,
+            "odoo": {},
+            "client_id": "test",
+        }
+        connector = build_connector(erp_type, config)
+        status, message = connector.test_connection()
+
+        return {
+            "code": 200 if status else 400,
+            "success": status,
+            "erp_type": erp_type,
+            "msg": message,
+        }
+    except Exception as e:
+        return {
+            "code": 500,
+            "success": False,
+            "msg": f"Error al probar conexión ERP: {str(e)}",
+        }
+
+
+# --- POST /test/odoo (sin cliente, solo con credenciales del body) ---
+
+@router.post("/test/odoo")
+def test_odoo_standalone(
+    body: TestConnectionRequest,
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    if not body.odoo:
+        raise HTTPException(status_code=400, detail="Se requieren credenciales WMS en el body")
+
+    try:
+        from connection.jsonrpc import JsonRPC
+
+        config = {
+            "erp": {},
+            "odoo": body.odoo.model_dump(),
+            "client_id": "test",
+        }
+        odoo = JsonRPC(config)
+        status, message = odoo.test_connection()
+
+        return {
+            "code": 200 if status else 400,
+            "success": status,
+            "odoo_url": config["odoo"]["url"],
+            "msg": message,
+        }
+    except Exception as e:
+        return {
+            "code": 500,
+            "success": False,
+            "msg": f"Error al probar conexión WMS: {str(e)}",
+        }
+
+
+# --- POST /clients/{id}/test/erp (con cliente existente) ---
+
+@router.post("/clients/{client_id}/test/erp")
 def test_erp_connection(
     client_id: int,
     body: Optional[TestConnectionRequest] = None,

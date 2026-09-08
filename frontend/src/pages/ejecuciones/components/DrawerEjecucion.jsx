@@ -107,7 +107,7 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                 {esTransaccion && descartados > 0 && (
                     <p className="drawer-nota">
                         {descartados} linea{descartados === 1 ? '' : 's'} pertenecen a documentos
-                        que ya existen en Odoo. No se recrean: estos flujos solo crean documentos
+                        que ya existen en el WMS. No se recrean: estos flujos solo crean documentos
                         nuevos, nunca actualizan los que ya estan cargados.
                     </p>
                 )}
@@ -126,7 +126,7 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                                     {etiquetaRegistro(item, i)}
                                 </span>
                                 {item.odoo_id && (
-                                    <span className="drawer-creado__id">Odoo #{item.odoo_id}</span>
+                                    <span className="drawer-creado__id">WMS #{item.odoo_id}</span>
                                 )}
                             </div>
                         ))}

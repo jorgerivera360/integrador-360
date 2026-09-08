@@ -12,7 +12,6 @@ import { ROLES } from '@/config/navigation'
 import { formatFechaHora } from '@/utils/format'
 import BotonVolver from '@/components/BotonVolver'
 import ModalEliminarCliente from './components/ModalEliminarCliente'
-import TestConexiones from './components/TestConexiones'
 import FormularioCredenciales from './components/FormularioCredenciales'
 import ProvisionContenedor from './components/ProvisionContenedor'
 import { IconAdvertencia, IconInfo, IconPapelera } from './icons'
@@ -257,11 +256,6 @@ const ClienteDetallePage = () => {
                 style={{ marginTop: 8 }}
                 items={[
                     { key: 'info', label: 'Información', children: pestanaInformacion },
-                    {
-                        key: 'test',
-                        label: 'Test de conexiones',
-                        children: <TestConexiones cliente={cliente} />,
-                    },
                     ...(puedeEditar
                         ? [
                               {

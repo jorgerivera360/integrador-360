@@ -135,7 +135,16 @@ const ProvisionContenedor = ({ cliente }) => {
                     )}
                 </div>
 
-                {existe && statusDocker !== 'running' && (
+                {existe && statusDocker === 'running' && (
+                    <Alert
+                        type="success"
+                        showIcon
+                        style={{ marginTop: 12 }}
+                        message="El contenedor está corriendo correctamente"
+                    />
+                )}
+
+                {existe && statusDocker && statusDocker !== 'running' && (
                     <Alert
                         type="warning"
                         showIcon
@@ -144,12 +153,12 @@ const ProvisionContenedor = ({ cliente }) => {
                     />
                 )}
 
-                {existe && statusDocker === 'running' && (
+                {inCompose && !containerRunning && !statusDocker && (
                     <Alert
-                        type="success"
+                        type="info"
                         showIcon
                         style={{ marginTop: 12 }}
-                        message="El contenedor está corriendo correctamente"
+                        message="La entrada existe en docker-compose.yml pero el contenedor no está levantado. Ejecuta 'docker compose up -d' en el servidor o elimínalo y vuelve a provisionar."
                     />
                 )}
             </div>
