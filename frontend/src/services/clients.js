@@ -62,6 +62,10 @@ export const getProvisionStatus = (id) => {
     return api.get(`/clients/${id}/provision/status`)
 }
 
+export const getCredentials = (id) => {
+    return api.get(`/clients/${id}/credentials`)
+}
+
 export const getCredentialsStatus = (id) => {
     return api.get(`/clients/${id}/credentials/status`)
 }

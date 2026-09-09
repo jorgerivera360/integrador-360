@@ -12,6 +12,7 @@ import {
     saveCredentials,
     provisionContainer,
     getProvisionStatus,
+    getCredentials,
     getCredentialsStatus,
     deleteCredentials,
     deleteProvision,
@@ -142,6 +143,17 @@ export function useProvisionarContenedor(id) {
             const respuesta = await provisionContainer(id)
             return respuesta.data
         },
+    })
+}
+
+export function useCredenciales(id) {
+    return useQuery({
+        queryKey: ['credentials', 'data', String(id)],
+        queryFn: async () => {
+            const respuesta = await getCredentials(id)
+            return respuesta.data
+        },
+        enabled: Boolean(id),
     })
 }
 

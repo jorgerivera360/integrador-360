@@ -246,6 +246,35 @@ def provision_container(
 
 # --- GET /clients/{id}/provision/status ---
 
+# --- GET /clients/{id}/credentials (leer credenciales guardadas) ---
+
+@router.get("/credentials")
+def get_credentials(
+    client_id: int,
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    cursor = db.cursor()
+    client = _get_client(cursor, client_id)
+    slug = client["client_id"]
+
+    try:
+        from config.loader import ConfigLoader
+        loader = ConfigLoader(client_id=slug)
+        config = loader.load_config()
+
+        if not config:
+            return {"exists": False, "erp": {}, "odoo": {}}
+
+        return {
+            "exists": True,
+            "erp": config.get("erp", {}),
+            "odoo": config.get("odoo", {}),
+        }
+    except Exception:
+        return {"exists": False, "erp": {}, "odoo": {}}
+
+
 # --- GET /clients/{id}/credentials/status ---
 
 @router.get("/credentials/status")

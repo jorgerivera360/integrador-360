@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, App, Button, Form, Input, Popconfirm } from 'antd'
 import { etiquetaErp } from '@/config/erp'
 import {
@@ -6,6 +6,7 @@ import {
     useGuardarCredenciales,
     useEliminarCredenciales,
     useEstadoCredenciales,
+    useCredenciales,
     mensajeDeError,
 } from '@/hooks/useClientes'
 import { IconCheck, IconEquis, IconServidor, IconNube, IconPapelera } from '../icons'
@@ -88,12 +89,30 @@ const FormularioCredenciales = ({ cliente }) => {
     const camposErp = CAMPOS_ERP[erpType] || []
 
     const { data: estadoCred, isLoading: cargandoEstado } = useEstadoCredenciales(cliente.id)
+    const { data: credGuardadas } = useCredenciales(cliente.id)
     const probarErp = useProbarConexionConCredenciales(cliente.id, 'erp')
     const probarWms = useProbarConexionConCredenciales(cliente.id, 'odoo')
     const guardar = useGuardarCredenciales(cliente.id)
     const eliminar = useEliminarCredenciales(cliente.id)
 
     const credencialesExisten = estadoCred?.exists === true
+
+    // Precargar formulario con credenciales guardadas
+    useEffect(() => {
+        if (!credGuardadas?.exists) return
+        const campos = {}
+        if (credGuardadas.erp) {
+            Object.entries(credGuardadas.erp).forEach(([key, val]) => {
+                campos[`erp_${key}`] = val
+            })
+        }
+        if (credGuardadas.odoo) {
+            Object.entries(credGuardadas.odoo).forEach(([key, val]) => {
+                campos[`wms_${key}`] = val
+            })
+        }
+        form.setFieldsValue(campos)
+    }, [credGuardadas, form])
 
     const obtenerCredencialesErp = () => {
         const valores = form.getFieldsValue()
