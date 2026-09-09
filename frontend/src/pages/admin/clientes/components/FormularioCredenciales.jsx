@@ -168,7 +168,7 @@ const FormularioCredenciales = ({ cliente }) => {
                     style={{ marginTop: 12 }}
                     message={
                         credencialesExisten
-                            ? `Credenciales configuradas — GCP: ${estadoCred.gcp ? 'sí' : 'no'} · Local: ${estadoCred.local ? 'sí' : 'no'}`
+                            ? 'Credenciales configuradas'
                             : 'No hay credenciales guardadas para este cliente'
                     }
                 />
