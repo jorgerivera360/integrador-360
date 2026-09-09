@@ -20,7 +20,6 @@ router = APIRouter(prefix="/clients/{client_id}", tags=["Provisioning"])
 
 COMPOSE_PATH = os.getenv("COMPOSE_PATH", "/opt/integrador/docker-compose.yml")
 DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "integrador-360")
-DOCKER_NETWORK = os.getenv("DOCKER_NETWORK")
 GCP_KEY_PATH = os.getenv("GCP_KEY_HOST_PATH", "/etc/integrador/gcp-key.json")
 CREDENTIALS_HOST_PATH = os.getenv("CREDENTIALS_HOST_PATH", "/etc/integrador/credentials")
 LOGS_HOST_PATH = os.getenv("LOGS_HOST_PATH", "/var/log/integrador")
@@ -196,30 +195,14 @@ def provision_container(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error escribiendo docker-compose.yml: {e}")
 
-    # Levantar el contenedor con docker run
-    env_args = []
-    for env_str in compose["services"][service_name]["environment"]:
-        key, _, val = env_str.partition("=")
-        # Resolver ${VAR} desde el entorno real del host (la API tiene las mismas vars)
-        if val.startswith("${") and val.endswith("}"):
-            val = os.getenv(key, "")
-        env_args.extend(["-e", f"{key}={val}"])
-
-    vol_args = []
-    for vol in compose["services"][service_name]["volumes"]:
-        vol_args.extend(["-v", vol])
-
+    # Levantar el contenedor con docker compose (queda bajo gestión de compose)
+    compose_dir = os.path.dirname(COMPOSE_PATH)
     try:
-        cmd = ["docker", "run", "-d",
-             "--name", service_name,
-             "--restart", "unless-stopped"]
-        if DOCKER_NETWORK:
-            cmd.extend(["--network", DOCKER_NETWORK])
-        cmd.extend([*env_args, *vol_args, DOCKER_IMAGE])
-
         result = subprocess.run(
-            cmd,
+            ["docker", "compose", "-f", COMPOSE_PATH, "up", "-d", service_name],
             capture_output=True, text=True, timeout=60,
+            cwd=compose_dir,
+            env={**os.environ},
         )
         if result.returncode != 0:
             return {
