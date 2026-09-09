@@ -103,8 +103,8 @@ class SiesaConnekta(ERPConnector):
                 timeout=10
             )
             if response.status_code in (200, 400, 404):
-                return True, f"Conexión exitosa con SIESA Connekta — compañía {self.id_compania}"
-            return False, f"No se pudo conectar — status {response.status_code}"
+                return True, f"Conexión exitosa con SIESA Connekta: compañía {self.id_compania}"
+            return False, f"No se pudo conectar: status {response.status_code}"
         except Exception as e:
             self.logger.error(f"Error al probar conexión Connekta: {e}")
             return False, str(e)

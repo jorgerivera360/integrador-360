@@ -103,5 +103,5 @@ class SAP(ERPConnector):
     def test_connection(self) -> tuple:
         ok = self.login_api()
         if ok:
-            return True, f"Conexión exitosa con SAP - empresa {self.compania}"
-        return False, f"No se puedo conectar con SAP - empresa {self.compania}"
+            return True, f"Conexión exitosa con SAP: empresa {self.compania}"
+        return False, f"No se pudo conectar con SAP: empresa {self.compania}"

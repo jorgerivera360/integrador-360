@@ -181,5 +181,5 @@ class JsonRPC:
     def test_connection(self) -> tuple:
         ok, msg = self.authenticate()
         if ok:
-            return True, f"Conexión exitosa con Odoo — db={self.db}"
-        return False, f"No se pudo conectar con Odoo — db={self.db}: {msg}"
+            return True, f"Conexión exitosa con WMS: {self.db}"
+        return False, f"No se pudo conectar con WMS: {self.db} ({msg})"
