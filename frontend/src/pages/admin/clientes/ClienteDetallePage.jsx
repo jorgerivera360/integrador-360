@@ -19,9 +19,8 @@ import '@/styles/pagina.css'
 import './clientes.css'
 
 const AYUDA_ID =
-    'Identificador interno del cliente, distinto del nombre visible. Debe coincidir ' +
-    'con el nombre del secret en GCP (integrador-{id}) y con la variable CLIENT_ID ' +
-    'del contenedor Docker.'
+    'Identificador único del cliente en el sistema. Se usa internamente para ' +
+    'nombrar credenciales y servicios de automatización.'
 
 const AYUDA_ERP =
     'Determina qué conector y transformador usa el integrador para este cliente. ' +
@@ -265,7 +264,7 @@ const ClienteDetallePage = () => {
                               },
                               {
                                   key: 'provision',
-                                  label: 'Contenedor',
+                                  label: 'Automatización',
                                   children: <ProvisionContenedor cliente={cliente} />,
                               },
                           ]
