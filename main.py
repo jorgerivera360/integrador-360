@@ -181,10 +181,10 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
             db_writer.finish_execution(execution_id, status, result, error_core)
 
     except Exception as e:
-        error_msg = traceback.format_exc()
-        logger.error(f"Main | Error en flow '{flow_name}': {e}")
+        logger.error(f"Main | Error en flow '{flow_name}':\n{traceback.format_exc()}")
+        error_limpio = str(e)
         if db_writer:
-            db_writer.finish_execution(execution_id, "error", None, error_msg)
+            db_writer.finish_execution(execution_id, "error", None, error_limpio)
         raise
 
     if status == "error" and error_core:
