@@ -105,8 +105,8 @@ class SiesaEnterprise(ERPConnector):
             params={"sql": sql}
         )
         if status:
-            return True, f"Conexión exitosa con SIESA WS — {self.conexion}"
-        return False, f"No se pudo conectar con SIESA WS — {self.conexion}: {data}"
+            return True, f"Conexión exitosa con SIESA WS: {self.conexion}"
+        return False, f"No se pudo conectar con SIESA WS: {self.conexion} ({data})"
 
     def _parse_raw_response(self, history) -> list | None:
       """Parsea respuesta SOAP cruda cuando serialize_object falla"""

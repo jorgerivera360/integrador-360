@@ -13,9 +13,11 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
 
     const resultado = ejecucion.result || {}
     const fallidos = resultado.fallidos || []
+    const descartadosTransform = resultado.descartados_transform || []
     const creados = resultado.creados_detalle || []
     const creadosTruncados = resultado.creados_truncado || 0
     const numFallidos = fallidos.length || resultado.fallidos_count || 0
+    const numDescartados = descartadosTransform.length
     const tieneError = Boolean(ejecucion.error_message)
 
     // Purchases y sales agrupan lineas planas en documentos, y solo ellos
@@ -103,6 +105,13 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                             />
                         </>
                     )}
+                    {numDescartados > 0 && (
+                        <CampoResultado
+                            label="Descartados en validacion"
+                            valor={numDescartados}
+                            esWarning
+                        />
+                    )}
                 </div>
                 {esTransaccion && descartados > 0 && (
                     <p className="drawer-nota">
@@ -138,6 +147,34 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                         </p>
                     )}
                 </div>
+            )}
+
+            {descartadosTransform.length > 0 && (
+                <div className="drawer-seccion">
+                    <h4 className="drawer-seccion__titulo drawer-seccion__titulo--warning">
+                        Descartados en validacion ({descartadosTransform.length})
+                    </h4>
+                    <p className="drawer-nota">
+                        Registros que llegaron del ERP pero fueron descartados porque
+                        les faltaban campos obligatorios o tenian valores invalidos.
+                    </p>
+                    <div className="drawer-fallidos">
+                        {descartadosTransform.map((item, i) => (
+                            <div key={i} className="drawer-fallido drawer-fallido--warning">
+                                <span className="drawer-fallido__ref">
+                                    {etiquetaRegistro(item, i)}
+                                </span>
+                                <span className="drawer-fallido__razon">
+                                    {item.razon || 'Sin detalle'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {descartadosTransform.length > 1 && (
+                <ResumenErrores fallidos={descartadosTransform} titulo="Descartados agrupados" />
             )}
 
             {fallidos.length > 0 && (
@@ -186,7 +223,7 @@ const etiquetaRegistro = (item, i) => {
     return `#${i + 1}`
 }
 
-const ResumenErrores = ({ fallidos }) => {
+const ResumenErrores = ({ fallidos, titulo = "Errores agrupados" }) => {
     const agrupados = {}
     for (const item of fallidos) {
         const razon = item.razon || item.reason || 'Sin detalle'
@@ -200,7 +237,7 @@ const ResumenErrores = ({ fallidos }) => {
     return (
         <div className="drawer-seccion">
             <h4 className="drawer-seccion__titulo">
-                Errores agrupados ({ordenados.length})
+                {titulo} ({ordenados.length})
             </h4>
             <div className="drawer-fallidos">
                 {ordenados.map(([razon, cantidad], i) => (
@@ -214,12 +251,13 @@ const ResumenErrores = ({ fallidos }) => {
     )
 }
 
-const CampoResultado = ({ label, valor, esError }) => {
+const CampoResultado = ({ label, valor, esError, esWarning }) => {
     const valorFinal = valor ?? 0
+    const clase = esError ? 'drawer-campo__valor--error' : esWarning ? 'drawer-campo__valor--warning' : ''
     return (
         <div className="drawer-campo">
             <span className="drawer-campo__label">{label}</span>
-            <span className={`drawer-campo__valor ${esError ? 'drawer-campo__valor--error' : ''}`}>
+            <span className={`drawer-campo__valor ${clase}`}>
                 {valorFinal}
             </span>
         </div>

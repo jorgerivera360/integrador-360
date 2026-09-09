@@ -255,6 +255,11 @@
     font-weight: 600;
 }
 
+.drawer-campo__valor--warning {
+    color: #d46b08;
+    font-weight: 600;
+}
+
 /* ---------- Fallidos en drawer ---------- */
 
 .drawer-fallidos {
@@ -286,6 +291,14 @@
     font-size: 12.5px;
     color: rgba(0, 0, 0, 0.55);
     line-height: 1.4;
+}
+
+.drawer-fallido--warning {
+    border-left-color: #faad14;
+}
+
+.drawer-seccion__titulo--warning {
+    color: #d46b08;
 }
 
 .drawer-fallido__cantidad {

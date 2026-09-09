@@ -100,12 +100,15 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
 
         # 2. Obtener datos del ERP
         data = transform.get_flow(connector, flow_name, flow_type, flow_config)
+        descartados_transform = list(getattr(transform, 'descartados', []))
 
         if not data:
             logger.info(f"Main | Flow '{flow_name}' no retornó datos")
-            result = {"creados": 0, "actualizados": 0, "fallidos": [], "total": 0}
+            result = {"creados": 0, "actualizados": 0, "fallidos": [], "total": 0,
+                       "descartados_transform": descartados_transform}
+            status = "partial" if descartados_transform else "success"
             if db_writer:
-                db_writer.finish_execution(execution_id, "success", result)
+                db_writer.finish_execution(execution_id, status, result)
             return result
 
         # Chequeo de cancelación antes de Odoo
@@ -156,6 +159,9 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
         # 5. Ejecutar core
         result = _dispatch_flow(data, flow_type, odoo, config, flow_config, cancel_check=cancel_check)
 
+        # 5.1 Agregar descartados del transform al resultado
+        result["descartados_transform"] = descartados_transform
+
         # 6. Determinar status
         error_core = result.get("error")
         fallidos = result.get("fallidos", [])
@@ -164,7 +170,7 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
             status = "cancelled"
         elif error_core:
             status = "error"
-        elif fallidos:
+        elif fallidos or descartados_transform:
             status = "partial"
         else:
             status = "success"

@@ -96,223 +96,115 @@ def clean_row(row: dict) -> dict:
               cleaned[k] = v
       return cleaned
 
-def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, str]:
+def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, dict]:
 
     ENTIDADES_VALIDAS = ("items", "partners", "purchases", "sales")
 
+    def _rechazo(campo, razon, valor_recibido=""):
+        """Construye dict de rechazo estandarizado y loguea."""
+        if logger:
+            logger.warning(f"validate_record: {entity_type} descartado: {razon} (datos: {row})")
+        return False, {"campo": campo, "razon": razon, "valor_recibido": str(valor_recibido)}
+
+    def _campo_vacio(campo, contexto=""):
+        valor = row.get(campo, "")
+        if not valor or not str(valor).strip():
+            prefijo = f"{contexto}: " if contexto else ""
+            return True, _rechazo(campo, f"{prefijo}campo '{campo}' vacio", valor)
+        return False, None
+
     if entity_type not in ENTIDADES_VALIDAS:
         if logger:
-            logger.error(
-                f"validate_record: entity_type desconocido '{entity_type}' — "
-                f"registro descartado. Validos: {', '.join(ENTIDADES_VALIDAS)}"
-            )
-        return False, f"entity_type desconocido: '{entity_type}'"
+            logger.error(f"validate_record: entity_type desconocido '{entity_type}'")
+        return False, {"campo": "entity_type", "razon": f"Tipo de entidad desconocido: '{entity_type}'", "valor_recibido": entity_type}
 
     if entity_type == "items":
-        ref = row.get("referencia", "")
-        if not ref or not str(ref).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: item descartado — referencia vacía "
-                    f"— datos recibidos: {row}"
-                )
-            return False, "referencia vacía"
-        desc = row.get("descripcion", "")
-        if not desc or not str(desc).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: item descartado — descripcion vacía "
-                    f"para referencia '{ref}' — datos recibidos: {row}"
-                )
-            return False, "descripcion vacía"
+        ref = str(row.get("referencia", "")).strip()
+        desc = str(row.get("descripcion", "")).strip()
+        contexto = f"Producto '{ref or '?'}'"
+
+        vacio, resultado = _campo_vacio("referencia", "Producto")
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("descripcion", contexto)
+        if vacio: return resultado
 
     elif entity_type == "partners":
-        nombre = row.get("nombre", "")
-        identificacion = row.get("identificacion", "")
-        if not nombre or not str(nombre).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: partner descartado — nombre vacío "
-                    f"— datos recibidos: {row}"
-                )
-            return False, "nombre vacío"
-        if not identificacion or not str(identificacion).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: partner descartado — identificacion "
-                    f"vacía para nombre '{nombre}' — datos recibidos: {row}"
-                )
-            return False, "identificacion vacía"
+        nombre = str(row.get("nombre", "")).strip()
+        ident = str(row.get("identificacion", "")).strip()
+        contexto = f"Tercero '{nombre or ident or '?'}'"
+
+        vacio, resultado = _campo_vacio("nombre", "Tercero")
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("identificacion", contexto)
+        if vacio: return resultado
 
     elif entity_type == "purchases":
-        compra = row.get("compra", "")
-        if not compra or not str(compra).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: purchase descartado — compra vacía "
-                    f"— datos recibidos: {row}"
-                )
-            return False, "compra vacía"
-        producto = row.get("producto", "")
-        if not producto or not str(producto).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: línea descartada — producto vacío "
-                    f"en compra '{compra}' — datos recibidos: {row}"
-                )
-            return False, "producto vacío"
-        proveedor = row.get("proveedor", "")
-        if not proveedor or not str(proveedor).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: purchase descartado — proveedor vacío "
-                    f"en compra '{compra}' — datos recibidos: {row}"
-                )
-            return False, "proveedor vacío"
-        sucursal_proveedor = row.get("sucursal_proveedor", "")
-        if not sucursal_proveedor or not str(sucursal_proveedor).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: purchase descartado — sucursal_proveedor vacía "
-                    f"en compra '{compra}' — datos recibidos: {row}"
-                )
-            return False, "sucursal_proveedor vacía"
-        fecha_entrega = row.get("fecha_entrega", "")
-        if not fecha_entrega or not str(fecha_entrega).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: purchase descartado — fecha_entrega vacía "
-                    f"en compra '{compra}' — datos recibidos: {row}"
-                )
-            return False, "fecha_entrega vacía"
-        estado = row.get("estado", "")
-        if not estado or not str(estado).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: purchase descartado — estado vacío "
-                    f"en compra '{compra}' — datos recibidos: {row}"
-                )
-            return False, "estado vacío"
-        almacen = row.get("almacen", "")
-        if not almacen or not str(almacen).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: purchase descartado — almacen vacío "
-                    f"en compra '{compra}' — datos recibidos: {row}"
-                )
-            return False, "almacen vacío"
+        compra = str(row.get("compra", "")).strip()
+        producto = str(row.get("producto", "")).strip()
+        contexto = f"Compra '{compra or '?'}'"
+        contexto_linea = f"Compra '{compra or '?'}', producto '{producto or '?'}'"
+
+        vacio, resultado = _campo_vacio("compra", "Compra")
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("producto", contexto)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("proveedor", contexto_linea)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("sucursal_proveedor", contexto_linea)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("fecha_entrega", contexto_linea)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("estado", contexto_linea)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("almacen", contexto_linea)
+        if vacio: return resultado
+
         if row.get("precio_unitario") is None or str(row.get("precio_unitario", "")).strip() == "":
             row["precio_unitario"] = 0
+
         cantidad = row.get("cantidad")
         if cantidad is None or str(cantidad).strip() == "":
-            if logger:
-                logger.warning(
-                    f"validate_record: línea descartada - cantidad ausente "
-                    f"en compra '{compra}' - datos recibidos: {row}"
-                )
-            return False, "cantidad ausente"
+            return _rechazo("cantidad", f"{contexto_linea}: campo 'cantidad' ausente", cantidad)
         try:
             if float(cantidad) <= 0:
-                if logger:
-                    logger.warning(
-                        f"validate_record: línea descartada — "
-                        f"cantidad <= 0 en compra '{compra}' "
-                        f"— datos recibidos: {row}"
-                    )
-                return False, "cantidad <= 0"
+                return _rechazo("cantidad", f"{contexto_linea}: cantidad es {cantidad} (debe ser > 0)", cantidad)
         except (ValueError, TypeError):
-            if logger:
-                logger.error(
-                    f"validate_record: línea descartada — cantidad no "
-                    f"numérica '{cantidad}' en compra '{compra}' "
-                    f"— datos recibidos: {row}"
-                )
-            return False, f"cantidad no numérica: {cantidad}"
+            return _rechazo("cantidad", f"{contexto_linea}: cantidad no numerica '{cantidad}'", cantidad)
+
     elif entity_type == "sales":
-        pedido = row.get("pedido", "")
-        if not pedido or not str(pedido).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: sale descartado — pedido vacío "
-                    f"— datos recibidos: {row}"
-                )
-            return False, "pedido vacío"
-        producto = row.get("producto", "")
-        if not producto or not str(producto).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: línea descartada — producto vacío "
-                    f"en pedido '{pedido}' — datos recibidos: {row}"
-                )
-            return False, "producto vacío"
-        cliente = row.get("cliente", "")
-        if not cliente or not str(cliente).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: sale descartado — cliente vacío "
-                    f"en pedido '{pedido}' — datos recibidos: {row}"
-                )
-            return False, "cliente vacío"
-        sucursal_cliente = row.get("sucursal_cliente", "")
-        if not sucursal_cliente or not str(sucursal_cliente).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: sale descartado — sucursal_cliente vacía "
-                    f"en pedido '{pedido}' — datos recibidos: {row}"
-                )
-            return False, "sucursal_cliente vacía"
-        fecha_pedido = row.get("fecha_pedido", "")
-        if not fecha_pedido or not str(fecha_pedido).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: sale descartado — fecha_pedido vacía "
-                    f"en pedido '{pedido}' — datos recibidos: {row}"
-                )
-            return False, "fecha_pedido vacía"
-        estado = row.get("estado", "")
-        if not estado or not str(estado).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: sale descartado — estado vacío "
-                    f"en pedido '{pedido}' — datos recibidos: {row}"
-                )
-            return False, "estado vacío"
-        almacen = row.get("almacen", "")
-        if not almacen or not str(almacen).strip():
-            if logger:
-                logger.warning(
-                    f"validate_record: sale descartado — almacen vacío "
-                    f"en pedido '{pedido}' — datos recibidos: {row}"
-                )
-            return False, "almacen vacío"
+        pedido = str(row.get("pedido", "")).strip()
+        producto = str(row.get("producto", "")).strip()
+        contexto = f"Pedido '{pedido or '?'}'"
+        contexto_linea = f"Pedido '{pedido or '?'}', producto '{producto or '?'}'"
+
+        vacio, resultado = _campo_vacio("pedido", "Pedido")
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("producto", contexto)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("cliente", contexto_linea)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("sucursal_cliente", contexto_linea)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("fecha_pedido", contexto_linea)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("estado", contexto_linea)
+        if vacio: return resultado
+        vacio, resultado = _campo_vacio("almacen", contexto_linea)
+        if vacio: return resultado
+
         if row.get("precio_unitario") is None or str(row.get("precio_unitario", "")).strip() == "":
             row["precio_unitario"] = 0
+
         cantidad = row.get("cantidad_pedida")
         if cantidad is None or str(cantidad).strip() == "":
-            if logger:
-                logger.warning(
-                    f"validate_record: línea descartada — cantidad_pedida ausente "
-                    f"en pedido '{pedido}' — datos recibidos: {row}"
-                )
-            return False, "cantidad_pedida ausente"
+            return _rechazo("cantidad_pedida", f"{contexto_linea}: campo 'cantidad_pedida' ausente", cantidad)
         try:
             if float(cantidad) <= 0:
-                if logger:
-                    logger.warning(
-                        f"validate_record: línea descartada — "
-                        f"cantidad_pedida <= 0 en pedido '{pedido}' "
-                        f"— datos recibidos: {row}"
-                    )
-                return False, "cantidad_pedida <= 0"
+                return _rechazo("cantidad_pedida", f"{contexto_linea}: cantidad_pedida es {cantidad} (debe ser > 0)", cantidad)
         except (ValueError, TypeError):
-            if logger:
-                logger.error(
-                    f"validate_record: línea descartada — cantidad_pedida no "
-                    f"numérica '{cantidad}' en pedido '{pedido}' "
-                    f"— datos recibidos: {row}"
-                )
-            return False, f"cantidad_pedida no numérica: {cantidad}"
-    return True, ""
+            return _rechazo("cantidad_pedida", f"{contexto_linea}: cantidad_pedida no numerica '{cantidad}'", cantidad)
+
+    return True, {}
 
 def resolve_parametros(parametros_str, formato="%Y%m%d", logger=None):
     if not parametros_str or "{" not in parametros_str:

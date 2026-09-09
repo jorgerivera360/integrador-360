@@ -19,8 +19,10 @@ class TransformConnekta(Transform):
     def __init__(self, config: dict):
         self.client_id = config["client_id"]
         self.logger = IntegradorLogger(client_id=self.client_id)
+        self.descartados = []
 
     def get_flow(self, connector, flow_name: str, flow_type: str, flow_config: dict) -> list:
+        self.descartados = []
         normalize_map = {
             "items": self._normalize_items,
             "customer": self._normalize_partners,
@@ -163,9 +165,9 @@ class TransformConnekta(Transform):
 
                 row = clean_row(row)
 
-                valid, reason = validate_record(row, "items", logger=self.logger)
+                valid, detalle = validate_record(row, "items", logger=self.logger)
                 if not valid:
-                    fallidos.append({"ref": row.get("referencia", "?"), "desc": row.get("descripcion", "?"), "razon": reason})
+                    fallidos.append({"referencia": row.get("referencia", "?"), "etapa": "validacion", **detalle})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -177,7 +179,7 @@ class TransformConnekta(Transform):
                 results.append(row)
 
             except Exception as e:
-                fallidos.append({"ref": row.get("referencia", "?"), "desc": row.get("descripcion", "?"), "razon": str(e)})
+                fallidos.append({"referencia": row.get("referencia", "?"), "etapa": "validacion", "campo": "excepcion", "razon": str(e), "valor_recibido": ""})
                 continue
 
         self.logger.info(
@@ -186,7 +188,8 @@ class TransformConnekta(Transform):
         if fallidos:
             self.logger.warning(f"_normalize_items: {len(fallidos)} registros descartados:")
             for f in fallidos:
-                self.logger.warning(f"  - {f['ref']} ({f['desc']}): {f['razon']}")
+                self.logger.warning(f"  - {f.get('referencia', '?')}: {f.get('razon', '?')}")
+            self.descartados.extend(fallidos)
         if docs_activos:
             detalle = ", ".join(
                 f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
@@ -222,15 +225,15 @@ class TransformConnekta(Transform):
 
                 row = clean_row(row)
 
-                valid, reason = validate_record(row, "partners", logger=self.logger)
+                valid, detalle = validate_record(row, "partners", logger=self.logger)
                 if not valid:
-                    fallidos.append({"nombre": row.get("nombre", "?"), "id": row.get("identificacion", "?"), "razon": reason})
+                    fallidos.append({"identificacion": row.get("identificacion", "?"), "etapa": "validacion", **detalle})
                     continue
 
                 results.append(row)
 
             except Exception as e:
-                fallidos.append({"nombre": row.get("nombre", "?"), "id": row.get("identificacion", "?"), "razon": str(e)})
+                fallidos.append({"identificacion": row.get("identificacion", "?"), "etapa": "validacion", "campo": "excepcion", "razon": str(e), "valor_recibido": ""})
                 continue
 
         self.logger.info(
@@ -239,7 +242,8 @@ class TransformConnekta(Transform):
         if fallidos:
             self.logger.warning(f"_normalize_partners: {len(fallidos)} registros descartados:")
             for f in fallidos:
-                self.logger.warning(f"  - {f['nombre']} ({f['id']}): {f['razon']}")
+                self.logger.warning(f"  - {f.get('identificacion', '?')}: {f.get('razon', '?')}")
+            self.descartados.extend(fallidos)
         if docs_activos:
             detalle = ", ".join(
                 f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
@@ -277,9 +281,9 @@ class TransformConnekta(Transform):
 
                 row = clean_row(row)
 
-                valid, reason = validate_record(row, "purchases", logger=self.logger)
+                valid, detalle = validate_record(row, "purchases", logger=self.logger)
                 if not valid:
-                    fallidos.append({"compra": row.get("compra", "?"), "producto": row.get("producto", "?"), "razon": reason})
+                    fallidos.append({"compra": row.get("compra", "?"), "etapa": "validacion", **detalle})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -291,7 +295,7 @@ class TransformConnekta(Transform):
                 results.append(row)
 
             except Exception as e:
-                fallidos.append({"compra": row.get("compra", "?"), "producto": row.get("producto", "?"), "razon": str(e)})
+                fallidos.append({"compra": row.get("compra", "?"), "etapa": "validacion", "campo": "excepcion", "razon": str(e), "valor_recibido": ""})
                 continue
 
         self.logger.info(
@@ -300,7 +304,8 @@ class TransformConnekta(Transform):
         if fallidos:
             self.logger.warning(f"_normalize_purchases: {len(fallidos)} registros descartados:")
             for f in fallidos:
-                self.logger.warning(f"  - Compra {f['compra']}, producto {f['producto']}: {f['razon']}")
+                self.logger.warning(f"  - Compra {f.get('compra', '?')}: {f.get('razon', '?')}")
+            self.descartados.extend(fallidos)
         if docs_activos:
             detalle = ", ".join(
                 f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
@@ -338,9 +343,9 @@ class TransformConnekta(Transform):
 
                 row = clean_row(row)
 
-                valid, reason = validate_record(row, "sales", logger=self.logger)
+                valid, detalle = validate_record(row, "sales", logger=self.logger)
                 if not valid:
-                    fallidos.append({"pedido": row.get("pedido", "?"), "producto": row.get("producto", "?"), "razon": reason})
+                    fallidos.append({"pedido": row.get("pedido", "?"), "etapa": "validacion", **detalle})
                     continue
 
                 for campo in campos_float & row.keys():
@@ -352,7 +357,7 @@ class TransformConnekta(Transform):
                 results.append(row)
 
             except Exception as e:
-                fallidos.append({"pedido": row.get("pedido", "?"), "producto": row.get("producto", "?"), "razon": str(e)})
+                fallidos.append({"pedido": row.get("pedido", "?"), "etapa": "validacion", "campo": "excepcion", "razon": str(e), "valor_recibido": ""})
                 continue
 
         self.logger.info(
@@ -361,7 +366,8 @@ class TransformConnekta(Transform):
         if fallidos:
             self.logger.warning(f"_normalize_sales: {len(fallidos)} registros descartados:")
             for f in fallidos:
-                self.logger.warning(f"  - Pedido {f['pedido']}, producto {f['producto']}: {f['razon']}")
+                self.logger.warning(f"  - Pedido {f.get('pedido', '?')}: {f.get('razon', '?')}")
+            self.descartados.extend(fallidos)
         if docs_activos:
             detalle = ", ".join(
                 f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
