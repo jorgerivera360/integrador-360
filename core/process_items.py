@@ -25,7 +25,7 @@ class ProcessItems(CoreProcessor):
 
     def process(self, data):
         if not data:
-            return {"creados": 0, "actualizados": 0, "fallidos": [], "total": 0}
+            return {"creados": 0, "sincronizados": 0, "fallidos": [], "total": 0}
 
         try:
             # ---- Fase 1: Normalizar UOMs ----
@@ -59,7 +59,7 @@ class ProcessItems(CoreProcessor):
                         f"Items | Búsqueda existentes: falló después de {max_retries} intentos"
                     )
                     return {
-                        "creados": 0, "actualizados": 0, "fallidos": [],
+                        "creados": 0, "sincronizados": 0, "fallidos": [],
                         "total": len(data), "error": str(result)
                     }
             self.logger.info(
@@ -128,7 +128,7 @@ class ProcessItems(CoreProcessor):
 
             # ---- Fase 4: Loop — create / write ----
             creados = 0
-            actualizados = 0
+            sincronizados = 0
             fallidos = []
             creados_detalle = []
 
@@ -206,7 +206,7 @@ class ProcessItems(CoreProcessor):
                         # ---- WRITE (sin default_code, tracking) ----
                         ok, res = self.odoo.write("product.template", [product_id], payload)
                         if ok:
-                            actualizados += 1
+                            sincronizados += 1
                         else:
                             fallidos.append({"referencia": ref, "razon": f"write falló: {res}"})
                     else:
@@ -239,7 +239,7 @@ class ProcessItems(CoreProcessor):
 
             # ---- Fase 5: Resumen ----
             self.logger.info(
-                f"Items | Procesamiento: {creados} creados, {actualizados} actualizados, "
+                f"Items | Procesamiento: {creados} creados, {sincronizados} sincronizados, "
                 f"{len(fallidos)} fallidos de {len(data)} total"
             )
             if fallidos:
@@ -248,7 +248,7 @@ class ProcessItems(CoreProcessor):
                     self.logger.warning(f"  - {f['referencia']}: {f['razon']}")
 
             return {
-                "creados": creados, "actualizados": actualizados,
+                "creados": creados, "sincronizados": sincronizados,
                 "fallidos": fallidos, "total": len(data),
                 "creados_detalle": creados_detalle,
                 "creados_truncado": max(0, creados - len(creados_detalle))
@@ -257,7 +257,7 @@ class ProcessItems(CoreProcessor):
         except Exception as e:
             self.logger.error(f"Items | Error fatal: {e}")
             return {
-                "creados": 0, "actualizados": 0, "fallidos": [],
+                "creados": 0, "sincronizados": 0, "fallidos": [],
                 "total": len(data), "error": str(e)
             }
 

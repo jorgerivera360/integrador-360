@@ -102,13 +102,13 @@ const NivelHistorial = ({ cliente, flow, onVolver }) => {
             render: (_, rec) => rec.result?.creados ?? '—',
         },
         {
-            title: 'Actualizados',
-            key: 'actualizados',
+            title: 'Sincronizados',
+            key: 'sincronizados',
             align: 'center',
             width: 110,
             className: 'celda-tenue',
-            sorter: (a, b) => (a.result?.actualizados ?? 0) - (b.result?.actualizados ?? 0),
-            render: (_, rec) => rec.result?.actualizados ?? '—',
+            sorter: (a, b) => (a.result?.sincronizados ?? 0) - (b.result?.sincronizados ?? 0),
+            render: (_, rec) => rec.result?.sincronizados ?? '—',
         },
         {
             title: 'Fallidos',

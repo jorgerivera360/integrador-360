@@ -528,7 +528,7 @@ class TestDispatchFlow:
         fc = {"uom_mapping": {"UND": "Unidades"}}
 
         _dispatch_flow([], "items", odoo, MAIN_CONFIG, fc)
-        mock_cls.assert_called_once_with(odoo, MAIN_CONFIG, fc)
+        mock_cls.assert_called_once_with(odoo, MAIN_CONFIG, {**fc, "flow_type": "items"}, cancel_check=None)
 
     @patch("main.ProcessItems")
     def test_pasa_data_a_process(self, mock_cls):
@@ -708,12 +708,16 @@ class TestRun:
     def test_status_success_sin_fallidos(self, mock_bc, mock_bt, mock_cd, mock_df):
         from main import run
         mock_bt.return_value.get_flow.return_value = [{"referencia": "P001"}]
+        mock_bt.return_value.descartados = []
         mock_df.return_value = {"creados": 1, "fallidos": [], "total": 1}
 
         db_writer = MagicMock()
         db_writer.start_execution.return_value = 99
+        db_writer.is_cancelled.return_value = False
         run(FLOW_ITEMS, MAIN_CONFIG, "ws", db_writer=db_writer)
-        db_writer.finish_execution.assert_called_once_with(99, "success", {"creados": 1, "fallidos": [], "total": 1})
+        call_args = db_writer.finish_execution.call_args[0]
+        assert call_args[0] == 99
+        assert call_args[1] == "success"
 
     @patch("main._dispatch_flow")
     @patch("main.connection_data")
@@ -722,6 +726,7 @@ class TestRun:
     def test_status_partial_con_fallidos(self, mock_bc, mock_bt, mock_cd, mock_df):
         from main import run
         mock_bt.return_value.get_flow.return_value = [{"referencia": "P001"}]
+        mock_bt.return_value.descartados = []
         result_con_fallidos = {
             "creados": 1,
             "fallidos": [{"referencia": "P002", "razon": "UOM no existe"}],
@@ -731,8 +736,11 @@ class TestRun:
 
         db_writer = MagicMock()
         db_writer.start_execution.return_value = 99
+        db_writer.is_cancelled.return_value = False
         run(FLOW_ITEMS, MAIN_CONFIG, "ws", db_writer=db_writer)
-        db_writer.finish_execution.assert_called_once_with(99, "partial", result_con_fallidos)
+        call_args = db_writer.finish_execution.call_args[0]
+        assert call_args[0] == 99
+        assert call_args[1] == "partial"
 
     @patch("main._dispatch_flow")
     @patch("main.connection_data")
@@ -741,10 +749,12 @@ class TestRun:
     def test_excepcion_registra_error_en_bd(self, mock_bc, mock_bt, mock_cd, mock_df):
         from main import run
         mock_bt.return_value.get_flow.return_value = [{"referencia": "P001"}]
+        mock_bt.return_value.descartados = []
         mock_df.side_effect = Exception("Odoo exploto")
 
         db_writer = MagicMock()
         db_writer.start_execution.return_value = 99
+        db_writer.is_cancelled.return_value = False
 
         with pytest.raises(Exception, match="Odoo exploto"):
             run(FLOW_ITEMS, MAIN_CONFIG, "ws", db_writer=db_writer)

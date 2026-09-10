@@ -104,7 +104,7 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
 
         if not data:
             logger.info(f"Main | Flow '{flow_name}' no retornó datos")
-            result = {"creados": 0, "actualizados": 0, "fallidos": [], "total": 0,
+            result = {"creados": 0, "sincronizados": 0, "fallidos": [], "total": 0,
                        "descartados_transform": descartados_transform}
             status = "partial" if descartados_transform else "success"
             if db_writer:
@@ -116,8 +116,8 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
             logger.info(f"Main | Flow '{flow_name}' cancelado antes de conectar a Odoo")
             if db_writer:
                 db_writer.finish_execution(execution_id, "cancelled",
-                    {"creados": 0, "actualizados": 0, "fallidos": [], "total": len(data)})
-            return {"creados": 0, "actualizados": 0, "fallidos": [], "total": len(data)}
+                    {"creados": 0, "sincronizados": 0, "fallidos": [], "total": len(data)})
+            return {"creados": 0, "sincronizados": 0, "fallidos": [], "total": len(data)}
 
         # 3. Autenticar en Odoo
         odoo = connection_data(config)
@@ -153,8 +153,8 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
             logger.info(f"Main | Flow '{flow_name}' cancelado antes de ejecutar core")
             if db_writer:
                 db_writer.finish_execution(execution_id, "cancelled",
-                    {"creados": 0, "actualizados": 0, "fallidos": [], "total": len(data)})
-            return {"creados": 0, "actualizados": 0, "fallidos": [], "total": len(data)}
+                    {"creados": 0, "sincronizados": 0, "fallidos": [], "total": len(data)})
+            return {"creados": 0, "sincronizados": 0, "fallidos": [], "total": len(data)}
 
         # 5. Ejecutar core
         result = _dispatch_flow(data, flow_type, odoo, config, flow_config, cancel_check=cancel_check)

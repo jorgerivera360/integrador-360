@@ -97,7 +97,7 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                         <>
                             <CampoResultado label="Registros" valor={resultado.total} />
                             <CampoResultado label="Creados" valor={resultado.creados} />
-                            <CampoResultado label="Actualizados" valor={resultado.actualizados} />
+                            <CampoResultado label="Sincronizados" valor={resultado.sincronizados} />
                             <CampoResultado
                                 label="Fallidos"
                                 valor={numFallidos}

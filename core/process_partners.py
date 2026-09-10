@@ -25,7 +25,7 @@ class ProcessPartners(CoreProcessor):
 
     def process(self, data):
         if not data:
-            return {"creados": 0, "actualizados": 0, "fallidos": [], "total": 0}
+            return {"creados": 0, "sincronizados": 0, "fallidos": [], "total": 0}
 
         try:
             # ---- Fase 1: Ordenar por jerarquía (si aplica) ----
@@ -67,7 +67,7 @@ class ProcessPartners(CoreProcessor):
                         f"Partners | Búsqueda existentes: falló después de {max_retries} intentos"
                     )
                     return {
-                        "creados": 0, "actualizados": 0, "fallidos": [],
+                        "creados": 0, "sincronizados": 0, "fallidos": [],
                         "total": len(data), "error": str(result)
                     }
             self.logger.info(
@@ -93,7 +93,7 @@ class ProcessPartners(CoreProcessor):
 
             # ---- Fase 4: Loop — create / write ----
             creados = 0
-            actualizados = 0
+            sincronizados = 0
             fallidos = []
             creados_detalle = []
 
@@ -145,7 +145,7 @@ class ProcessPartners(CoreProcessor):
 
                         ok, res = self.odoo.write("res.partner", [partner_id], payload)
                         if ok:
-                            actualizados += 1
+                            sincronizados += 1
                         else:
                             fallidos.append({
                                 "identificacion": vat, "sucursal": sucursal,
@@ -202,7 +202,7 @@ class ProcessPartners(CoreProcessor):
 
             # ---- Fase 5: Resumen ----
             self.logger.info(
-                f"Partners | Procesamiento: {creados} creados, {actualizados} actualizados, "
+                f"Partners | Procesamiento: {creados} creados, {sincronizados} sincronizados, "
                 f"{len(fallidos)} fallidos de {len(data)} total"
             )
             if fallidos:
@@ -213,7 +213,7 @@ class ProcessPartners(CoreProcessor):
                     )
 
             return {
-                "creados": creados, "actualizados": actualizados,
+                "creados": creados, "sincronizados": sincronizados,
                 "fallidos": fallidos, "total": len(data),
                 "creados_detalle": creados_detalle,
                 "creados_truncado": max(0, creados - len(creados_detalle))
@@ -222,6 +222,6 @@ class ProcessPartners(CoreProcessor):
         except Exception as e:
             self.logger.error(f"Partners | Error fatal: {e}")
             return {
-                "creados": 0, "actualizados": 0, "fallidos": [],
+                "creados": 0, "sincronizados": 0, "fallidos": [],
                 "total": len(data), "error": str(e)
             }

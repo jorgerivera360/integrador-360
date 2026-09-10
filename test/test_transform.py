@@ -453,11 +453,11 @@ class TestValidateRecordPurchases:
         from transform.utils.helpers import validate_record
         assert validate_record(dict(purchase_ok(), cantidad="abc"), "purchases")[0] is False
 
-    def test_cantidad_no_numerica_loguea_error(self):
+    def test_cantidad_no_numerica_loguea_warning(self):
         from transform.utils.helpers import validate_record
         logger = MagicMock()
         validate_record(dict(purchase_ok(), cantidad="abc"), "purchases", logger=logger)
-        assert logger.error.called
+        assert logger.warning.called
 
 
 class TestValidateRecordSales:
@@ -501,8 +501,9 @@ class TestValidateRecordEntidadDesconocida:
 
     def test_entity_type_desconocido_explica_el_motivo(self):
         from transform.utils.helpers import validate_record
-        _, razon = validate_record({}, "no_existe")
-        assert "entity_type" in razon
+        _, detalle = validate_record({}, "no_existe")
+        assert detalle["campo"] == "entity_type"
+        assert "no_existe" in detalle["razon"]
 
     def test_entity_type_desconocido_loguea_error(self):
         from transform.utils.helpers import validate_record
