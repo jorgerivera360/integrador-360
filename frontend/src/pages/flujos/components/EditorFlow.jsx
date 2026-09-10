@@ -524,10 +524,12 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                     />
                 )}
 
-                <SeccionDocumentos
-                    config={config}
-                    onChange={setConfig}
-                />
+                {(flowType === 'purchases' || flowType === 'sales') && (
+                    <SeccionDocumentos
+                        config={config}
+                        onChange={setConfig}
+                    />
+                )}
 
                 <SeccionResolve
                     erpType={erpType}
