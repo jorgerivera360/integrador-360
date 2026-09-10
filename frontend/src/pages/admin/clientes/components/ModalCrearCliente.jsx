@@ -5,8 +5,8 @@ import { useCrearCliente, mensajeDeError } from '@/hooks/useClientes'
 import { IconInfo } from '../icons'
 
 const AYUDA_ID =
-    'Debe ser único. Se usará como nombre del secret en GCP (integrador-{id}) ' +
-    'y como identificador interno de la automatización.'
+    'Identificador único del cliente en el sistema. Se usa internamente para ' +
+    'nombrar credenciales y servicios de automatización.'
 
 const ModalCrearCliente = ({ abierto, onCerrar, onCreado }) => {
     const [form] = Form.useForm()

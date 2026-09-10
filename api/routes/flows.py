@@ -250,13 +250,12 @@ def duplicate_flow(
 
     cursor.execute(
         """INSERT INTO flows
-        (client_id, flow_name, flow_type, flow_config, schedule_cron, is_active, execution_order, created_by, updated_by)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING *""",
+        (client_id, flow_name, flow_type, flow_config, schedule_cron, is_active, created_by, updated_by)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING *""",
         (
             client_id, new_name, original["flow_type"],
             flow_config, original["schedule_cron"],
-            False, original.get("execution_order", 99),
-            current_user["id"], current_user["id"]
+            False, current_user["id"], current_user["id"]
         )
     )
     new_flow = cursor.fetchone()
