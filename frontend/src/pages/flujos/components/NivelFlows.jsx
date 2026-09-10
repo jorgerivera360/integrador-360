@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { Alert, Button, Spin, Table, message } from 'antd'
+import { Alert, Button, Dropdown, Spin, Table, message } from 'antd'
+import { MoreOutlined, CopyOutlined } from '@ant-design/icons'
 import ErpTag from '@/components/ErpTag'
 import ActivoTag from '@/components/ActivoTag'
 import useHasRole from '@/hooks/useHasRole'
-import { useFlowsClienteSummary, useEjecutarFlow, useCancelarFlow, mensajeDeError } from '@/hooks/useFlujos'
+import { useFlowsClienteSummary, useEjecutarFlow, useCancelarFlow, useDuplicarFlow, mensajeDeError } from '@/hooks/useFlujos'
 import { formatFechaHora } from '@/utils/format'
 import { IconVolver, IconMas, IconPlay, IconStop } from '../icons'
 
@@ -19,6 +20,7 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
     const { data: todosFlows, isPending, isError, error, refetch } = useFlowsClienteSummary(cliente.id)
     const ejecutar = useEjecutarFlow()
     const cancelar = useCancelarFlow()
+    const duplicar = useDuplicarFlow(cliente.id)
     const puedeEditar = useHasRole(['superadmin', 'admin'])
 
     const flows = todosFlows?.filter((f) => f.flow_type === flowType) || []
@@ -37,6 +39,14 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
         cancelar.mutate(flow.id, {
             onSuccess: () => message.success(`Cancelación de "${flow.flow_name}" solicitada`),
             onError: (err) => message.error(mensajeDeError(err, 'No se pudo cancelar la ejecución')),
+        })
+    }
+
+    const handleDuplicar = (e, flow) => {
+        e.domEvent.stopPropagation()
+        duplicar.mutate(flow.id, {
+            onSuccess: (res) => message.success(`Flujo duplicado como "${res.data.flow_name}"`),
+            onError: (err) => message.error(mensajeDeError(err, 'No se pudo duplicar el flujo')),
         })
     }
 
@@ -107,10 +117,30 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
                     >
                         Detener
                     </Button>
+                    <Dropdown
+                        menu={{
+                            items: [
+                                {
+                                    key: 'duplicar',
+                                    icon: <CopyOutlined />,
+                                    label: 'Duplicar',
+                                    onClick: (e) => handleDuplicar(e, flow),
+                                },
+                            ],
+                        }}
+                        trigger={['click']}
+                    >
+                        <Button
+                            size="small"
+                            type="text"
+                            icon={<MoreOutlined />}
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </Dropdown>
                 </div>
             ),
         }] : []),
-    ], [puedeEditar, ejecutar.isPending, ejecutar.variables, cancelar.isPending, cancelar.variables])
+    ], [puedeEditar, ejecutar.isPending, ejecutar.variables, cancelar.isPending, cancelar.variables, duplicar])
 
     if (isError) {
         return (

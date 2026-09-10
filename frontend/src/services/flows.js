@@ -24,6 +24,10 @@ export const deleteFlow = (clientId, flowId) => {
     return api.delete(`/clients/${clientId}/flows/${flowId}`)
 }
 
+export const duplicateFlow = (clientId, flowId) => {
+    return api.post(`/clients/${clientId}/flows/${flowId}/duplicate`)
+}
+
 export const executeFlow = (flowId) => {
     return api.post(`/flows/${flowId}/execute`)
 }

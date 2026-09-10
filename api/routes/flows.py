@@ -215,6 +215,63 @@ def update_flow(
     return updated_flow
 
 
+@router.post("/{flow_id}/duplicate", response_model=FlowResponse, status_code=201)
+def duplicate_flow(
+    client_id: int,
+    flow_id: int,
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    cursor = db.cursor()
+
+    cursor.execute(
+        "SELECT * FROM flows WHERE id = %s AND client_id = %s",
+        (flow_id, client_id)
+    )
+    original = cursor.fetchone()
+    if not original:
+        raise HTTPException(status_code=404, detail="Flow no encontrado")
+
+    base_name = original["flow_name"]
+    copy_num = 1
+    while True:
+        new_name = f"{base_name}_copy{copy_num}"
+        cursor.execute(
+            "SELECT id FROM flows WHERE client_id = %s AND flow_name = %s AND flow_type = %s",
+            (client_id, new_name, original["flow_type"])
+        )
+        if not cursor.fetchone():
+            break
+        copy_num += 1
+
+    flow_config = original["flow_config"]
+    if isinstance(flow_config, dict):
+        flow_config = json.dumps(flow_config)
+
+    cursor.execute(
+        """INSERT INTO flows
+        (client_id, flow_name, flow_type, flow_config, schedule_cron, is_active, execution_order, created_by, updated_by)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING *""",
+        (
+            client_id, new_name, original["flow_type"],
+            flow_config, original["schedule_cron"],
+            False, original.get("execution_order", 99),
+            current_user["id"], current_user["id"]
+        )
+    )
+    new_flow = cursor.fetchone()
+
+    cursor.execute(
+        """INSERT INTO change_history
+        (table_name, record_id, action, changed_fields, changed_by)
+        VALUES ('flows', %s, 'create', %s, %s)""",
+        (new_flow["id"], json.dumps({"flow_name": new_name, "duplicado_de": original["flow_name"]}), current_user["id"])
+    )
+
+    db.commit()
+    return new_flow
+
+
 @router.delete("/{flow_id}", status_code=204)
 def delete_flow(
     client_id: int,
