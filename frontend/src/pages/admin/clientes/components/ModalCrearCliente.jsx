@@ -6,7 +6,7 @@ import { IconInfo } from '../icons'
 
 const AYUDA_ID =
     'Debe ser único. Se usará como nombre del secret en GCP (integrador-{id}) ' +
-    'y como CLIENT_ID del contenedor Docker.'
+    'y como identificador interno de la automatización.'
 
 const ModalCrearCliente = ({ abierto, onCerrar, onCreado }) => {
     const [form] = Form.useForm()

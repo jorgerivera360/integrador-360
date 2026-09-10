@@ -138,7 +138,7 @@ const ClienteDetallePage = () => {
                                 label={
                                     <Etiqueta
                                         ayuda={AYUDA_ID}
-                                        alerta="Cambiarlo rompe la correspondencia con el secret de GCP y con el CLIENT_ID del contenedor, que hay que renombrar a mano."
+                                        alerta="Cambiarlo rompe la correspondencia con el secret de GCP y con la automatización, que hay que reconfigurar."
                                     >
                                         ID del cliente
                                     </Etiqueta>

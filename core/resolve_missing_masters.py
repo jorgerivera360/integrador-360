@@ -288,7 +288,7 @@ def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sal
 def _query_erp_batched(transform, connector, flow_name, flow_type, flow_config, faltantes, logger):
 
     needs_batching = (
-        flow_config.get("resolve_filter_field")
+        (flow_config.get("resolve_filter_field") or flow_config.get("resolve_sql_inject"))
         and len(faltantes) > BATCH_SIZE
     )
 
