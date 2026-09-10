@@ -62,10 +62,10 @@ const NivelFlows = ({ cliente, flowType, onEditar, onCrear, onVolver }) => {
             ),
         },
         {
-            title: 'Cron',
+            title: 'Frecuencia ejecución',
             dataIndex: 'schedule_cron',
             key: 'schedule_cron',
-            width: 150,
+            width: 180,
             sorter: (a, b) => (a.schedule_cron || '').localeCompare(b.schedule_cron || ''),
             render: (cron) => (
                 <span className="flujo-cron">{cron || '—'}</span>

@@ -22,7 +22,7 @@ const SeccionBase = ({ datos, onChange }) => {
         <div className="flujo-seccion">
             <h3 className="flujo-seccion__titulo">
                 Información del flujo{' '}
-                <Tooltip title="Datos generales del flujo: nombre, tipo de procesamiento, programación cron y orden de ejecución en el arranque del scheduler">
+                <Tooltip title="Datos generales del flujo: nombre, tipo de procesamiento, frecuencia de ejecución automática y estado">
                     <InfoCircleOutlined className="flujo-seccion__info" />
                 </Tooltip>
             </h3>
@@ -50,7 +50,12 @@ const SeccionBase = ({ datos, onChange }) => {
                 </div>
 
                 <div className="flujo-campo">
-                    <label className="flujo-campo__label">Cron (schedule)</label>
+                    <label className="flujo-campo__label">
+                        Frecuencia ejecución{' '}
+                        <Tooltip title="Intervalo de ejecución automática en formato cron. Ej: */5 * * * * = cada 5 min, 0 * * * * = cada hora. Vacío = solo ejecución manual.">
+                            <InfoCircleOutlined style={{ color: '#bfbfbf', fontSize: 13 }} />
+                        </Tooltip>
+                    </label>
                     <Input
                         className="flujo-input-mono"
                         value={datos.schedule_cron || ''}

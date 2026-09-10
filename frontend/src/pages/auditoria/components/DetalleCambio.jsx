@@ -7,9 +7,8 @@ const NOMBRES_CAMPO = {
     flow_name: 'Nombre del flujo',
     flow_type: 'Tipo de flujo',
     flow_config: 'Configuración',
-    schedule_cron: 'Cron',
+    schedule_cron: 'Frecuencia ejecución',
     is_active: 'Activo',
-    execution_order: 'Orden de ejecución',
     client_id: 'Cliente',
     // clients
     name: 'Nombre',
