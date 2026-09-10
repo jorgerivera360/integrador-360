@@ -123,6 +123,7 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
         odoo = connection_data(config)
 
         # 4. Resolve missing masters (solo para transacciones)
+        resolve_resumen = None
         if flow_type in ("purchases", "sales") and flow_configs:
             maestros_activos = {}
             for tipo, configs in flow_configs.items():
@@ -137,7 +138,7 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
             if maestros_activos:
                 data_purchases = data if flow_type == "purchases" else None
                 data_sales     = data if flow_type == "sales" else None
-                resolve_missing_masters(
+                resolve_resumen = resolve_missing_masters(
                     odoo, connector, transform,
                     data_purchases, data_sales,
                     maestros_activos, config, logger
@@ -161,6 +162,14 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
 
         # 5.1 Agregar descartados del transform al resultado
         result["descartados_transform"] = descartados_transform
+
+        # 5.2 Agregar resumen de resolve al resultado (solo transacciones)
+        if resolve_resumen:
+            result["maestros_creados"] = {
+                "productos": resolve_resumen.get("productos_resueltos", 0),
+                "proveedores": resolve_resumen.get("proveedores_resueltos", 0),
+                "clientes": resolve_resumen.get("clientes_resueltos", 0),
+            }
 
         # 6. Determinar status
         error_core = result.get("error")

@@ -113,6 +113,26 @@ const DrawerEjecucion = ({ ejecucion, abierto, onCerrar }) => {
                         />
                     )}
                 </div>
+                {resultado.maestros_creados && (
+                    resultado.maestros_creados.productos > 0 ||
+                    resultado.maestros_creados.proveedores > 0 ||
+                    resultado.maestros_creados.clientes > 0
+                ) && (
+                    <div className="drawer-seccion">
+                        <h4>Maestros creados en esta ejecucion</h4>
+                        <div className="drawer-resultados">
+                            {resultado.maestros_creados.productos > 0 && (
+                                <CampoResultado label="Productos" valor={resultado.maestros_creados.productos} />
+                            )}
+                            {resultado.maestros_creados.proveedores > 0 && (
+                                <CampoResultado label="Proveedores" valor={resultado.maestros_creados.proveedores} />
+                            )}
+                            {resultado.maestros_creados.clientes > 0 && (
+                                <CampoResultado label="Clientes" valor={resultado.maestros_creados.clientes} />
+                            )}
+                        </div>
+                    </div>
+                )}
                 {esTransaccion && descartados > 0 && (
                     <p className="drawer-nota">
                         {descartados} linea{descartados === 1 ? '' : 's'} pertenecen a documentos
