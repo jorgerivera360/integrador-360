@@ -3,6 +3,7 @@ from typing import Optional
 from api.dependencies import get_db
 from api.auth import require_role
 from api.schemas.credentials import TestConnectionRequest
+from connection.tunnel import start_tunnels, stop_tunnels
 
 router = APIRouter(tags=["Test Connections"])
 
@@ -26,6 +27,14 @@ def test_erp_standalone(
             "odoo": {},
             "client_id": "test",
         }
+
+        tunnels = start_tunnels(config)
+        try:
+            connector = build_connector(erp_type, config)
+            status, message = connector.test_connection()
+        finally:
+            stop_tunnels(tunnels)
+
         connector = build_connector(erp_type, config)
         status, message = connector.test_connection()
 

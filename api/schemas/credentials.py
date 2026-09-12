@@ -48,6 +48,14 @@ class ErpCredentialsSAP(BaseModel):
     clave: str
 
 
+class SshTunnelConfig(BaseModel):
+    ssh_enabled: bool = False
+    ssh_host: Optional[str] = None
+    ssh_port: int = 22
+    ssh_user: Optional[str] = None
+    ssh_key_path: Optional[str] = None
+    ssh_password: Optional[str] = None
+
 # --- Mapeo tipo → schema para validación dinámica ---
 
 ERP_CREDENTIAL_SCHEMAS = {

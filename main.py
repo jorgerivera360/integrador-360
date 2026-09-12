@@ -24,6 +24,7 @@ from core.process_partners import ProcessPartners
 from core.process_purchases import ProcessPurchases
 from core.process_sales import ProcessSales
 from core.resolve_missing_masters import resolve_missing_masters
+from connection.tunnel import start_tunnels, stop_tunnels
 
 
 def build_connector(erp_type, config):
@@ -91,8 +92,12 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
     def cancel_check():
           return db_writer.is_cancelled(execution_id) if db_writer and execution_id else False
 
+    tunnels = []
     try:
         logger.info(f"Main | Iniciando flow '{flow_name}' (tipo: {flow_type})")
+
+        # 0. Túnel SSH (si está configurado)
+        tunnels = start_tunnels(config, logger)
 
         # 1. Connector + Transform
         connector = build_connector(erp_type, config)
@@ -195,6 +200,8 @@ def run(flow, config, erp_type, flow_configs=None, db_writer=None,
         if db_writer:
             db_writer.finish_execution(execution_id, "error", None, error_limpio)
         raise
+    finally:
+        stop_tunnels(tunnels)
 
     if status == "error" and error_core:
         raise RuntimeError(f"Flow '{flow_name}': el core fallo - {error_core}")

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Button, Form, Input, Popconfirm } from 'antd'
+import { Alert, App, Button, Collapse, Form, Input, InputNumber, Popconfirm, Switch } from 'antd'
 import { etiquetaErp } from '@/config/erp'
 import {
     useProbarConexionConCredenciales,
@@ -83,6 +83,7 @@ const FormularioCredenciales = ({ cliente }) => {
     const [form] = Form.useForm()
     const [erpTesteado, setErpTesteado] = useState(false)
     const [wmsTesteado, setWmsTesteado] = useState(false)
+    const [sshEnabled, setSshEnabled] = useState(false)
 
     const erpType = cliente.erp_type
     const tieneErp = erpType !== 'excel'
@@ -103,8 +104,15 @@ const FormularioCredenciales = ({ cliente }) => {
         const campos = {}
         if (credGuardadas.erp) {
             Object.entries(credGuardadas.erp).forEach(([key, val]) => {
-                campos[`erp_${key}`] = val
+                if (key.startsWith('ssh_')) {
+                    campos[`erp_${key}`] = val
+                } else {
+                    campos[`erp_${key}`] = val
+                }
             })
+            if (credGuardadas.erp.ssh_enabled) {
+                setSshEnabled(true)
+            }
         }
         if (credGuardadas.odoo) {
             Object.entries(credGuardadas.odoo).forEach(([key, val]) => {
@@ -121,6 +129,15 @@ const FormularioCredenciales = ({ cliente }) => {
             const val = valores[`erp_${campo.name}`]
             erp[campo.name] = val || (campo.required ? '' : null)
         })
+        // SSH tunnel
+        erp.ssh_enabled = sshEnabled
+        if (sshEnabled) {
+            erp.ssh_host = valores.erp_ssh_host || ''
+            erp.ssh_port = valores.erp_ssh_port || 22
+            erp.ssh_user = valores.erp_ssh_user || ''
+            erp.ssh_key_path = valores.erp_ssh_key_path || ''
+            erp.ssh_password = valores.erp_ssh_password || ''
+        }
         return erp
     }
 
@@ -235,6 +252,77 @@ const FormularioCredenciales = ({ cliente }) => {
                                         }
                                     </Form.Item>
                                 ))}
+
+                                {/* --- Túnel SSH (opcional) --- */}
+                                <div style={{
+                                    border: '1px solid #d9d9d9',
+                                    borderRadius: 8,
+                                    padding: '12px 16px',
+                                    marginBottom: 16,
+                                    background: sshEnabled ? '#f6ffed' : '#fafafa',
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: sshEnabled ? 12 : 0 }}>
+                                        <Switch
+                                            checked={sshEnabled}
+                                            onChange={(checked) => {
+                                                setSshEnabled(checked)
+                                                handleValuesChange()
+                                            }}
+                                            size="small"
+                                        />
+                                        <span style={{ fontWeight: 500, fontSize: 13 }}>
+                                            Túnel SSH
+                                        </span>
+                                        <span style={{ fontSize: 12, color: '#8b93a1' }}>
+                                            Conectar al ERP a través de un servidor intermedio
+                                        </span>
+                                    </div>
+
+                                    {sshEnabled && (
+                                        <>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 8 }}>
+                                                <Form.Item
+                                                    name="erp_ssh_host"
+                                                    label="Host SSH"
+                                                    rules={[{ required: true, message: 'Host SSH es obligatorio' }]}
+                                                    style={{ marginBottom: 8 }}
+                                                >
+                                                    <Input placeholder="192.168.1.100" autoComplete="off" />
+                                                </Form.Item>
+                                                <Form.Item
+                                                    name="erp_ssh_port"
+                                                    label="Puerto"
+                                                    initialValue={22}
+                                                    style={{ marginBottom: 8 }}
+                                                >
+                                                    <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+                                                </Form.Item>
+                                            </div>
+                                            <Form.Item
+                                                name="erp_ssh_user"
+                                                label="Usuario SSH"
+                                                rules={[{ required: true, message: 'Usuario SSH es obligatorio' }]}
+                                                style={{ marginBottom: 8 }}
+                                            >
+                                                <Input placeholder="ubuntu" autoComplete="off" />
+                                            </Form.Item>
+                                            <Form.Item
+                                                name="erp_ssh_key_path"
+                                                label="Ruta de llave SSH"
+                                                style={{ marginBottom: 8 }}
+                                            >
+                                                <Input placeholder="/etc/integrador/ssh-keys/cliente.pem" autoComplete="off" />
+                                            </Form.Item>
+                                            <Form.Item
+                                                name="erp_ssh_password"
+                                                label="Contraseña SSH (si no usa llave)"
+                                                style={{ marginBottom: 0 }}
+                                            >
+                                                <Input.Password placeholder="Opcional si usa llave" autoComplete="off" />
+                                            </Form.Item>
+                                        </>
+                                    )}
+                                </div>
 
                                 <Button
                                     type="primary"
