@@ -52,6 +52,9 @@ class SiesaEnterprise(ERPConnector):
           session.proxies.update({
               "http": f"http://{self.proxy_host}:{self.proxy_port}"
           })
+      # Si la URL apunta a localhost (túnel SSH), desactivar verificación SSL
+      if "localhost" in self.url or "127.0.0.1" in self.url:
+          session.verify = False
       transport = Transport(session=session, timeout=600)
       return Client(self.url, transport=transport, plugins=plugins or [])
     
