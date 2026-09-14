@@ -5,7 +5,14 @@ abre un túnel SSH y reescribe la URL a localhost:puerto_local.
 Los conectores no saben del túnel — solo ven la URL reescrita.
 """
 import logging
+import paramiko
 from urllib.parse import urlparse, urlunparse
+
+# Parche de compatibilidad: sshtunnel 0.4.0 busca paramiko.DSSKey
+# que fue eliminado en paramiko 4.0+ (DSA está obsoleto).
+# Se agrega como dummy para que sshtunnel no explote al iniciar.
+if not hasattr(paramiko, 'DSSKey'):
+    paramiko.DSSKey = paramiko.RSAKey
 
 _logger = logging.getLogger(__name__)
 
