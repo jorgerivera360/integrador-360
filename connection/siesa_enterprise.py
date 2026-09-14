@@ -118,24 +118,23 @@ class SiesaEnterprise(ERPConnector):
         return False, f"No se pudo conectar con SIESA WS: {self.conexion} ({data})"
 
     def _parse_raw_response(self, history) -> list | None:
-    """Parsea respuesta SOAP cruda cuando serialize_object falla"""
-    envelope = history.last_received['envelope']
-    datos = []
+        envelope = history.last_received['envelope']
+        datos = []
 
-    for resultado_elem in envelope.iter():
-        if not isinstance(resultado_elem.tag, str):
-            continue
-        if etree.QName(resultado_elem.tag).localname != 'Resultado':
-            continue
-
-        fila = {}
-        for child in resultado_elem:
-            if not isinstance(child.tag, str):
+        for resultado_elem in envelope.iter():
+            if not isinstance(resultado_elem.tag, str):
                 continue
-            child_tag = etree.QName(child.tag).localname
-            fila[child_tag] = child.text.strip() if child.text else None
+            if etree.QName(resultado_elem.tag).localname != 'Resultado':
+                continue
 
-        if fila:
-            datos.append({'Resultado': fila})
+            fila = {}
+            for child in resultado_elem:
+                if not isinstance(child.tag, str):
+                    continue
+                child_tag = etree.QName(child.tag).localname
+                fila[child_tag] = child.text.strip() if child.text else None
 
-    return datos if datos else None
+            if fila:
+                datos.append({'Resultado': fila})
+
+        return datos if datos else None
