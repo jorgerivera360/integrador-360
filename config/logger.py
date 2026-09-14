@@ -4,7 +4,8 @@ from logging.handlers import RotatingFileHandler
 
 
 def _setup_file_logger(client_id: str) -> logging.Logger:
-    log_path = os.getenv("LOG_PATH", "/var/log/integrador")
+    log_base = os.getenv("LOG_PATH", "/var/log/integrador")
+    log_path = os.path.join(log_base, client_id)
     os.makedirs(log_path, exist_ok=True)
 
     log_file  = os.path.join(log_path, f"integrador-{client_id}.log")

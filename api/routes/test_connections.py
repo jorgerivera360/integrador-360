@@ -232,10 +232,22 @@ def upload_ssh_key_standalone(
         raise HTTPException(status_code=400, detail="El archivo debe ser .pem, .ppk o .key")
 
     # Para standalone se guarda con nombre temporal
-    nombre = f"test-{archivo.filename}"
-    ruta = os.path.join(SSH_KEYS_HOST_PATH, nombre)
+    carpeta = os.path.join(SSH_KEYS_HOST_PATH, "test")
+    os.makedirs(carpeta, exist_ok=True)
+
+    nombre = archivo.filename
+    ruta = os.path.join(carpeta, nombre)
 
     contenido = archivo.file.read()
+
+    # Si es PPK, convertir a PEM
+    if archivo.filename.endswith(".ppk"):
+        try:
+            from connection.tunnel import ppk_to_pem
+            contenido = ppk_to_pem(contenido)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error al convertir PPK a PEM: {e}")
+
     with open(ruta, "wb") as f:
         f.write(contenido)
 
