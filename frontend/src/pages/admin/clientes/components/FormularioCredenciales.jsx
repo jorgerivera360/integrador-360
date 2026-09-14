@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, Button, Collapse, Form, Input, InputNumber, Popconfirm, Switch } from 'antd'
+import { Alert, App, Button, Form, Input, InputNumber, Popconfirm, Switch, Upload } from 'antd'
+import { UploadOutlined } from '@ant-design/icons'
 import { etiquetaErp } from '@/config/erp'
 import {
     useProbarConexionConCredenciales,
@@ -9,6 +10,7 @@ import {
     useCredenciales,
     mensajeDeError,
 } from '@/hooks/useClientes'
+import { uploadSshKey } from '@/services/clients'
 import { IconCheck, IconEquis, IconServidor, IconNube, IconPapelera } from '../icons'
 
 // --- Campos ERP por tipo ---
@@ -84,6 +86,9 @@ const FormularioCredenciales = ({ cliente }) => {
     const [erpTesteado, setErpTesteado] = useState(false)
     const [wmsTesteado, setWmsTesteado] = useState(false)
     const [sshEnabled, setSshEnabled] = useState(false)
+    const [sshKeyPath, setSshKeyPath] = useState('')
+    const [sshFileName, setSshFileName] = useState('')
+    const [subiendoLlave, setSubiendoLlave] = useState(false)
 
     const erpType = cliente.erp_type
     const tieneErp = erpType !== 'excel'
@@ -104,14 +109,15 @@ const FormularioCredenciales = ({ cliente }) => {
         const campos = {}
         if (credGuardadas.erp) {
             Object.entries(credGuardadas.erp).forEach(([key, val]) => {
-                if (key.startsWith('ssh_')) {
-                    campos[`erp_${key}`] = val
-                } else {
-                    campos[`erp_${key}`] = val
-                }
+                campos[`erp_${key}`] = val
             })
             if (credGuardadas.erp.ssh_enabled) {
                 setSshEnabled(true)
+            }
+            if (credGuardadas.erp.ssh_key_path) {
+                setSshKeyPath(credGuardadas.erp.ssh_key_path)
+                const parts = credGuardadas.erp.ssh_key_path.replace(/\\/g, '/').split('/')
+                setSshFileName(parts[parts.length - 1] || '')
             }
         }
         if (credGuardadas.odoo) {
@@ -121,6 +127,24 @@ const FormularioCredenciales = ({ cliente }) => {
         }
         form.setFieldsValue(campos)
     }, [credGuardadas, form])
+
+    const handleSshFileChange = async (info) => {
+        const file = info.file
+        if (!file) return
+        setSubiendoLlave(true)
+        try {
+            const resp = await uploadSshKey(cliente.id, file)
+            const path = resp.data?.key_path || ''
+            setSshKeyPath(path)
+            setSshFileName(file.name)
+            message.success(`Llave "${file.name}" subida correctamente`)
+        } catch (err) {
+            message.error('Error al subir la llave SSH')
+            console.error(err)
+        } finally {
+            setSubiendoLlave(false)
+        }
+    }
 
     const obtenerCredencialesErp = () => {
         const valores = form.getFieldsValue()
@@ -135,7 +159,7 @@ const FormularioCredenciales = ({ cliente }) => {
             erp.ssh_host = valores.erp_ssh_host || ''
             erp.ssh_port = valores.erp_ssh_port || 22
             erp.ssh_user = valores.erp_ssh_user || ''
-            erp.ssh_key_path = valores.erp_ssh_key_path || ''
+            erp.ssh_key_path = sshKeyPath
             erp.ssh_password = valores.erp_ssh_password || ''
         }
         return erp
@@ -238,22 +262,7 @@ const FormularioCredenciales = ({ cliente }) => {
 
                         {tieneErp ? (
                             <>
-                                {camposErp.map((campo) => (
-                                    <Form.Item
-                                        key={campo.name}
-                                        name={`erp_${campo.name}`}
-                                        label={campo.label}
-                                        rules={campo.required ? [{ required: true, message: `${campo.label} es obligatorio` }] : []}
-                                        style={{ marginBottom: 12 }}
-                                    >
-                                        {campo.password
-                                            ? <Input.Password autoComplete="off" />
-                                            : <Input autoComplete="off" />
-                                        }
-                                    </Form.Item>
-                                ))}
-
-                                {/* --- Túnel SSH (opcional) --- */}
+                                {/* --- Túnel SSH (opcional) — arriba del formulario ERP --- */}
                                 <div style={{
                                     border: '1px solid #d9d9d9',
                                     borderRadius: 8,
@@ -306,13 +315,36 @@ const FormularioCredenciales = ({ cliente }) => {
                                             >
                                                 <Input placeholder="ubuntu" autoComplete="off" />
                                             </Form.Item>
-                                            <Form.Item
-                                                name="erp_ssh_key_path"
-                                                label="Ruta de llave SSH"
-                                                style={{ marginBottom: 8 }}
-                                            >
-                                                <Input placeholder="/etc/integrador/ssh-keys/cliente.pem" autoComplete="off" />
-                                            </Form.Item>
+                                            <div style={{ marginBottom: 8 }}>
+                                                <label style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>
+                                                    Llave SSH (.pem / .ppk)
+                                                </label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <Upload
+                                                        accept=".pem,.ppk,.key"
+                                                        showUploadList={false}
+                                                        beforeUpload={() => false}
+                                                        onChange={handleSshFileChange}
+                                                    >
+                                                        <Button
+                                                            icon={<UploadOutlined />}
+                                                            loading={subiendoLlave}
+                                                        >
+                                                            Seleccionar archivo
+                                                        </Button>
+                                                    </Upload>
+                                                    {sshFileName && (
+                                                        <span style={{ fontSize: 13, color: '#52c41a' }}>
+                                                            {sshFileName}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {sshKeyPath && !sshFileName && (
+                                                    <div style={{ fontSize: 12, color: '#8b93a1', marginTop: 4 }}>
+                                                        Ruta actual: {sshKeyPath}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <Form.Item
                                                 name="erp_ssh_password"
                                                 label="Contraseña SSH (si no usa llave)"
@@ -323,6 +355,22 @@ const FormularioCredenciales = ({ cliente }) => {
                                         </>
                                     )}
                                 </div>
+
+                                {/* --- Campos ERP (debajo del túnel) --- */}
+                                {camposErp.map((campo) => (
+                                    <Form.Item
+                                        key={campo.name}
+                                        name={`erp_${campo.name}`}
+                                        label={campo.label}
+                                        rules={campo.required ? [{ required: true, message: `${campo.label} es obligatorio` }] : []}
+                                        style={{ marginBottom: 12 }}
+                                    >
+                                        {campo.password
+                                            ? <Input.Password autoComplete="off" />
+                                            : <Input autoComplete="off" />
+                                        }
+                                    </Form.Item>
+                                ))}
 
                                 <Button
                                     type="primary"

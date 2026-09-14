@@ -77,3 +77,19 @@ export const deleteCredentials = (id) => {
 export const deleteProvision = (id) => {
     return api.delete(`/clients/${id}/provision`)
 }
+
+export const uploadSshKey = (id, file) => {
+    const formData = new FormData()
+    formData.append('archivo', file)
+    return api.post(`/clients/${id}/upload-ssh-key`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
+}
+
+export const uploadSshKeyStandalone = (file) => {
+    const formData = new FormData()
+    formData.append('archivo', file)
+    return api.post('/upload-ssh-key', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
+}

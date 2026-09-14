@@ -9,11 +9,19 @@ Responsabilidades:
 No hereda CoreProcessor — es un paso de orquestación
 Fase: 4 — Core Layer
 """
+import re
 from core.process_items import ProcessItems
 from core.process_partners import ProcessPartners
 
 
 BATCH_SIZE = 30
+
+_WHERE_TERMINATORS = [
+    re.compile(r'\bGROUP\s+BY\b'),
+    re.compile(r'\bHAVING\b'),
+    re.compile(r'\bORDER\s+BY\b'),
+    re.compile(r'\bUNION\b'),
+]
 
 
 def resolve_missing_masters(odoo, connector, transform, data_purchases, data_sales, flow_configs, config, logger):
@@ -316,6 +324,38 @@ def _query_erp_batched(transform, connector, flow_name, flow_type, flow_config, 
     return all_results if all_results else []
 
 
+def _find_where_end(sql):
+    """
+    Encuentra dónde terminan las condiciones del WHERE.
+    Recorre el SQL carácter por carácter, lleva cuenta de profundidad
+    de paréntesis para ignorar keywords dentro de subqueries.
+    Retorna el índice justo antes de GROUP BY / HAVING / ORDER BY / UNION / ; / fin.
+    """
+    upper = sql.upper()
+    depth = 0
+    i = 0
+
+    while i < len(upper):
+        if upper[i] == '(':
+            depth += 1
+            i += 1
+        elif upper[i] == ')':
+            depth -= 1
+            i += 1
+        elif depth == 0:
+            for term in _WHERE_TERMINATORS:
+                m = term.match(upper, i)
+                if m:
+                    return i
+            i += 1
+        else:
+            i += 1
+
+    # Sin keyword terminal — antes de ; o al final
+    semi = sql.rfind(';')
+    return semi if semi != -1 else len(sql)
+
+
 def _build_resolve_filter(flow_config, faltantes, logger=None):
 
     if not faltantes:
@@ -350,15 +390,8 @@ def _build_resolve_filter(flow_config, faltantes, logger=None):
         inject_clause = resolve_sql.replace("{refs}", refs_quoted)
 
         sql = flow_config["sql"]
-        order_idx = sql.upper().rfind("ORDER BY")
-        if order_idx != -1:
-            new_sql = sql[:order_idx] + inject_clause + " " + sql[order_idx:]
-        else:
-            last_semi = sql.rfind(";")
-            if last_semi != -1:
-                new_sql = sql[:last_semi] + " " + inject_clause + sql[last_semi:]
-            else:
-                new_sql = sql + " " + inject_clause
+        pos = _find_where_end(sql)
+        new_sql = sql[:pos].rstrip() + " " + inject_clause + " " + sql[pos:]
 
         new_config = {**flow_config}
         new_config["sql"] = new_sql

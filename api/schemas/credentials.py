@@ -8,7 +8,7 @@ Responsabilidades:
 Fase: 9-10 — Frontend (Onboarding)
 """
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # --- Credenciales Odoo (siempre iguales) ---
@@ -21,8 +21,11 @@ class OdooCredentials(BaseModel):
 
 
 # --- Credenciales ERP por tipo ---
+# extra="ignore" permite que pasen campos SSH sin romper la validación
 
 class ErpCredentialsWS(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     url: str
     conexion: str
     compania: str
@@ -34,6 +37,8 @@ class ErpCredentialsWS(BaseModel):
 
 
 class ErpCredentialsConnekta(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     url: str
     urlqa: Optional[str] = ""
     idcompania: str
@@ -42,6 +47,8 @@ class ErpCredentialsConnekta(BaseModel):
 
 
 class ErpCredentialsSAP(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     url: str
     compania: str
     usuario: str

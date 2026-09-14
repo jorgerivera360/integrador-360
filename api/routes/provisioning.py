@@ -11,7 +11,7 @@ import json
 import subprocess
 import yaml
 import threading
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from api.dependencies import get_db
 from api.auth import require_role
 from api.schemas.credentials import CredentialsSaveRequest, ERP_CREDENTIAL_SCHEMAS
@@ -23,10 +23,11 @@ DOCKER_IMAGE = os.getenv("DOCKER_IMAGE", "integrador-360")
 GCP_KEY_PATH = os.getenv("GCP_KEY_HOST_PATH", "/etc/integrador/gcp-key.json")
 CREDENTIALS_HOST_PATH = os.getenv("CREDENTIALS_HOST_PATH", "/etc/integrador/credentials")
 LOGS_HOST_PATH = os.getenv("LOGS_HOST_PATH", "/var/log/integrador")
+SSH_KEYS_HOST_PATH = os.getenv("SSH_KEYS_HOST_PATH", "/etc/integrador/ssh-keys")
 _compose_lock = threading.Lock()
 
 
-# --- Helpers ---
+# Helpers
 
 def _get_client(cursor, client_id: int) -> dict:
     cursor.execute(
@@ -39,7 +40,7 @@ def _get_client(cursor, client_id: int) -> dict:
     return client
 
 
-# --- POST /clients/{id}/credentials ---
+# POST /clients/{id}/credentials
 
 @router.post("/credentials")
 def save_credentials(
@@ -127,7 +128,44 @@ def save_credentials(
     }
 
 
-# --- POST /clients/{id}/provision ---
+# POST /clients/{id}/upload-ssh-key
+
+@router.post("/upload-ssh-key")
+def upload_ssh_key(
+    client_id: int,
+    archivo: UploadFile = File(...),
+    db=Depends(get_db),
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    cursor = db.cursor()
+    client = _get_client(cursor, client_id)
+    slug = client["client_id"]
+
+    if not archivo.filename.endswith((".pem", ".ppk", ".key")):
+        raise HTTPException(status_code=400, detail="El archivo debe ser .pem, .ppk o .key")
+
+    os.makedirs(SSH_KEYS_HOST_PATH, exist_ok=True)
+
+    # Nombre estandarizado: {slug}.pem
+    nombre = f"{slug}.pem"
+    ruta = os.path.join(SSH_KEYS_HOST_PATH, nombre)
+
+    contenido = archivo.file.read()
+    with open(ruta, "wb") as f:
+        f.write(contenido)
+
+    # Permisos 600 (solo lectura del owner)
+    os.chmod(ruta, 0o600)
+
+    return {
+        "success": True,
+        "key_path": ruta,
+        "filename": archivo.filename,
+        "msg": f"Llave SSH guardada en {ruta}"
+    }
+
+
+# POST /clients/{id}/provision
 
 @router.post("/provision")
 def provision_container(
@@ -171,6 +209,17 @@ def provision_container(
         if service_name in compose.get("services", {}):
             raise HTTPException(status_code=409, detail=f"El contenedor '{service_name}' ya existe en docker-compose.yml")
 
+        volumes = [
+            f"{GCP_KEY_PATH}:{GCP_KEY_PATH}:ro",
+            f"{CREDENTIALS_HOST_PATH}:{CREDENTIALS_HOST_PATH}",
+            f"{LOGS_HOST_PATH}:{LOGS_HOST_PATH}",
+        ]
+
+        # Si el cliente tiene llave SSH, montar el directorio de llaves
+        ssh_key_file = os.path.join(SSH_KEYS_HOST_PATH, f"{slug}.pem")
+        if os.path.exists(ssh_key_file):
+            volumes.append(f"{SSH_KEYS_HOST_PATH}:{SSH_KEYS_HOST_PATH}:ro")
+
         compose["services"][service_name] = {
             "image": DOCKER_IMAGE,
             "container_name": service_name,
@@ -182,11 +231,7 @@ def provision_container(
                 "GCP_PROJECT_ID=${GCP_PROJECT_ID}",
                 "GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}",
             ],
-            "volumes": [
-                f"{GCP_KEY_PATH}:{GCP_KEY_PATH}:ro",
-                f"{CREDENTIALS_HOST_PATH}:{CREDENTIALS_HOST_PATH}",
-                f"{LOGS_HOST_PATH}:{LOGS_HOST_PATH}",
-            ],
+            "volumes": volumes,
         }
 
         try:
@@ -227,9 +272,7 @@ def provision_container(
     }
 
 
-# --- GET /clients/{id}/provision/status ---
-
-# --- GET /clients/{id}/credentials (leer credenciales guardadas) ---
+# GET /clients/{id}/credentials (leer credenciales guardadas)
 
 @router.get("/credentials")
 def get_credentials(
@@ -258,7 +301,7 @@ def get_credentials(
         return {"exists": False, "erp": {}, "odoo": {}}
 
 
-# --- GET /clients/{id}/credentials/status ---
+# GET /clients/{id}/credentials/status
 
 @router.get("/credentials/status")
 def get_credentials_status(
@@ -296,7 +339,7 @@ def get_credentials_status(
     }
 
 
-# --- GET /clients/{id}/provision/status ---
+# GET /clients/{id}/provision/status
 
 @router.get("/provision/status")
 def get_provision_status(
@@ -341,7 +384,7 @@ def get_provision_status(
     }
 
 
-# --- DELETE /clients/{id}/credentials ---
+# DELETE /clients/{id}/credentials
 
 @router.delete("/credentials")
 def delete_credentials(
@@ -365,7 +408,7 @@ def delete_credentials(
     }
 
 
-# --- DELETE /clients/{id}/provision ---
+# DELETE /clients/{id}/provision
 
 @router.delete("/provision")
 def delete_provision(
@@ -385,7 +428,7 @@ def delete_provision(
     }
 
 
-# --- Funciones de cleanup (usadas por DELETE /clients/{id} y endpoints individuales) ---
+# Funciones de cleanup (usadas por DELETE /clients/{id} y endpoints individuales)
 
 def cleanup_gcp_secret(slug: str) -> dict:
     """Elimina el secret integrador-{slug} de GCP Secret Manager."""

@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Alert, Button, Form, Input, Modal, Select } from 'antd'
+import { Alert, Button, Form, Input, InputNumber, Modal, Select, Switch, Upload } from 'antd'
+import { UploadOutlined } from '@ant-design/icons'
 import { OPCIONES_ERP } from '@/config/erp'
-import { testErpStandalone, testOdooStandalone } from '@/services/clients'
+import { testErpStandalone, testOdooStandalone, uploadSshKeyStandalone } from '@/services/clients'
 import { IconCheck, IconEquis } from '../icons'
 
 // --- Campos ERP por tipo ---
@@ -39,7 +40,6 @@ const CAMPOS_WMS = [
     { name: 'clave', label: 'Clave', required: true, password: true },
 ]
 
-// Opciones sin Excel (no tiene ERP que probar de forma independiente, y WMS se prueba igual)
 const OPCIONES_TIPO = [
     ...OPCIONES_ERP,
 ]
@@ -64,15 +64,6 @@ const ResultadoInline = ({ resultado, error, label }) => {
     )
 }
 
-/**
- * Modal para probar conexiones sin tener un cliente creado.
- * Usa un client_id temporal (0) — los endpoints de test con body
- * no necesitan que el cliente exista en BD cuando se envían credenciales.
- *
- * Nota: el endpoint requiere un client_id en la URL, pero con body
- * de credenciales no lo usa para cargar de GCP. Usamos el ID del
- * primer cliente disponible o un ID especial.
- */
 const ModalProbarConexion = ({ abierto, onCerrar }) => {
     const [form] = Form.useForm()
     const [erpType, setErpType] = useState(null)
@@ -82,6 +73,10 @@ const ModalProbarConexion = ({ abierto, onCerrar }) => {
     const [resultadoWms, setResultadoWms] = useState(null)
     const [errorErp, setErrorErp] = useState(null)
     const [errorWms, setErrorWms] = useState(null)
+    const [sshEnabled, setSshEnabled] = useState(false)
+    const [sshKeyPath, setSshKeyPath] = useState('')
+    const [sshFileName, setSshFileName] = useState('')
+    const [subiendoLlave, setSubiendoLlave] = useState(false)
 
     const tieneErp = erpType && erpType !== 'excel'
     const camposErp = CAMPOS_ERP[erpType] || []
@@ -97,6 +92,25 @@ const ModalProbarConexion = ({ abierto, onCerrar }) => {
         setErpType(valor)
         form.resetFields()
         resetResultados()
+        setSshEnabled(false)
+        setSshKeyPath('')
+        setSshFileName('')
+    }
+
+    const handleSshFileChange = async (info) => {
+        const file = info.file
+        if (!file) return
+        setSubiendoLlave(true)
+        try {
+            const resp = await uploadSshKeyStandalone(file)
+            const path = resp.data?.key_path || ''
+            setSshKeyPath(path)
+            setSshFileName(file.name)
+        } catch (err) {
+            console.error('Error al subir llave SSH:', err)
+        } finally {
+            setSubiendoLlave(false)
+        }
     }
 
     const handleProbarErp = async () => {
@@ -110,6 +124,14 @@ const ModalProbarConexion = ({ abierto, onCerrar }) => {
             camposErp.forEach((c) => {
                 erp[c.name] = valores[`erp_${c.name}`] || (c.required ? '' : null)
             })
+            if (sshEnabled) {
+                erp.ssh_enabled = true
+                erp.ssh_host = valores.erp_ssh_host || ''
+                erp.ssh_port = valores.erp_ssh_port || 22
+                erp.ssh_user = valores.erp_ssh_user || ''
+                erp.ssh_key_path = sshKeyPath
+                erp.ssh_password = valores.erp_ssh_password || ''
+            }
             const resp = await testErpStandalone({ erp })
             setResultadoErp(resp.data)
         } catch (err) {
@@ -144,6 +166,9 @@ const ModalProbarConexion = ({ abierto, onCerrar }) => {
         setErpType(null)
         form.resetFields()
         resetResultados()
+        setSshEnabled(false)
+        setSshKeyPath('')
+        setSshFileName('')
         onCerrar()
     }
 
@@ -181,6 +206,96 @@ const ModalProbarConexion = ({ abierto, onCerrar }) => {
                             <div className="seccion__titulo" style={{ fontSize: 14, marginBottom: 12 }}>
                                 Credenciales ERP
                             </div>
+
+                            {/* --- Túnel SSH (opcional) — arriba de los campos ERP --- */}
+                            <div style={{
+                                border: '1px solid #d9d9d9',
+                                borderRadius: 8,
+                                padding: '12px 16px',
+                                marginBottom: 16,
+                                background: sshEnabled ? '#f6ffed' : '#fafafa',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: sshEnabled ? 12 : 0 }}>
+                                    <Switch
+                                        checked={sshEnabled}
+                                        onChange={(checked) => {
+                                            setSshEnabled(checked)
+                                            resetResultados()
+                                        }}
+                                        size="small"
+                                    />
+                                    <span style={{ fontWeight: 500, fontSize: 13 }}>
+                                        Túnel SSH
+                                    </span>
+                                    <span style={{ fontSize: 12, color: '#8b93a1' }}>
+                                        Conectar a través de un servidor intermedio
+                                    </span>
+                                </div>
+
+                                {sshEnabled && (
+                                    <>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: 8 }}>
+                                            <Form.Item
+                                                name="erp_ssh_host"
+                                                label="Host SSH"
+                                                rules={[{ required: true, message: 'Host SSH es obligatorio' }]}
+                                                style={{ marginBottom: 8 }}
+                                            >
+                                                <Input placeholder="192.168.1.100" autoComplete="off" />
+                                            </Form.Item>
+                                            <Form.Item
+                                                name="erp_ssh_port"
+                                                label="Puerto"
+                                                initialValue={22}
+                                                style={{ marginBottom: 8 }}
+                                            >
+                                                <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+                                            </Form.Item>
+                                        </div>
+                                        <Form.Item
+                                            name="erp_ssh_user"
+                                            label="Usuario SSH"
+                                            rules={[{ required: true, message: 'Usuario SSH es obligatorio' }]}
+                                            style={{ marginBottom: 8 }}
+                                        >
+                                            <Input placeholder="ubuntu" autoComplete="off" />
+                                        </Form.Item>
+                                        <div style={{ marginBottom: 8 }}>
+                                            <label style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>
+                                                Llave SSH (.pem / .ppk)
+                                            </label>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <Upload
+                                                    accept=".pem,.ppk,.key"
+                                                    showUploadList={false}
+                                                    beforeUpload={() => false}
+                                                    onChange={handleSshFileChange}
+                                                >
+                                                    <Button
+                                                        icon={<UploadOutlined />}
+                                                        loading={subiendoLlave}
+                                                    >
+                                                        Seleccionar archivo
+                                                    </Button>
+                                                </Upload>
+                                                {sshFileName && (
+                                                    <span style={{ fontSize: 13, color: '#52c41a' }}>
+                                                        {sshFileName}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <Form.Item
+                                            name="erp_ssh_password"
+                                            label="Contraseña SSH (si no usa llave)"
+                                            style={{ marginBottom: 0 }}
+                                        >
+                                            <Input.Password placeholder="Opcional si usa llave" autoComplete="off" />
+                                        </Form.Item>
+                                    </>
+                                )}
+                            </div>
+
                             {camposErp.map((campo) => (
                                 <Form.Item
                                     key={campo.name}

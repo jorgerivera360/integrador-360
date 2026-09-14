@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from typing import Optional
 from api.dependencies import get_db
 from api.auth import require_role
@@ -35,9 +35,6 @@ def test_erp_standalone(
         finally:
             stop_tunnels(tunnels)
 
-        connector = build_connector(erp_type, config)
-        status, message = connector.test_connection()
-
         return {
             "code": 200 if status else 400,
             "success": status,
@@ -66,12 +63,17 @@ def test_odoo_standalone(
         from connection.jsonrpc import JsonRPC
 
         config = {
-            "erp": {},
+            "erp": body.erp or {},
             "odoo": body.odoo.model_dump(),
             "client_id": "test",
         }
-        odoo = JsonRPC(config)
-        status, message = odoo.test_connection()
+
+        tunnels = start_tunnels(config)
+        try:
+            odoo = JsonRPC(config)
+            status, message = odoo.test_connection()
+        finally:
+            stop_tunnels(tunnels)
 
         return {
             "code": 200 if status else 400,
@@ -130,8 +132,12 @@ def test_erp_connection(
                 }
             config["client_id"] = client["client_id"]
 
-        connector = build_connector(client["erp_type"], config)
-        status, message = connector.test_connection()
+        tunnels = start_tunnels(config)
+        try:
+            connector = build_connector(client["erp_type"], config)
+            status, message = connector.test_connection()
+        finally:
+            stop_tunnels(tunnels)
 
         return {
             "code": 200 if status else 400,
@@ -171,7 +177,7 @@ def test_odoo_connection(
         # Si vienen credenciales en el body, usar esas
         if body and body.odoo:
             config = {
-                "erp": {},
+                "erp": body.erp or {},
                 "odoo": body.odoo.model_dump(),
                 "client_id": client["client_id"]
             }
@@ -189,8 +195,12 @@ def test_odoo_connection(
                 }
             config["client_id"] = client["client_id"]
 
-        odoo = JsonRPC(config)
-        status, message = odoo.test_connection()
+        tunnels = start_tunnels(config)
+        try:
+            odoo = JsonRPC(config)
+            status, message = odoo.test_connection()
+        finally:
+            stop_tunnels(tunnels)
 
         return {
             "code": 200 if status else 400,
@@ -203,5 +213,36 @@ def test_odoo_connection(
         return {
             "code": 500,
             "success": False,
-            "msg": f"Error al probar conexión Odoo: {str(e)}"
+            "msg": f"Error al probar conexión WMS: {str(e)}"
         }
+
+# POST /upload-ssh-key 
+
+@router.post("/upload-ssh-key")
+def upload_ssh_key_standalone(
+    archivo: UploadFile = File(...),
+    current_user=Depends(require_role("superadmin", "admin"))
+):
+    import os
+
+    SSH_KEYS_HOST_PATH = os.getenv("SSH_KEYS_HOST_PATH", "/etc/integrador/ssh-keys")
+    os.makedirs(SSH_KEYS_HOST_PATH, exist_ok=True)
+
+    if not archivo.filename.endswith((".pem", ".ppk", ".key")):
+        raise HTTPException(status_code=400, detail="El archivo debe ser .pem, .ppk o .key")
+
+    # Para standalone se guarda con nombre temporal
+    nombre = f"test-{archivo.filename}"
+    ruta = os.path.join(SSH_KEYS_HOST_PATH, nombre)
+
+    contenido = archivo.file.read()
+    with open(ruta, "wb") as f:
+        f.write(contenido)
+
+    os.chmod(ruta, 0o600)
+
+    return {
+        "success": True,
+        "key_path": ruta,
+        "filename": archivo.filename,
+    }
