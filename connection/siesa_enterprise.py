@@ -1,10 +1,10 @@
 """
 SiesaEnterprise — Conector SIESA WS
 Responsabilidades:
-  - Conecta con SIESA WS via SOAP usando zeep
-  - Limpia caracteres de control del XML
-  - Maneja paginación
-  - Implementa get() y test_connection()
+- Conecta con SIESA WS via SOAP usando zeep
+- Limpia caracteres de control del XML
+- Maneja paginación
+- Implementa get() y test_connection()
 Hereda: ERPConnector
 Fase: 2 — Connection Layer
 """
@@ -17,7 +17,7 @@ from config.logger import IntegradorLogger
 from connection.base import ERPConnector
 
 class SiesaEnterprise(ERPConnector):
-    
+
     def __init__(self, config: dict):
         self.url         = config["erp"]["url"]
         self.conexion    = config["erp"]["conexion"]
@@ -45,30 +45,36 @@ class SiesaEnterprise(ERPConnector):
             </Parametros>
         </Consulta>
         """
-    
+
     def _get_client(self, plugins=None) -> Client:
-      session = requests.Session()
-      if self.proxy_host and self.proxy_port:
-          session.proxies.update({
-              "http": f"http://{self.proxy_host}:{self.proxy_port}"
-          })
-      # Si la URL apunta a localhost (túnel SSH), desactivar verificación SSL
-      if "localhost" in self.url or "127.0.0.1" in self.url:
-          session.verify = False
-      transport = Transport(session=session, timeout=600)
-      return Client(self.url, transport=transport, plugins=plugins or [])
-    
+        session = requests.Session()
+        if self.proxy_host and self.proxy_port:
+            session.proxies.update({
+                "http": f"http://{self.proxy_host}:{self.proxy_port}"
+            })
+        # Si la URL apunta a localhost (túnel SSH), desactivar verificación SSL
+        # porque el certificado del ERP no es válido para localhost
+        if "localhost" in self.url or "127.0.0.1" in self.url:
+            session.verify = False
+        transport = Transport(session=session, timeout=600)
+        client = Client(self.url, transport=transport, plugins=plugins or [])
+        # Forzar endpoint al URL actual (el WSDL puede devolver una dirección distinta)
+        if "localhost" in self.url or "127.0.0.1" in self.url:
+            url_servicio = self.url.split("?")[0]
+            client.service._binding_options["address"] = url_servicio
+        return client
+
     def _clean_string(self, valor) -> str:
         if not isinstance(valor, str):
             return valor
         return "".join(c for c in valor if c.isprintable())
-    
+
     def get(self, endpoint: str, params: dict = {}) -> tuple:
         sql = params.get("sql", "")
         if not sql:
             self.logger.error("No se proporcionó SQL en params")
             return False, "Falta el SQL en params"
-        
+
         try:
             xml     = self._build_xml(sql)
             history = HistoryPlugin()
@@ -93,14 +99,14 @@ class SiesaEnterprise(ERPConnector):
                 for k, v in fila.items():
                     fila_limpia[k] = self._clean_string(v)
                 resultado.append(fila_limpia)
-            
+
             self.logger.info(f"Consulta exitosa — {len(resultado)} registros traídos")
             return True, resultado
-        
+
         except Exception as e:
             self.logger.error(f"Error SOAP SIESA WS: {e}")
             return False, str(e)
-    
+
     def test_connection(self) -> tuple:
         sql = "SELECT 1"
         status, data = self.get(
@@ -112,25 +118,24 @@ class SiesaEnterprise(ERPConnector):
         return False, f"No se pudo conectar con SIESA WS: {self.conexion} ({data})"
 
     def _parse_raw_response(self, history) -> list | None:
-      """Parsea respuesta SOAP cruda cuando serialize_object falla"""
-      envelope = history.last_received['envelope']
-      datos = []
+    """Parsea respuesta SOAP cruda cuando serialize_object falla"""
+    envelope = history.last_received['envelope']
+    datos = []
 
-      for resultado_elem in envelope.iter():
-          if not isinstance(resultado_elem.tag, str):
-              continue
-          if etree.QName(resultado_elem.tag).localname != 'Resultado':
-              continue
+    for resultado_elem in envelope.iter():
+        if not isinstance(resultado_elem.tag, str):
+            continue
+        if etree.QName(resultado_elem.tag).localname != 'Resultado':
+            continue
 
-          fila = {}
-          for child in resultado_elem:
-              if not isinstance(child.tag, str):
-                  continue
-              child_tag = etree.QName(child.tag).localname
-              fila[child_tag] = child.text.strip() if child.text else None
+        fila = {}
+        for child in resultado_elem:
+            if not isinstance(child.tag, str):
+                continue
+            child_tag = etree.QName(child.tag).localname
+            fila[child_tag] = child.text.strip() if child.text else None
 
-          if fila:
-              datos.append({'Resultado': fila})
+        if fila:
+            datos.append({'Resultado': fila})
 
-      return datos if datos else None
-            
+    return datos if datos else None
