@@ -117,6 +117,31 @@ CREATE TABLE change_history (
     changed_by      INTEGER      REFERENCES users(id),
     changed_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+
+-- ============================================================
+-- 5. SQL_BLOCKS
+-- ============================================================
+CREATE TABLE sql_blocks (
+      id              SERIAL PRIMARY KEY,
+      name            VARCHAR(100) NOT NULL,
+      description     TEXT DEFAULT '',
+      block_type      VARCHAR(10) NOT NULL CHECK (block_type IN ('base', 'campo', 'filtro')),
+      entity_types    VARCHAR(100) NOT NULL,
+      select_fragment TEXT DEFAULT '',
+      join_fragment   TEXT DEFAULT '',
+      group_by_fragment TEXT DEFAULT '',
+      where_fragment  TEXT DEFAULT '',
+      variables       JSONB DEFAULT '[]',
+      requires_block_id INTEGER REFERENCES sql_blocks(id) ON DELETE SET NULL,
+      sort_order      INTEGER DEFAULT 0,
+      is_active       BOOLEAN DEFAULT true,
+      created_by      INTEGER REFERENCES users(id),
+      updated_by      INTEGER REFERENCES users(id),
+      created_at      TIMESTAMPTZ DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ DEFAULT NOW()
+  );
+
 -- Indice automatico: id (PK)
 
 CREATE INDEX idx_change_history_record ON change_history (table_name, record_id, changed_at DESC);
@@ -144,6 +169,10 @@ CREATE TRIGGER trg_clients_updated
 
 CREATE TRIGGER trg_flows_updated
     BEFORE UPDATE ON flows
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+CREATE TRIGGER update_sql_blocks_timestamp
+    BEFORE UPDATE ON sql_blocks
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
 -- ============================================================

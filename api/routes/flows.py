@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from api.dependencies import get_db
 from api.auth import require_role
 from api.schemas.flows import FlowCreate, FlowUpdate, FlowResponse
+from api.utils.sql_assembler import assemble_from_flow_config
 
 router = APIRouter(prefix="/clients/{client_id}/flows", tags=["Flows"])
 
@@ -117,13 +118,17 @@ def create_flow(
             detail=f"Ya existe un flow '{flow.flow_name}' con tipo '{flow.flow_type}' para este cliente"
         )
 
+    fc = flow.flow_config
+    if fc.get("sql_mode") == "visual":
+        fc["sql"] = assemble_from_flow_config(fc, cursor)
+
     cursor.execute(
         """INSERT INTO flows
         (client_id, flow_name, flow_type, flow_config, schedule_cron, created_by, updated_by)
         VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *""",
         (
             client_id, flow.flow_name, flow.flow_type,
-            json.dumps(flow.flow_config), flow.schedule_cron, 
+            json.dumps(fc), flow.schedule_cron,
             current_user["id"], current_user["id"]
         )
     )
@@ -174,7 +179,10 @@ def update_flow(
         updates["flow_type"] = flow.flow_type
     if flow.flow_config is not None:
         previous_values["flow_config"] = existing["flow_config"]
-        updates["flow_config"] = json.dumps(flow.flow_config)
+        fc = flow.flow_config
+        if fc.get("sql_mode") == "visual":
+            fc["sql"] = assemble_from_flow_config(fc, cursor)
+        updates["flow_config"] = json.dumps(fc)
     if "schedule_cron" in flow.model_fields_set:
         previous_values["schedule_cron"] = existing["schedule_cron"]
         updates["schedule_cron"] = flow.schedule_cron

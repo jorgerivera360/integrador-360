@@ -179,6 +179,11 @@ function deserializar(flow, erpType, flowType) {
 
     if (erpType === 'ws') {
         estado.config.sql = fc.sql || ''
+        estado.config.sql_mode = fc.sql_mode || 'libre'
+        estado.config.sql_base_id = fc.sql_base_id || null
+        estado.config.sql_base_variables = fc.sql_base_variables || {}
+        estado.config.sql_campos = fc.sql_campos || []
+        estado.config.sql_filtros = fc.sql_filtros || []
     }
 
     if (erpType === 'connekta') {
@@ -262,6 +267,13 @@ function serializar(base, config, erpType, flowType) {
 
     if (erpType === 'ws') {
         fc.sql = config.sql || ''
+        fc.sql_mode = config.sql_mode || 'libre'
+        if (config.sql_mode === 'visual') {
+            fc.sql_base_id = config.sql_base_id || null
+            fc.sql_base_variables = config.sql_base_variables || {}
+            fc.sql_campos = config.sql_campos || []
+            fc.sql_filtros = config.sql_filtros || []
+        }
     }
 
     if (erpType === 'connekta') {
@@ -466,7 +478,10 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                 {erpType === 'ws' && (
                     <SeccionSQL
                         sql={config.sql}
+                        config={config}
+                        flowType={flowType}
                         onChange={(sql) => setConfig({ ...config, sql })}
+                        onConfigChange={setConfig}
                     />
                 )}
 

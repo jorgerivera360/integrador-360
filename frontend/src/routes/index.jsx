@@ -12,6 +12,7 @@ import ClientesListPage from '@/pages/admin/clientes/ClientesListPage'
 import ClienteDetallePage from '@/pages/admin/clientes/ClienteDetallePage'
 import UsuariosPage from '@/pages/admin/usuarios/UsuariosPage'
 import UsuarioDetallePage from '@/pages/admin/usuarios/UsuarioDetallePage'
+import SqlBlocksPage from '@/pages/admin/sql-blocks/SqlBlocksPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 /**
@@ -40,6 +41,14 @@ const AppRoutes = () => (
 
             <Route path="/admin/clientes" element={<ClientesListPage />} />
             <Route path="/admin/clientes/:id" element={<ClienteDetallePage />} />
+            <Route
+                path="/admin/config-sql"
+                element={
+                    <ProtectedRoute roles={[ROLES.SUPERADMIN, ROLES.ADMIN]}>
+                        <SqlBlocksPage />
+                    </ProtectedRoute>
+                }
+            />
             <Route
                 path="/admin/usuarios"
                 element={

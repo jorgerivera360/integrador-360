@@ -63,6 +63,12 @@ export const IconSalir = (props) => (
     </svg>
 )
 
+export const IconConfigSQL = (props) => (
+    <svg {...base} {...props}>
+        <path d="M4 7h16M4 12h10M4 17h6M18 13v8M15 18h6" />
+    </svg>
+)
+
 export const IconRueda = (props) => (
     <svg {...base} width={18} height={18} strokeWidth={1.6} strokeLinecap="butt" {...props}>
         <path d="M9.9 2.1h3.2l.5 2.5 1.9.8 2.2-1.3 2.2 2.2-1.3 2.2.8 1.9 2.5.5v3.2l-2.5.5-.8 1.9 1.3 2.2-2.2 2.2-2.2-1.3-1.9.8-.5 2.5H9.9l-.5-2.5-1.9-.8-2.2 1.3-2.2-2.2 1.3-2.2-.8-1.9-2.5-.5v-3.2l2.5-.5.8-1.9-1.3-2.2 2.2-2.2 2.2 1.3 1.9-.8z" />
