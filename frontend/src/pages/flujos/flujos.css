@@ -985,3 +985,28 @@
 .flujo-doc__cabecera .flujo-seccion__subtitulo {
     margin: 0;
 }
+
+.flujo-doc__regla {
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: #fafafa;
+}
+
+.flujo-doc__regla-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.flujo-doc__regla-etiqueta {
+    font-weight: 500;
+    font-size: 13px;
+    color: #595959;
+}
+
+.flujo-doc__config-wms {
+    padding: 8px 0;
+}

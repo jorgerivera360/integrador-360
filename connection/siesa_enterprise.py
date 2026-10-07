@@ -69,7 +69,9 @@ class SiesaEnterprise(ERPConnector):
             return valor
         return "".join(c for c in valor if c.isprintable())
 
-    def get(self, endpoint: str, params: dict = {}) -> tuple:
+    def get(self, endpoint: str, params: dict = None) -> tuple:
+        if params is None:
+            params = {}
         sql = params.get("sql", "")
         if not sql:
             self.logger.error("No se proporcionó SQL en params")

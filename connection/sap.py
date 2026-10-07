@@ -55,7 +55,9 @@ class SAP(ERPConnector):
             "Cookie":    f"B1SESSION={self.session_id}; ROUTEID=.node7",
         }
     
-    def get(self, endpoint: str, params: dict = {}) -> tuple:
+    def get(self, endpoint: str, params: dict = None) -> tuple:
+        if params is None:
+            params = {}
         if not self.session_id:
             self.logger.error("No hay session_id")
             return False, "No autenticado en SAP"

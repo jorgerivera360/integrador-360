@@ -28,7 +28,9 @@ class ExcelConnector(ERPConnector):
             f"{self.client_id}-{proceso}.xlsx"
         )
     
-    def get(self, endpoint: str, params: dict = {}) -> tuple:
+    def get(self, endpoint: str, params: dict = None) -> tuple:
+        if params is None:
+            params = {}
         if endpoint not in self.ARCHIVOS_VALIDOS:
             self.logger.error(f"Proceso '{endpoint}' no es válido para ExcelConnector — válidos: {self.ARCHIVOS_VALIDOS}")
             return False, f"Proceso '{endpoint}' no válido"

@@ -8,7 +8,11 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from api.dependencies import get_db
 
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "integrador-360-secret-key-cambiar-en-produccion")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
+if not SECRET_KEY:
+    import warnings
+    warnings.warn("JWT_SECRET_KEY no configurada — la API no podrá generar tokens válidos", stacklevel=2)
+    SECRET_KEY = "integrador-360-secret-key-cambiar-en-produccion"
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")

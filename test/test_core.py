@@ -731,7 +731,7 @@ class TestProcessItems:
     def test_empty_data_returns_zero_summary(self):
         odoo = MagicMock()
         result = self._make(odoo).process([])
-        assert result == {"creados": 0, "actualizados": 0, "fallidos": [], "total": 0}
+        assert result == {"creados": 0, "sincronizados": 0, "fallidos": [], "total": 0}
 
     def test_summary_counts_correct(self):
         odoo = MagicMock()
@@ -745,7 +745,7 @@ class TestProcessItems:
             self._minimal(referencia="REF001"),
             self._minimal(referencia="REF002"),
         ])
-        assert result["actualizados"] + result["creados"] + len(result["fallidos"]) <= result["total"]
+        assert result["sincronizados"] + result["creados"] + len(result["fallidos"]) <= result["total"]
 
     @patch("core.process_items.IntegradorLogger")
     def test_fallidos_logged_individually(self, MockLogger):
@@ -870,7 +870,7 @@ class TestProcessItems:
             self._minimal(referencia="REF001"),
             self._minimal(referencia="REF002"),
         ])
-        assert result["actualizados"] == 1
+        assert result["sincronizados"] == 1
         assert result["creados"] == 1
 
     def test_no_refs_skips_bulk_fetch(self):
@@ -1020,7 +1020,7 @@ class TestProcessItems:
         ]
         odoo.write.return_value = (True, True)
         result = self._make(odoo).process([self._minimal()])
-        assert result["actualizados"] == 1
+        assert result["sincronizados"] == 1
         odoo.write.assert_called_once()
 
     def test_write_does_not_send_default_code(self):
@@ -1335,14 +1335,14 @@ class TestProcessPartners:
 
     def test_empty_data_returns_zero_summary(self):
         result = self._make(MagicMock()).process([])
-        assert result == {"creados": 0, "actualizados": 0, "fallidos": [], "total": 0}
+        assert result == {"creados": 0, "sincronizados": 0, "fallidos": [], "total": 0}
 
     def test_summary_counts_correct(self):
         odoo = MagicMock()
         odoo.search_read.side_effect = [(True, []), (True, [{"id": 100}])]
         odoo.create.return_value = (True, 200)
         result = self._make(odoo, {"flow_type": "customer"}).process([self._partner()])
-        assert result["creados"] + result["actualizados"] + len(result["fallidos"]) == result["total"]
+        assert result["creados"] + result["sincronizados"] + len(result["fallidos"]) == result["total"]
 
     def test_fatal_exception_returns_error_key(self):
         odoo = MagicMock()
@@ -1425,7 +1425,7 @@ class TestProcessPartners:
         ]
         odoo.write.return_value = (True, True)
         result = self._make(odoo, {"flow_type": "customer"}).process([self._partner()])
-        assert result["actualizados"] == 1
+        assert result["sincronizados"] == 1
 
     def test_bulk_fetch_empty_result(self):
         odoo = MagicMock()
@@ -1482,7 +1482,7 @@ class TestProcessPartners:
         ]
         odoo.write.return_value = (True, True)
         result = self._make(odoo, {"flow_type": "customer"}).process([self._partner()])
-        assert result["actualizados"] == 1
+        assert result["sincronizados"] == 1
 
     def test_write_does_not_send_vat(self):
         odoo = MagicMock()

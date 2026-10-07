@@ -83,6 +83,11 @@ def _validar_campos(row: dict, documentos: list, logger=None) -> None:
         for filtro in doc.get("filtros") or []:
             if isinstance(filtro, dict) and filtro.get("campo"):
                 referenciados.add(filtro["campo"])
+        for regla in doc.get("reglas") or []:
+            if isinstance(regla, dict):
+                for filtro in regla.get("filtros") or []:
+                    if isinstance(filtro, dict) and filtro.get("campo"):
+                        referenciados.add(filtro["campo"])
     faltantes = referenciados - disponibles
     if faltantes:
         logger.warning(
@@ -92,6 +97,13 @@ def _validar_campos(row: dict, documentos: list, logger=None) -> None:
         )
 
 
+def _inyectar_meta(row: dict, fuente: dict) -> None:
+    for clave in ("method", "operacion_id", "estado", "crear_como", "warehouse_mapping"):
+        valor = fuente.get(clave)
+        if valor is not None:
+            row[f"_{clave}"] = valor
+
+
 def preparar_documentos(documentos: list, logger=None) -> tuple:
     activos = _documentos_activos(documentos, logger=logger)
     if documentos and not activos and logger:
@@ -99,8 +111,13 @@ def preparar_documentos(documentos: list, logger=None) -> tuple:
             "preparar_documentos: el flujo declara documentos pero ninguno "
             "quedo activo — las filas pasan sin cambios"
         )
-    stats = {doc.get("codigo", f"#{i}"): {"aceptados": 0, "descartados": 0}
-             for i, doc in enumerate(activos)}
+    stats = {}
+    for i, doc in enumerate(activos):
+        codigo = doc.get("codigo", f"#{i}")
+        entry = {"aceptados": 0, "descartados": 0}
+        if doc.get("reglas"):
+            entry["reglas_sin_match"] = 0
+        stats[codigo] = entry
     stats["_sin_documento"] = 0
     stats["_validado"] = False
     return activos, stats
@@ -122,6 +139,31 @@ def procesar_fila(row: dict, activos: list, stats: dict, logger=None):
 
     codigo = doc.get("codigo", "?")
 
+    reglas = doc.get("reglas")
+    if reglas:
+        # --- Modo reglas: evaluar if/elif ---
+        regla_ganadora = None
+        for regla in reglas:
+            if not isinstance(regla, dict):
+                continue
+            filtros_regla = regla.get("filtros") or []
+            if all(evaluar_condicion(row, f, logger=logger) for f in filtros_regla):
+                regla_ganadora = regla
+                break
+
+        if regla_ganadora is None:
+            stats[codigo]["descartados"] += 1
+            stats[codigo]["reglas_sin_match"] += 1
+            return None
+
+        for campo, valor in (regla_ganadora.get("hardcodes") or {}).items():
+            row[campo] = valor
+
+        _inyectar_meta(row, regla_ganadora)
+        stats[codigo]["aceptados"] += 1
+        return row
+
+    # --- Modo simple (sin reglas): comportamiento original ---
     if not all(evaluar_condicion(row, f, logger=logger) for f in doc.get("filtros") or []):
         stats[codigo]["descartados"] += 1
         return None
@@ -129,5 +171,6 @@ def procesar_fila(row: dict, activos: list, stats: dict, logger=None):
     for campo, valor in (doc.get("hardcodes") or {}).items():
         row[campo] = valor
 
+    _inyectar_meta(row, doc)
     stats[codigo]["aceptados"] += 1
     return row

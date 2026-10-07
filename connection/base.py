@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 class ERPConnector(ABC):
     
     @abstractmethod
-    def get(self, endpoint:str, params: dict ={}) -> tuple:
+    def get(self, endpoint:str, params: dict = None) -> tuple:
         """Trae datos del ERP, retorna tupla (status: bool, data: list)
             status: True si fue exitoso
             data  : Lista de dicts con los datos crudos

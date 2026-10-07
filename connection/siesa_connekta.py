@@ -31,7 +31,9 @@ class SiesaConnekta(ERPConnector):
             "Accept": "application/json"
         }
 
-    def get(self, endpoint: str, params: dict = {}) -> tuple:
+    def get(self, endpoint: str, params: dict = None) -> tuple:
+        if params is None:
+            params = {}
         # Se obtiene el query del parámetro o directamente del endpoint
         query_desc = params.get("query_desc", endpoint)
         if not query_desc:

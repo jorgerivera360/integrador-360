@@ -1,10 +1,9 @@
 """
 ConfigLoader — Único punto de acceso a la configuración
 Responsabilidades:
-- load_config()      → credenciales ERP/Odoo desde GCP (fallback local)
-- load_flows()       → flows activos desde la BD
-- load_erp_type()    → tipo de ERP del cliente desde la BD
-- _load_from_gcp()   → lee credenciales desde GCP Secret Manager
+- load_config()        → credenciales ERP/Odoo desde GCP (fallback local)
+- load_db_config()     → erp_type + flows activos desde la BD
+- _load_from_gcp()     → lee credenciales desde GCP Secret Manager
 - _get_db_connection() → conexión a PostgreSQL via DATABASE_URL
 Patrones: Factory
 Fase: 6 — Conexión BD + Main

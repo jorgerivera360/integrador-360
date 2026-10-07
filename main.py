@@ -23,6 +23,7 @@ from core.process_items import ProcessItems
 from core.process_partners import ProcessPartners
 from core.process_purchases import ProcessPurchases
 from core.process_sales import ProcessSales
+from core.process_picking_direct import ProcessPickingDirect
 from core.resolve_missing_masters import resolve_missing_masters
 from connection.tunnel import start_tunnels, stop_tunnels
 
@@ -69,11 +70,65 @@ def _dispatch_flow(data, flow_type, odoo, config, flow_config, cancel_check=None
         "purchases": ProcessPurchases,
         "sales":     ProcessSales,
     }
-    cls = processors.get(flow_type)
-    if not cls:
-        raise ValueError(f"flow_type no soportado: {flow_type}")
-    processor = cls(odoo, config, {**flow_config, "flow_type": flow_type}, cancel_check=cancel_check)
-    return processor.process(data)
+    campos_internos = ("_method", "_operacion_id", "_estado", "_crear_como", "_warehouse_mapping")
+
+    # Separar datos por método: los que tienen _method override van aparte
+    grupos = {}
+    for row in data:
+        method = row.pop("_method", None)
+        meta = {}
+        for campo in campos_internos:
+            val = row.pop(campo, None)
+            if val is not None:
+                meta[campo.lstrip("_")] = val
+        key = method or "default"
+        if key not in grupos:
+            grupos[key] = {"rows": [], "meta": meta}
+        grupos[key]["rows"].append(row)
+
+    # Sin datos o solo grupo default → despachar directo (retrocompatible)
+    if not grupos or list(grupos.keys()) == ["default"]:
+        cls = processors.get(flow_type)
+        if not cls:
+            raise ValueError(f"flow_type no soportado: {flow_type}")
+        processor = cls(odoo, config, {**flow_config, "flow_type": flow_type}, cancel_check=cancel_check)
+        return processor.process(data)
+
+    # Múltiples grupos: despachar cada uno a su procesador
+    result_total = {"creados": 0, "fallidos": [], "descartados": 0, "total": len(data),
+                    "total_ordenes": 0, "creados_detalle": [], "creados_truncado": 0}
+    logger = IntegradorLogger(client_id=config["client_id"])
+
+    for method_key, grupo in grupos.items():
+        group_data = grupo["rows"]
+        group_meta = grupo["meta"]
+        logger.info(f"Main | Despachando {len(group_data)} registros con método '{method_key}'")
+
+        if method_key == "picking_direct":
+            cls = ProcessPickingDirect
+        elif method_key == "default":
+            cls = processors.get(flow_type)
+        else:
+            cls = processors.get(flow_type)
+            logger.warning(f"Main | Método '{method_key}' no reconocido, usando procesador por defecto")
+
+        if not cls:
+            raise ValueError(f"flow_type no soportado: {flow_type}")
+
+        group_flow_config = {**flow_config, "flow_type": flow_type, **group_meta}
+        processor = cls(odoo, config, group_flow_config, cancel_check=cancel_check)
+        result = processor.process(group_data)
+
+        result_total["creados"] += result.get("creados", 0)
+        result_total["fallidos"].extend(result.get("fallidos", []))
+        result_total["descartados"] += result.get("descartados", 0)
+        result_total["total_ordenes"] += result.get("total_ordenes", 0)
+        result_total["creados_detalle"].extend(result.get("creados_detalle", []))
+        result_total["creados_truncado"] += result.get("creados_truncado", 0)
+        if result.get("error"):
+            result_total["error"] = result["error"]
+
+    return result_total
 
 
 def run(flow, config, erp_type, flow_configs=None, db_writer=None,

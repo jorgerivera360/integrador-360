@@ -11,7 +11,6 @@ import SeccionOrigenSAP from './SeccionOrigenSAP'
 import SeccionMapping from './SeccionMapping'
 import SeccionConfigItems from './SeccionConfigItems'
 import SeccionConfigPartners from './SeccionConfigPartners'
-import SeccionConfigTransacciones from './SeccionConfigTransacciones'
 import SeccionConditionals from './SeccionConditionals'
 import SeccionDocumentos from './SeccionDocumentos'
 import SeccionResolve from './SeccionResolve'
@@ -89,48 +88,119 @@ function tablaACondicionales(tabla) {
     })
 }
 
+function _filtrosATabla(filtros) {
+    return (filtros || []).map((f) => ({
+        campo: f?.campo || '',
+        operador: f?.operador || '=',
+        valor: Array.isArray(f?.valor) ? f.valor.join(', ') : String(f?.valor ?? ''),
+    }))
+}
+
+function _filtrosABackend(filtros) {
+    return (filtros || [])
+        .filter((f) => f.campo?.trim())
+        .map((f) => ({
+            campo: f.campo.trim(),
+            operador: f.operador || '=',
+            valor: f.operador === 'in'
+                ? String(f.valor ?? '').split(',').map((v) => v.trim()).filter(Boolean)
+                : f.valor,
+        }))
+}
+
+function _reglaATabla(regla) {
+    return {
+        filtros: _filtrosATabla(regla.filtros),
+        warehouse_mapping: dictATabla(regla.warehouse_mapping),
+        hardcodes: dictATabla(regla.hardcodes),
+        crear_como: regla.crear_como || regla.method || 'order',
+        estado: regla.estado || 'draft',
+        operacion_id: regla.operacion_id ?? '',
+    }
+}
+
+function _reglaABackend(regla) {
+    const out = {
+        filtros: _filtrosABackend(regla.filtros),
+        hardcodes: tablaADict(regla.hardcodes || []),
+        crear_como: regla.crear_como || 'order',
+        estado: regla.estado || 'draft',
+    }
+    if (regla.crear_como === 'picking_direct') {
+        out.method = 'picking_direct'
+        if (regla.operacion_id) out.operacion_id = Number(regla.operacion_id)
+    }
+    const wm = tablaADict(regla.warehouse_mapping || [])
+    if (Object.keys(wm).length) out.warehouse_mapping = wm
+    return out
+}
+
 function documentosATabla(documentos) {
     if (!Array.isArray(documentos)) return []
     return documentos.map((doc) => {
         const ident = doc.identificar_por || {}
-        return {
+        const tieneReglas = Array.isArray(doc.reglas) && doc.reglas.length > 0
+
+        const base = {
             ident_campo: ident.campo || '',
             ident_operador: ident.operador || 'contiene',
             ident_valor: String(ident.valor ?? ''),
-            filtros: (doc.filtros || []).map((f) => ({
-                campo: f?.campo || '',
-                operador: f?.operador || '=',
-                // el operador `in` guarda una lista; en el formulario se edita separado por comas
-                valor: Array.isArray(f?.valor) ? f.valor.join(', ') : String(f?.valor ?? ''),
-            })),
-            hardcodes: dictATabla(doc.hardcodes),
+            tiene_variantes: tieneReglas,
         }
+
+        if (tieneReglas) {
+            base.reglas = doc.reglas.map(_reglaATabla)
+            // campos de nivel documento no aplican en modo reglas
+            base.filtros = []
+            base.warehouse_mapping = []
+            base.hardcodes = []
+            base.crear_como = 'order'
+            base.estado = 'draft'
+            base.operacion_id = ''
+        } else {
+            base.reglas = []
+            base.filtros = _filtrosATabla(doc.filtros)
+            base.warehouse_mapping = dictATabla(doc.warehouse_mapping)
+            base.hardcodes = dictATabla(doc.hardcodes)
+            base.crear_como = doc.crear_como || doc.method || 'order'
+            base.estado = doc.estado || 'draft'
+            base.operacion_id = doc.operacion_id ?? ''
+        }
+
+        return base
     })
 }
 
 function tablaADocumentos(tabla) {
     return tabla
         .filter((d) => d.ident_campo?.trim())
-        .map((d, i) => ({
-            // el nombre del documento se deriva del valor que lo identifica;
-            // el backend lo usa para el resumen por documento en los logs
-            codigo: String(d.ident_valor ?? '').trim() || `#${i}`,
-            identificar_por: {
-                campo: (d.ident_campo || '').trim(),
-                operador: d.ident_operador || 'contiene',
-                valor: d.ident_valor ?? '',
-            },
-            filtros: (d.filtros || [])
-                .filter((f) => f.campo?.trim())
-                .map((f) => ({
-                    campo: f.campo.trim(),
-                    operador: f.operador || '=',
-                    valor: f.operador === 'in'
-                        ? String(f.valor ?? '').split(',').map((v) => v.trim()).filter(Boolean)
-                        : f.valor,
-                })),
-            hardcodes: tablaADict(d.hardcodes || []),
-        }))
+        .map((d, i) => {
+            const doc = {
+                codigo: String(d.ident_valor ?? '').trim() || `#${i}`,
+                identificar_por: {
+                    campo: (d.ident_campo || '').trim(),
+                    operador: d.ident_operador || 'contiene',
+                    valor: d.ident_valor ?? '',
+                },
+            }
+
+            if (d.tiene_variantes && d.reglas?.length) {
+                doc.reglas = d.reglas.map(_reglaABackend)
+            } else {
+                doc.filtros = _filtrosABackend(d.filtros)
+                doc.hardcodes = tablaADict(d.hardcodes || [])
+                doc.crear_como = d.crear_como || 'order'
+                doc.estado = d.estado || 'draft'
+                if (d.crear_como === 'picking_direct') {
+                    doc.method = 'picking_direct'
+                    if (d.operacion_id) doc.operacion_id = Number(d.operacion_id)
+                }
+                const wm = tablaADict(d.warehouse_mapping || [])
+                if (Object.keys(wm).length) doc.warehouse_mapping = wm
+            }
+
+            return doc
+        })
 }
 
 function filterStringACondiciones(filterStr) {
@@ -235,10 +305,6 @@ function deserializar(flow, erpType, flowType) {
         estado.config.identification_type_id = fc.identification_type_id ?? 5
     }
 
-    if (flowType === 'purchases' || flowType === 'sales') {
-        estado.config.warehouse_mapping_tabla = dictATabla(fc.warehouse_mapping)
-    }
-
     estado.config.documentos_tabla = documentosATabla(fc.documentos)
 
     if (flowType === 'items' || flowType === 'customer' || flowType === 'supplier') {
@@ -312,10 +378,6 @@ function serializar(base, config, erpType, flowType) {
         fc.sucursal_padre = config.sucursal_padre || '001'
         fc.country_id = config.country_id ?? 49
         fc.identification_type_id = config.identification_type_id ?? 5
-    }
-
-    if (flowType === 'purchases' || flowType === 'sales') {
-        fc.warehouse_mapping = tablaADict(config.warehouse_mapping_tabla || [])
     }
 
     // Solo se escribe la clave si hay al menos un documento: un flujo sin
@@ -524,14 +586,6 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                     />
                 )}
 
-                {(flowType === 'purchases' || flowType === 'sales') && (
-                    <SeccionConfigTransacciones
-                        flowType={flowType}
-                        config={config}
-                        onChange={setConfig}
-                    />
-                )}
-
                 {(erpType === 'connekta' || erpType === 'sap') && (
                     <SeccionConditionals
                         conditionals={config.conditionals_tabla || []}
@@ -543,6 +597,7 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                     <SeccionDocumentos
                         config={config}
                         onChange={setConfig}
+                        flowType={flowType}
                     />
                 )}
 
