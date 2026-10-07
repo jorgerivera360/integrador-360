@@ -68,6 +68,20 @@ class TransformWS(Transform):
                 f"Flow '{flow_name}': error inesperado en get_flow — {e}"
             ) from e
 
+    def _apply_mapping(self, row: dict, mapping: dict) -> dict:
+        if not mapping:
+            return row
+        mapped = {}
+        mapped_keys = set()
+        for key_origen, key_canon in mapping.items():
+            if key_origen in row:
+                mapped[key_canon] = row[key_origen]
+                mapped_keys.add(key_origen)
+        for key, value in row.items():
+            if key not in mapped_keys:
+                mapped[key] = value
+        return mapped
+
     def _apply_hardcodes(self, row: dict, hardcodes: dict) -> dict:
         if not hardcodes:
             return row
@@ -81,6 +95,7 @@ class TransformWS(Transform):
         campos_float = {"peso", "volumen", "costo", "precio", "iva"}
         campos_int = {"vence", "use_expiration_date", "expiration_time",
                         "ind_compra", "ind_venta", "ind_manufactura"}
+        mapping = flow_config.get("mapping", {})
         hardcodes = flow_config.get("hardcodes", {})
 
         docs_activos, stats_docs = preparar_documentos(
@@ -92,6 +107,7 @@ class TransformWS(Transform):
 
         for row in raw:
             try:
+                row = self._apply_mapping(row, mapping)
                 row = self._apply_hardcodes(row, hardcodes)
 
                 row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
@@ -135,6 +151,7 @@ class TransformWS(Transform):
         return results
 
     def _normalize_partners(self, raw: list, flow_config: dict) -> list:
+        mapping = flow_config.get("mapping", {})
         hardcodes = flow_config.get("hardcodes", {})
 
         docs_activos, stats_docs = preparar_documentos(
@@ -146,6 +163,7 @@ class TransformWS(Transform):
 
         for row in raw:
             try:
+                row = self._apply_mapping(row, mapping)
                 row = self._apply_hardcodes(row, hardcodes)
 
                 row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
@@ -188,6 +206,7 @@ class TransformWS(Transform):
 
         campos_float = {"cantidad", "precio_unitario", "impuesto"}
         campos_fecha = {"fecha_entrega"}
+        mapping = flow_config.get("mapping", {})
         hardcodes = flow_config.get("hardcodes", {})
 
         docs_activos, stats_docs = preparar_documentos(
@@ -199,6 +218,7 @@ class TransformWS(Transform):
 
         for row in raw:
             try:
+                row = self._apply_mapping(row, mapping)
                 row = self._apply_hardcodes(row, hardcodes)
 
                 row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
@@ -244,6 +264,7 @@ class TransformWS(Transform):
     def _normalize_sales(self, raw: list, flow_config: dict) -> list:
         campos_float = {"cantidad_pedida", "precio_unitario", "impuesto"}
         campos_fecha = {"fecha_pedido"}
+        mapping = flow_config.get("mapping", {})
         hardcodes = flow_config.get("hardcodes", {})
 
         docs_activos, stats_docs = preparar_documentos(
@@ -255,6 +276,7 @@ class TransformWS(Transform):
 
         for row in raw:
             try:
+                row = self._apply_mapping(row, mapping)
                 row = self._apply_hardcodes(row, hardcodes)
 
                 row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)

@@ -3,7 +3,7 @@ import { InfoCircleOutlined } from '@ant-design/icons'
 import TablaClaveValor from './TablaClaveValor'
 
 const SeccionMapping = ({ erpType, flowType, config, onChange }) => {
-    const etiquetaCampoOrigen = erpType === 'sap' ? 'Campo SAP' : 'Campo Connekta'
+    const etiquetaCampoOrigen = erpType === 'sap' ? 'Campo SAP' : erpType === 'connekta' ? 'Campo Connekta' : 'Campo ERP'
     const mostrarMappingLineas = erpType === 'sap' && flowType !== 'items'
 
     return (

@@ -267,9 +267,9 @@ function deserializar(flow, erpType, flowType) {
         estado.config.filter_condiciones = filterStringACondiciones(fc.filter)
     }
 
+    estado.config.mapping_tabla = dictATabla(fc.mapping)
+    estado.config.hardcodes_tabla = dictATabla(fc.hardcodes)
     if (erpType === 'connekta' || erpType === 'sap') {
-        estado.config.mapping_tabla = dictATabla(fc.mapping)
-        estado.config.hardcodes_tabla = dictATabla(fc.hardcodes)
         estado.config.conditionals_tabla = condicionalesATabla(fc.conditionals)
     }
 
@@ -353,9 +353,9 @@ function serializar(base, config, erpType, flowType) {
         fc.filter = condicionesAFilterString(config.filter_condiciones || [])
     }
 
+    fc.mapping = tablaADict(config.mapping_tabla || [])
+    fc.hardcodes = tablaADict(config.hardcodes_tabla || [])
     if (erpType === 'connekta' || erpType === 'sap') {
-        fc.mapping = tablaADict(config.mapping_tabla || [])
-        fc.hardcodes = tablaADict(config.hardcodes_tabla || [])
         fc.conditionals = tablaACondicionales(config.conditionals_tabla || [])
     }
 
@@ -561,7 +561,7 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                     />
                 )}
 
-                {(erpType === 'connekta' || erpType === 'sap') && flowType !== 'items' && (
+                {flowType !== 'items' && (
                     <SeccionMapping
                         erpType={erpType}
                         flowType={flowType}
