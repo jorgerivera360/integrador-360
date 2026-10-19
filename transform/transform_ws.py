@@ -1,42 +1,21 @@
 """
 TransformWS — Transform SIESA WS
-Responsabilidades:
-  - get_flow() — llama al conector y normaliza los datos
-  - _apply_hardcodes() — inyecta valores fijos del flujo
-  - _normalize_items() — limpieza + tipado + validación de productos
-  - _normalize_partners() — limpieza + validación de clientes/proveedores
-  - _normalize_purchases() — limpieza + tipado + validación de compras/entradas
-  - _normalize_sales() — limpieza + tipado + validación de ventas/salidas
 Hereda: Transform
 Fase: 3 — Transform Layer
 """
 from config.logger import IntegradorLogger
 from transform.base import Transform, TransformError
-from transform.utils.helpers import (clean_row, validate_record, to_float, to_int, parse_fecha)
-from transform.utils.documentos import preparar_documentos, procesar_fila
+from transform.utils.normalize import normalize
+
 
 class TransformWS(Transform):
     def __init__(self, config: dict):
         self.client_id = config["client_id"]
-        self.logger    = IntegradorLogger(client_id=self.client_id)
+        self.logger = IntegradorLogger(client_id=self.client_id)
         self.descartados = []
 
     def get_flow(self, connector, flow_name: str, flow_type: str, flow_config: dict) -> list:
         self.descartados = []
-
-        normalize_map = {
-            "items": self._normalize_items,
-            "customer": self._normalize_partners,
-            "supplier": self._normalize_partners,
-            "purchases": self._normalize_purchases,
-            "sales": self._normalize_sales,
-        }
-
-        normalize_fn = normalize_map.get(flow_type)
-        if not normalize_fn:
-            raise TransformError(
-                f"flow_type no soportado en TransformWS: '{flow_type}'"
-            )
 
         try:
             sql = flow_config.get("sql", "")
@@ -45,11 +24,14 @@ class TransformWS(Transform):
             if endpoint:
                 status, raw = connector.get(endpoint=endpoint, params={})
             elif sql:
-                status, raw = connector.get(endpoint="EjecutarConsultaXML", params={"sql": sql})
+                status, raw = connector.get(
+                    endpoint="EjecutarConsultaXML", params={"sql": sql}
+                )
             else:
                 raise TransformError(
                     f"Flow '{flow_name}': no hay SQL ni endpoint configurado"
                 )
+
             if not status:
                 raise TransformError(
                     f"Flow '{flow_name}': error obteniendo datos del ERP — {raw}"
@@ -59,7 +41,8 @@ class TransformWS(Transform):
                 self.logger.info(f"Flow '{flow_name}': sin registros del conector")
                 return []
 
-            return normalize_fn(raw, flow_config)
+            return normalize(raw, flow_config, flow_type,
+                             self.logger, self.descartados)
 
         except TransformError:
             raise
@@ -67,254 +50,3 @@ class TransformWS(Transform):
             raise TransformError(
                 f"Flow '{flow_name}': error inesperado en get_flow — {e}"
             ) from e
-
-    def _apply_mapping(self, row: dict, mapping: dict) -> dict:
-        if not mapping:
-            return row
-        mapped = {}
-        mapped_keys = set()
-        for key_origen, key_canon in mapping.items():
-            if key_origen in row:
-                mapped[key_canon] = row[key_origen]
-                mapped_keys.add(key_origen)
-        for key, value in row.items():
-            if key not in mapped_keys:
-                mapped[key] = value
-        return mapped
-
-    def _apply_hardcodes(self, row: dict, hardcodes: dict) -> dict:
-        if not hardcodes:
-            return row
-        for campo, valor in hardcodes.items():
-            row[campo] = valor
-        return row
-
-# Maestros
-
-    def _normalize_items(self, raw: list, flow_config: dict) -> list:
-        campos_float = {"peso", "volumen", "costo", "precio", "iva"}
-        campos_int = {"vence", "use_expiration_date", "expiration_time",
-                        "ind_compra", "ind_venta", "ind_manufactura"}
-        mapping = flow_config.get("mapping", {})
-        hardcodes = flow_config.get("hardcodes", {})
-
-        docs_activos, stats_docs = preparar_documentos(
-            flow_config.get("documentos"), logger=self.logger
-        )
-
-        results = []
-        fallidos = []
-
-        for row in raw:
-            try:
-                row = self._apply_mapping(row, mapping)
-                row = self._apply_hardcodes(row, hardcodes)
-
-                row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
-                if row is None:
-                    continue
-
-                row = clean_row(row)
-
-                valid, detalle = validate_record(row, "items", logger=self.logger)
-                if not valid:
-                    fallidos.append({"referencia": row.get("referencia", "?"), "etapa": "validacion", **detalle})
-                    continue
-
-                for campo in campos_float & row.keys():
-                    row[campo] = to_float(row[campo], logger=self.logger, field_name=campo)
-
-                for campo in campos_int & row.keys():
-                    row[campo] = to_int(row[campo], logger=self.logger, field_name=campo)
-
-                results.append(row)
-
-            except Exception as e:
-                fallidos.append({"referencia": row.get("referencia", "?"), "etapa": "validacion", "campo": "excepcion", "razon": str(e), "valor_recibido": ""})
-                continue
-
-        self.logger.info(f"_normalize_items: {len(results)}/{len(raw)} registros validos")
-        if fallidos:
-            self.logger.warning(f"_normalize_items: {len(fallidos)} registros descartados:")
-            for f in fallidos:
-                self.logger.warning(f"  - {f.get('referencia', '?')}: {f['razon']}")
-            self.descartados.extend(fallidos)
-        if docs_activos:
-            detalle = ", ".join(
-                f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
-                for cod, d in stats_docs.items() if not cod.startswith("_")
-            )
-            self.logger.info(
-                f"_normalize_items: documentos — {detalle}, "
-                f"sin documento: {stats_docs['_sin_documento']}"
-            )
-        return results
-
-    def _normalize_partners(self, raw: list, flow_config: dict) -> list:
-        mapping = flow_config.get("mapping", {})
-        hardcodes = flow_config.get("hardcodes", {})
-
-        docs_activos, stats_docs = preparar_documentos(
-            flow_config.get("documentos"), logger=self.logger
-        )
-
-        results = []
-        fallidos = []
-
-        for row in raw:
-            try:
-                row = self._apply_mapping(row, mapping)
-                row = self._apply_hardcodes(row, hardcodes)
-
-                row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
-                if row is None:
-                    continue
-
-                row = clean_row(row)
-
-                valid, detalle = validate_record(row, "partners", logger=self.logger)
-                if not valid:
-                    fallidos.append({"identificacion": row.get("identificacion", "?"), "etapa": "validacion", **detalle})
-                    continue
-
-                results.append(row)
-
-            except Exception as e:
-                fallidos.append({"identificacion": row.get("identificacion", "?"), "etapa": "validacion", "campo": "excepcion", "razon": str(e), "valor_recibido": ""})
-                continue
-
-        self.logger.info(f"_normalize_partners: {len(results)}/{len(raw)} registros validos")
-        if fallidos:
-            self.logger.warning(f"_normalize_partners: {len(fallidos)} registros descartados:")
-            for f in fallidos:
-                self.logger.warning(f"  - {f.get('identificacion', '?')}: {f['razon']}")
-            self.descartados.extend(fallidos)
-        if docs_activos:
-            detalle = ", ".join(
-                f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
-                for cod, d in stats_docs.items() if not cod.startswith("_")
-            )
-            self.logger.info(
-                f"_normalize_partners: documentos — {detalle}, "
-                f"sin documento: {stats_docs['_sin_documento']}"
-            )
-        return results
-
-# Transacciones
-
-    def _normalize_purchases(self, raw: list, flow_config: dict) -> list:
-
-        campos_float = {"cantidad", "precio_unitario", "impuesto"}
-        campos_fecha = {"fecha_entrega"}
-        mapping = flow_config.get("mapping", {})
-        hardcodes = flow_config.get("hardcodes", {})
-
-        docs_activos, stats_docs = preparar_documentos(
-            flow_config.get("documentos"), logger=self.logger
-        )
-
-        results = []
-        fallidos = []
-
-        for row in raw:
-            try:
-                row = self._apply_mapping(row, mapping)
-                row = self._apply_hardcodes(row, hardcodes)
-
-                row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
-                if row is None:
-                    continue
-
-                row = clean_row(row)
-
-                valid, detalle = validate_record(row, "purchases", logger=self.logger)
-                if not valid:
-                    fallidos.append({"compra": row.get("compra", "?"), "etapa": "validacion", **detalle})
-                    continue
-
-                for campo in campos_float & row.keys():
-                    row[campo] = to_float(row[campo], logger = self.logger, field_name = campo)
-
-                for campo in campos_fecha & row.keys():
-                    row[campo] = parse_fecha(row[campo], logger=self.logger)
-
-                results.append(row)
-
-            except Exception as e:
-                fallidos.append({"compra": row.get("compra", "?"), "etapa": "validacion", "campo": "excepcion", "razon": str(e), "valor_recibido": ""})
-                continue
-
-        self.logger.info(f"_normalize_purchases: {len(results)}/{len(raw)} registros validos")
-        if fallidos:
-            self.logger.warning(f"_normalize_purchases: {len(fallidos)} registros descartados:")
-            for f in fallidos:
-                self.logger.warning(f"  - {f.get('compra', '?')}: {f['razon']}")
-            self.descartados.extend(fallidos)
-        if docs_activos:
-            detalle = ", ".join(
-                f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
-                for cod, d in stats_docs.items() if not cod.startswith("_")
-            )
-            self.logger.info(
-                f"_normalize_purchases: documentos — {detalle}, "
-                f"sin documento: {stats_docs['_sin_documento']}"
-            )
-        return results
-
-    def _normalize_sales(self, raw: list, flow_config: dict) -> list:
-        campos_float = {"cantidad_pedida", "precio_unitario", "impuesto"}
-        campos_fecha = {"fecha_pedido"}
-        mapping = flow_config.get("mapping", {})
-        hardcodes = flow_config.get("hardcodes", {})
-
-        docs_activos, stats_docs = preparar_documentos(
-            flow_config.get("documentos"), logger=self.logger
-        )
-
-        results = []
-        fallidos = []
-
-        for row in raw:
-            try:
-                row = self._apply_mapping(row, mapping)
-                row = self._apply_hardcodes(row, hardcodes)
-
-                row = procesar_fila(row, docs_activos, stats_docs, logger=self.logger)
-                if row is None:
-                    continue
-
-                row = clean_row(row)
-
-                valid, detalle = validate_record(row, "sales", logger=self.logger)
-                if not valid:
-                    fallidos.append({"pedido": row.get("pedido", "?"), "etapa": "validacion", **detalle})
-                    continue
-
-                for campo in campos_float & row.keys():
-                    row[campo] = to_float(row[campo], logger=self.logger, field_name=campo)
-
-                for campo in campos_fecha & row.keys():
-                    row[campo] = parse_fecha(row[campo], logger=self.logger)
-
-                results.append(row)
-
-            except Exception as e:
-                fallidos.append({"pedido": row.get("pedido", "?"), "etapa": "validacion", "campo": "excepcion", "razon": str(e), "valor_recibido": ""})
-                continue
-
-        self.logger.info(f"_normalize_sales: {len(results)}/{len(raw)} registros validos")
-        if fallidos:
-            self.logger.warning(f"_normalize_sales: {len(fallidos)} registros descartados:")
-            for f in fallidos:
-                self.logger.warning(f"  - {f.get('pedido', '?')}: {f['razon']}")
-            self.descartados.extend(fallidos)
-        if docs_activos:
-            detalle = ", ".join(
-                f"{cod}: {d['aceptados']} ok / {d['descartados']} descartados"
-                for cod, d in stats_docs.items() if not cod.startswith("_")
-            )
-            self.logger.info(
-                f"_normalize_sales: documentos — {detalle}, "
-                f"sin documento: {stats_docs['_sin_documento']}"
-            )
-        return results

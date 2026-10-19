@@ -1007,40 +1007,38 @@ class TestTransformWSGetFlow:
             self._t().get_flow(c, "items", "items", {"sql": "S"})
         assert exc.value.__cause__ is original
 
-    def test_normalize_map_tiene_cinco_flow_types(self):
-        from transform.transform_ws import TransformWS
-        import inspect
-        fuente = inspect.getsource(TransformWS.get_flow)
+    def test_normalize_defaults_tiene_cinco_flow_types(self):
+        from transform.utils.defaults import NORMALIZE_DEFAULTS
         for ft in ("items", "customer", "supplier", "purchases", "sales"):
-            assert f'"{ft}"' in fuente
+            assert ft in NORMALIZE_DEFAULTS
 
 
 @patch.dict(os.environ, {"ENV": "dev"})
 class TestTransformWSHardcodes:
 
-    def _t(self):
-        from transform.transform_ws import TransformWS
-        return TransformWS(WS_CONFIG)
-
     def test_sin_hardcodes_no_modifica(self):
+        from transform.utils.normalize import apply_hardcodes
         row = {"a": "1"}
-        assert self._t()._apply_hardcodes(row, {}) == {"a": "1"}
+        assert apply_hardcodes(row, {}) == {"a": "1"}
 
     def test_inyecta_campo_nuevo(self):
-        assert self._t()._apply_hardcodes({"a": "1"}, {"b": "2"})["b"] == "2"
+        from transform.utils.normalize import apply_hardcodes
+        assert apply_hardcodes({"a": "1"}, {"b": "2"})["b"] == "2"
 
     def test_pisa_campo_existente(self):
-        assert self._t()._apply_hardcodes({"estado": "draft"}, {"estado": "sale"})["estado"] == "sale"
+        from transform.utils.normalize import apply_hardcodes
+        assert apply_hardcodes({"estado": "draft"}, {"estado": "sale"})["estado"] == "sale"
 
     def test_hardcodes_none_no_revienta(self):
-        assert self._t()._apply_hardcodes({"a": "1"}, None) == {"a": "1"}
+        from transform.utils.normalize import apply_hardcodes
+        assert apply_hardcodes({"a": "1"}, None) == {"a": "1"}
 
     def test_se_aplica_antes_de_validar(self):
+        from transform.utils.normalize import normalize
         # Un registro sin estado se descartaria; el hardcode lo rescata.
-        t = self._t()
         fila = dict(sale_ok(), estado="")
-        sin = t._normalize_sales([dict(fila)], {})
-        con = t._normalize_sales([dict(fila)], {"hardcodes": {"estado": "sale"}})
+        sin = normalize([dict(fila)], {}, "sales", MagicMock(), [])
+        con = normalize([dict(fila)], {"hardcodes": {"estado": "sale"}}, "sales", MagicMock(), [])
         assert len(sin) == 0
         assert len(con) == 1
 
@@ -1048,44 +1046,44 @@ class TestTransformWSHardcodes:
 @patch.dict(os.environ, {"ENV": "dev"})
 class TestTransformWSNormalizes:
 
-    def _t(self):
-        from transform.transform_ws import TransformWS
-        return TransformWS(WS_CONFIG)
+    def _norm(self, raw, flow_config, flow_type):
+        from transform.utils.normalize import normalize
+        return normalize(raw, flow_config, flow_type, MagicMock(), [])
 
     def test_items_tipa_floats(self):
         raw = [dict(item_ok(), peso="1.5", precio="100.5")]
-        r = self._t()._normalize_items(raw, {})
+        r = self._norm(raw, {}, "items")
         assert r[0]["peso"] == 1.5 and r[0]["precio"] == 100.5
 
     def test_items_tipa_enteros(self):
         raw = [dict(item_ok(), vence="30", ind_compra="1")]
-        r = self._t()._normalize_items(raw, {})
+        r = self._norm(raw, {}, "items")
         assert r[0]["vence"] == 30 and r[0]["ind_compra"] == 1
 
     def test_items_descarta_invalidos(self):
         raw = [item_ok(), dict(item_ok(), referencia="")]
-        assert len(self._t()._normalize_items(raw, {})) == 1
+        assert len(self._norm(raw, {}, "items")) == 1
 
     def test_partners_solo_limpia(self):
         raw = [dict(partner_ok(), nombre="  Cliente  ")]
-        assert self._t()._normalize_partners(raw, {})[0]["nombre"] == "Cliente"
+        assert self._norm(raw, {}, "customer")[0]["nombre"] == "Cliente"
 
     def test_purchases_tipa_y_parsea_fecha(self):
         raw = [dict(purchase_ok(), cantidad="5", fecha_entrega="20260115")]
-        r = self._t()._normalize_purchases(raw, {})
+        r = self._norm(raw, {}, "purchases")
         assert r[0]["cantidad"] == 5.0 and r[0]["fecha_entrega"] == "2026-01-15"
 
     def test_sales_tipa_y_parsea_fecha(self):
         raw = [dict(sale_ok(), cantidad_pedida="5", fecha_pedido="20260115")]
-        r = self._t()._normalize_sales(raw, {})
+        r = self._norm(raw, {}, "sales")
         assert r[0]["cantidad_pedida"] == 5.0 and r[0]["fecha_pedido"] == "2026-01-15"
 
     def test_raw_vacio_devuelve_lista_vacia(self):
-        assert self._t()._normalize_items([], {}) == []
+        assert self._norm([], {}, "items") == []
 
     def test_una_fila_rota_no_tumba_el_resto(self):
         raw = [item_ok(), None, item_ok()]
-        assert len(self._t()._normalize_items(raw, {})) == 2
+        assert len(self._norm(raw, {}, "items")) == 2
 
     def test_integra_la_personalizacion_por_documento(self):
         docs = [{
@@ -1095,7 +1093,7 @@ class TestTransformWSNormalizes:
             "hardcodes": {"estado": "sale"},
         }]
         raw = [dict(sale_ok(), pedido="7-CDC-1"), dict(sale_ok(), pedido="7-CPV-1")]
-        r = self._t()._normalize_sales(raw, {"documentos": docs})
+        r = self._norm(raw, {"documentos": docs}, "sales")
         estados = {f["pedido"]: f["estado"] for f in r}
         assert estados["7-CDC-1"] == "sale"
         assert estados["7-CPV-1"] == "draft"
@@ -1108,12 +1106,12 @@ class TestTransformWSNormalizes:
             "hardcodes": {},
         }]
         raw = [dict(sale_ok(), pedido="7-CPV-1", almacen="1")]
-        assert self._t()._normalize_sales(raw, {"documentos": docs}) == []
+        assert self._norm(raw, {"documentos": docs}, "sales") == []
 
     def test_sin_documentos_resultado_identico(self):
         raw = [sale_ok() for _ in range(3)]
-        con_clave = self._t()._normalize_sales([dict(f) for f in raw], {"documentos": []})
-        sin_clave = self._t()._normalize_sales([dict(f) for f in raw], {})
+        con_clave = self._norm([dict(f) for f in raw], {"documentos": []}, "sales")
+        sin_clave = self._norm([dict(f) for f in raw], {}, "sales")
         assert len(con_clave) == len(sin_clave) == 3
 
 
@@ -1190,38 +1188,35 @@ class TestTransformConnektaGetFlow:
 @patch.dict(os.environ, {"ENV": "dev"})
 class TestTransformConnektaMapping:
 
-    def _t(self):
-        from transform.transform_connekta import TransformConnekta
-        return TransformConnekta(CONNEKTA_CONFIG)
-
     def test_renombra_los_campos_mapeados(self):
-        r = self._t()._apply_mapping({"Referencia_Item": "A1"}, {"Referencia_Item": "referencia"})
+        from transform.utils.normalize import apply_mapping
+        r = apply_mapping({"Referencia_Item": "A1"}, {"Referencia_Item": "referencia"})
         assert r["referencia"] == "A1"
 
     def test_conserva_los_campos_no_mapeados(self):
-        # _apply_mapping es pass-through: no filtra.
-        r = self._t()._apply_mapping({"a": "1", "b": "2"}, {"a": "alias"})
+        from transform.utils.normalize import apply_mapping
+        # apply_mapping es pass-through: no filtra.
+        r = apply_mapping({"a": "1", "b": "2"}, {"a": "alias"})
         assert r["alias"] == "1" and r["b"] == "2"
 
     def test_el_nombre_original_desaparece_al_renombrar(self):
-        r = self._t()._apply_mapping({"a": "1"}, {"a": "alias"})
+        from transform.utils.normalize import apply_mapping
+        r = apply_mapping({"a": "1"}, {"a": "alias"})
         assert "a" not in r
 
     def test_mapping_vacio_devuelve_la_fila_igual(self):
+        from transform.utils.normalize import apply_mapping
         row = {"a": "1"}
-        assert self._t()._apply_mapping(row, {}) == row
+        assert apply_mapping(row, {}) == row
 
     def test_campo_del_mapping_ausente_no_crea_clave(self):
-        r = self._t()._apply_mapping({"a": "1"}, {"no_existe": "alias"})
+        from transform.utils.normalize import apply_mapping
+        r = apply_mapping({"a": "1"}, {"no_existe": "alias"})
         assert "alias" not in r
 
 
 @patch.dict(os.environ, {"ENV": "dev"})
 class TestTransformConnektaConditionals:
-
-    def _t(self):
-        from transform.transform_connekta import TransformConnekta
-        return TransformConnekta(CONNEKTA_CONFIG)
 
     def _regla(self):
         return {
@@ -1230,96 +1225,105 @@ class TestTransformConnektaConditionals:
         }
 
     def test_regla_que_matchea(self):
-        r = self._t()._apply_conditionals({"Maneja_lote": "SI"}, [self._regla()])
+        from transform.utils.normalize import apply_conditionals
+        r = apply_conditionals({"Maneja_lote": "SI"}, [self._regla()])
         assert r["tracking"] == "lot"
 
     def test_regla_que_no_matchea_usa_el_default(self):
-        r = self._t()._apply_conditionals({"Maneja_lote": "NO"}, [self._regla()])
+        from transform.utils.normalize import apply_conditionals
+        r = apply_conditionals({"Maneja_lote": "NO"}, [self._regla()])
         assert r["tracking"] == "none"
 
     def test_aplica_strip_al_comparar(self):
-        r = self._t()._apply_conditionals({"Maneja_lote": " SI "}, [self._regla()])
+        from transform.utils.normalize import apply_conditionals
+        r = apply_conditionals({"Maneja_lote": " SI "}, [self._regla()])
         assert r["tracking"] == "lot"
 
     def test_sin_default_no_asigna_y_avisa(self):
-        t = self._t()
-        t.logger = MagicMock()
+        from transform.utils.normalize import apply_conditionals
+        logger = MagicMock()
         cond = dict(self._regla())
         del cond["default"]
-        r = t._apply_conditionals({"Maneja_lote": "NO"}, [cond])
+        r = apply_conditionals({"Maneja_lote": "NO"}, [cond], logger=logger)
         assert "tracking" not in r
-        assert t.logger.warning.called
+        assert logger.warning.called
 
     def test_regla_sin_entonces_loguea_error(self):
-        t = self._t()
-        t.logger = MagicMock()
+        from transform.utils.normalize import apply_conditionals
+        logger = MagicMock()
         cond = dict(self._regla(), reglas=[{"si": "SI"}])
-        t._apply_conditionals({"Maneja_lote": "SI"}, [cond])
-        assert t.logger.error.called
+        apply_conditionals({"Maneja_lote": "SI"}, [cond], logger=logger)
+        assert logger.error.called
 
     def test_funcion_del_catalogo(self):
+        from transform.utils.normalize import apply_conditionals
         cond = {
             "tipo": "funcion", "campo_destino": "prefijo",
             "funcion": "extraer_prefijo", "params": {"campo_origen": "ref"},
         }
-        r = self._t()._apply_conditionals({"ref": "PT001"}, [cond])
+        r = apply_conditionals({"ref": "PT001"}, [cond])
         assert r["prefijo"] == "PT"
 
     def test_funcion_inexistente_no_crea_el_campo(self):
+        from transform.utils.normalize import apply_conditionals
         cond = {"tipo": "funcion", "campo_destino": "x",
                 "funcion": "no_existe", "params": {}}
-        r = self._t()._apply_conditionals({"a": "1"}, [cond])
+        r = apply_conditionals({"a": "1"}, [cond])
         assert "x" not in r
 
     def test_sin_tipo_se_ignora_el_conditional(self):
+        from transform.utils.normalize import apply_conditionals
         # Sin la clave `tipo` no entra a ninguna rama del dispatch.
         cond = dict(self._regla())
         del cond["tipo"]
-        r = self._t()._apply_conditionals({"Maneja_lote": "SI"}, [cond])
+        r = apply_conditionals({"Maneja_lote": "SI"}, [cond])
         assert "tracking" not in r
 
     def test_conditionals_vacio_devuelve_la_fila_igual(self):
+        from transform.utils.normalize import apply_conditionals
         row = {"a": "1"}
-        assert self._t()._apply_conditionals(row, []) == row
+        assert apply_conditionals(row, []) == row
 
     def test_varios_conditionals_se_aplican_todos(self):
+        from transform.utils.normalize import apply_conditionals
         conds = [
             self._regla(),
             {"tipo": "funcion", "campo_destino": "prefijo",
              "funcion": "extraer_prefijo", "params": {"campo_origen": "ref"}},
         ]
-        r = self._t()._apply_conditionals({"Maneja_lote": "SI", "ref": "PT1"}, conds)
+        r = apply_conditionals({"Maneja_lote": "SI", "ref": "PT1"}, conds)
         assert r["tracking"] == "lot" and r["prefijo"] == "PT"
 
 
 @patch.dict(os.environ, {"ENV": "dev"})
 class TestTransformConnektaNormalizes:
 
-    def _t(self):
-        from transform.transform_connekta import TransformConnekta
-        return TransformConnekta(CONNEKTA_CONFIG)
+    def _norm(self, raw, flow_config, flow_type):
+        from transform.utils.normalize import normalize
+        return normalize(raw, flow_config, flow_type, MagicMock(), [],
+                         use_conditionals=True)
 
     def test_items_aplica_mapping_y_hardcodes(self):
         raw = [{"Referencia_Item": "A1", "name": "Producto"}]
         cfg = {"mapping": {"Referencia_Item": "referencia", "name": "descripcion"},
                "hardcodes": {"categoria": "GENERAL"}}
-        r = self._t()._normalize_items(raw, cfg)
+        r = self._norm(raw, cfg, "items")
         assert r[0]["referencia"] == "A1" and r[0]["categoria"] == "GENERAL"
 
     def test_purchases_parsea_fecha_compra(self):
         raw = [dict(purchase_ok(), fecha_compra="20260115")]
-        r = self._t()._normalize_purchases(raw, {})
+        r = self._norm(raw, {"campos_fecha": ["fecha_entrega", "fecha_compra"]}, "purchases")
         assert r[0]["fecha_compra"] == "2026-01-15"
 
     def test_sales_parsea_fecha_entrega(self):
         raw = [dict(sale_ok(), fecha_entrega="20260115")]
-        r = self._t()._normalize_sales(raw, {})
+        r = self._norm(raw, {"campos_fecha": ["fecha_pedido", "fecha_entrega"]}, "sales")
         assert r[0]["fecha_entrega"] == "2026-01-15"
 
     def test_orden_hardcodes_pisa_al_mapping(self):
         raw = [{"est": "draft", "referencia": "A1", "descripcion": "P"}]
         cfg = {"mapping": {"est": "estado"}, "hardcodes": {"estado": "sale"}}
-        assert self._t()._normalize_items(raw, cfg)[0]["estado"] == "sale"
+        assert self._norm(raw, cfg, "items")[0]["estado"] == "sale"
 
     def test_integra_la_personalizacion_por_documento(self):
         docs = [{
@@ -1328,7 +1332,7 @@ class TestTransformConnektaNormalizes:
             "filtros": [], "hardcodes": {"estado": "sale"},
         }]
         raw = [dict(sale_ok(), pedido="7-PTR-1")]
-        assert self._t()._normalize_sales(raw, {"documentos": docs})[0]["estado"] == "sale"
+        assert self._norm(raw, {"documentos": docs}, "sales")[0]["estado"] == "sale"
 
 
 # ==========================================================
@@ -1527,20 +1531,36 @@ class TestTransformSAPNormalizes:
         from transform.transform_sap import TransformSAP
         return TransformSAP(SAP_CONFIG)
 
+    def _sap_norm(self, raw, flow_config, flow_type, t=None):
+        """Reproduce the SAP-specific pre-processing before normalize()."""
+        from transform.utils.normalize import normalize
+        if t is None:
+            t = self._t()
+        mapping_lineas = flow_config.get("mapping_lineas", {})
+        raw = t._flatten_lines(raw, mapping_lineas)
+        if flow_type == "items":
+            t._resolve_categories(raw)
+        if mapping_lineas:
+            combined = {**flow_config.get("mapping", {})}
+            combined.update(mapping_lineas.get("campos", {}))
+            flow_config = {**flow_config, "mapping": combined}
+        return normalize(raw, flow_config, flow_type, MagicMock(), [],
+                         use_conditionals=True)
+
     def test_items_resuelve_la_categoria_del_prefetch(self):
         t = self._t()
         t._categorias = {7: "PINTURAS"}
         raw = [{"ItemCode": "A1", "ItemName": "P", "ItemsGroupCode": 7}]
         cfg = {"mapping": {"ItemCode": "referencia", "ItemName": "descripcion",
                            "ItemsGroupCode_resolved": "categoria"}}
-        assert t._normalize_items(raw, cfg)[0]["categoria"] == "PINTURAS"
+        assert self._sap_norm(raw, cfg, "items", t)[0]["categoria"] == "PINTURAS"
 
     def test_items_conserva_el_codigo_original_para_los_conditionals(self):
         t = self._t()
         t._categorias = {7: "PINTURAS"}
         raw = [{"ItemCode": "A1", "ItemName": "P", "ItemsGroupCode": 7}]
         cfg = {"mapping": {"ItemCode": "referencia", "ItemName": "descripcion"}}
-        assert t._normalize_items(raw, cfg)[0]["ItemsGroupCode"] == 7
+        assert self._sap_norm(raw, cfg, "items", t)[0]["ItemsGroupCode"] == 7
 
     def test_items_categoria_desconocida_usa_valor_por_defecto(self):
         t = self._t()
@@ -1548,7 +1568,7 @@ class TestTransformSAPNormalizes:
         raw = [{"ItemCode": "A1", "ItemName": "P", "ItemsGroupCode": 99}]
         cfg = {"mapping": {"ItemCode": "referencia", "ItemName": "descripcion",
                            "ItemsGroupCode_resolved": "categoria"}}
-        assert t._normalize_items(raw, cfg)[0]["categoria"] == "Sin categoría"
+        assert self._sap_norm(raw, cfg, "items", t)[0]["categoria"] == "Sin categoría"
 
     def test_purchases_combina_mapping_de_cabecera_y_lineas(self):
         raw = [{"DocNum": "OC-1", "CardCode": "900", "DocDate": "2026-01-01",
@@ -1560,7 +1580,7 @@ class TestTransformSAPNormalizes:
                                           "UnitPrice": "precio_unitario"}},
             "hardcodes": {"sucursal_proveedor": "001", "estado": "draft", "almacen": "1"},
         }
-        r = self._t()._normalize_purchases(raw, cfg)
+        r = self._sap_norm(raw, cfg, "purchases")
         assert len(r) == 1
         assert r[0]["compra"] == "OC-1" and r[0]["producto"] == "A1"
 
@@ -1574,19 +1594,19 @@ class TestTransformSAPNormalizes:
                                           "UnitPrice": "precio_unitario"}},
             "hardcodes": {"sucursal_cliente": "001", "estado": "draft", "almacen": "1"},
         }
-        assert len(self._t()._normalize_sales(raw, cfg)) == 1
+        assert len(self._sap_norm(raw, cfg, "sales")) == 1
 
     def test_partners_sin_mapping_lineas_no_aplana(self):
         raw = [{"CardCode": "900", "CardName": "Cliente"}]
         cfg = {"mapping": {"CardCode": "identificacion", "CardName": "nombre"}}
-        assert len(self._t()._normalize_partners(raw, cfg)) == 1
+        assert len(self._sap_norm(raw, cfg, "customer")) == 1
 
     def test_partners_con_bp_addresses_aplana(self):
         raw = [{"CardCode": "900", "CardName": "Cliente",
                 "BPAddresses": [{"AddressName": "S1"}, {"AddressName": "S2"}]}]
         cfg = {"mapping": {"CardCode": "identificacion", "CardName": "nombre"},
                "mapping_lineas": {"origen": "BPAddresses", "campos": {"AddressName": "sucursal"}}}
-        assert len(self._t()._normalize_partners(raw, cfg)) == 2
+        assert len(self._sap_norm(raw, cfg, "customer")) == 2
 
     def test_integra_la_personalizacion_por_documento(self):
         docs = [{
@@ -1605,7 +1625,7 @@ class TestTransformSAPNormalizes:
                           "fecha_entrega": "2026-01-01", "estado": "draft", "almacen": "1"},
             "documentos": docs,
         }
-        assert self._t()._normalize_purchases(raw, cfg)[0]["estado"] == "purchase"
+        assert self._sap_norm(raw, cfg, "purchases")[0]["estado"] == "purchase"
 
 
 # ==========================================================
@@ -1622,15 +1642,16 @@ class TestConsistenciaEntreTransforms:
         return [TransformWS(WS_CONFIG), TransformConnekta(CONNEKTA_CONFIG),
                 TransformSAP(SAP_CONFIG)]
 
-    def test_los_tres_tienen_los_cuatro_normalizes(self):
-        for t in self._todos():
-            for m in ("_normalize_items", "_normalize_partners",
-                      "_normalize_purchases", "_normalize_sales"):
-                assert hasattr(t, m), f"{type(t).__name__} sin {m}"
+    def test_normalize_standalone_existe_con_cinco_flow_types(self):
+        from transform.utils.normalize import normalize
+        from transform.utils.defaults import NORMALIZE_DEFAULTS
+        assert callable(normalize)
+        for ft in ("items", "customer", "supplier", "purchases", "sales"):
+            assert ft in NORMALIZE_DEFAULTS
 
-    def test_los_tres_tienen_apply_hardcodes(self):
-        for t in self._todos():
-            assert hasattr(t, "_apply_hardcodes"), type(t).__name__
+    def test_apply_hardcodes_standalone_existe(self):
+        from transform.utils.normalize import apply_hardcodes
+        assert callable(apply_hardcodes)
 
     def test_los_tres_lanzan_ante_un_flow_type_desconocido(self):
         from transform.base import TransformError
@@ -1663,11 +1684,11 @@ class TestConsistenciaEntreTransforms:
         for t in self._todos():
             assert isinstance(t, Transform)
 
-    def test_los_tres_aplican_hardcodes_igual(self):
-        for t in self._todos():
-            assert t._apply_hardcodes({"estado": "draft"}, {"estado": "sale"})["estado"] == "sale"
+    def test_apply_hardcodes_funciona_igual_que_antes(self):
+        from transform.utils.normalize import apply_hardcodes
+        assert apply_hardcodes({"estado": "draft"}, {"estado": "sale"})["estado"] == "sale"
 
-    def test_sin_documentos_ninguno_altera_las_filas(self):
-        for t in self._todos():
-            r = t._normalize_sales([sale_ok()], {})
-            assert len(r) == 1 and r[0]["estado"] == "draft"
+    def test_sin_documentos_normalize_no_altera_las_filas(self):
+        from transform.utils.normalize import normalize
+        r = normalize([sale_ok()], {}, "sales", MagicMock(), [])
+        assert len(r) == 1 and r[0]["estado"] == "draft"

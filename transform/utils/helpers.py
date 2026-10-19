@@ -96,113 +96,72 @@ def clean_row(row: dict) -> dict:
               cleaned[k] = v
       return cleaned
 
-def validate_record(row: dict, entity_type: str, logger=None) -> Tuple[bool, dict]:
+def validate_record(row: dict, campos_obligatorios, campos_mayor_cero: set = None,
+                    campos_default_cero: set = None, logger=None) -> Tuple[bool, dict]:
 
-    ENTIDADES_VALIDAS = ("items", "partners", "purchases", "sales")
+    # Caso None o tipo inválido
+    if campos_obligatorios is None:
+        if logger:
+            logger.error("validate_record: campos_obligatorios es None")
+        return False, {
+            "campo": "entity_type",
+            "razon": "Tipo de entidad desconocido: 'None'",
+            "valor_recibido": "None",
+        }
+
+    # Retrocompatibilidad: si recibe un string (entity_type), resuelve desde defaults
+    if isinstance(campos_obligatorios, str):
+        from transform.utils.defaults import NORMALIZE_DEFAULTS
+        entity_type = campos_obligatorios
+        # partners es alias legacy para customer/supplier
+        if entity_type == "partners":
+            entity_type = "customer"
+        defaults = NORMALIZE_DEFAULTS.get(entity_type)
+        if defaults is None:
+            if logger:
+                logger.error(f"validate_record: entity_type desconocido '{campos_obligatorios}'")
+            return False, {
+                "campo": "entity_type",
+                "razon": f"Tipo de entidad desconocido: '{campos_obligatorios}'",
+                "valor_recibido": campos_obligatorios,
+            }
+        campos_obligatorios = defaults.get("campos_obligatorios", [])
+        if campos_mayor_cero is None:
+            campos_mayor_cero = set(defaults.get("campos_mayor_cero", []))
+        if campos_default_cero is None:
+            campos_default_cero = set(defaults.get("campos_default_cero", []))
+
+    if campos_default_cero is None:
+        campos_default_cero = set()
+    if campos_mayor_cero is None:
+        campos_mayor_cero = set()
 
     def _rechazo(campo, razon, valor_recibido=""):
-        """Construye dict de rechazo estandarizado y loguea."""
         if logger:
-            logger.warning(f"validate_record: {entity_type} descartado: {razon} (datos: {row})")
+            logger.warning(f"validate_record: descartado: {razon} (datos: {row})")
         return False, {"campo": campo, "razon": razon, "valor_recibido": str(valor_recibido)}
 
-    def _campo_vacio(campo, contexto=""):
+    # 1. Campos obligatorios no vacíos
+    for campo in campos_obligatorios:
         valor = row.get(campo, "")
         if not valor or not str(valor).strip():
-            prefijo = f"{contexto}: " if contexto else ""
-            return True, _rechazo(campo, f"{prefijo}campo '{campo}' vacio", valor)
-        return False, None
+            return _rechazo(campo, f"campo '{campo}' vacio", valor)
 
-    if entity_type not in ENTIDADES_VALIDAS:
-        if logger:
-            logger.error(f"validate_record: entity_type desconocido '{entity_type}'")
-        return False, {"campo": "entity_type", "razon": f"Tipo de entidad desconocido: '{entity_type}'", "valor_recibido": entity_type}
+    # 2. Campos que defaultean a 0 si no vienen
+    for campo in campos_default_cero:
+        if row.get(campo) is None or str(row.get(campo, "")).strip() == "":
+            row[campo] = 0
 
-    if entity_type == "items":
-        ref = str(row.get("referencia", "")).strip()
-        desc = str(row.get("descripcion", "")).strip()
-        contexto = f"Producto '{ref or '?'}'"
-
-        vacio, resultado = _campo_vacio("referencia", "Producto")
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("descripcion", contexto)
-        if vacio: return resultado
-
-    elif entity_type == "partners":
-        nombre = str(row.get("nombre", "")).strip()
-        ident = str(row.get("identificacion", "")).strip()
-        contexto = f"Tercero '{nombre or ident or '?'}'"
-
-        vacio, resultado = _campo_vacio("nombre", "Tercero")
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("identificacion", contexto)
-        if vacio: return resultado
-
-    elif entity_type == "purchases":
-        compra = str(row.get("compra", "")).strip()
-        producto = str(row.get("producto", "")).strip()
-        contexto = f"Compra '{compra or '?'}'"
-        contexto_linea = f"Compra '{compra or '?'}', producto '{producto or '?'}'"
-
-        vacio, resultado = _campo_vacio("compra", "Compra")
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("producto", contexto)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("proveedor", contexto_linea)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("sucursal_proveedor", contexto_linea)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("fecha_entrega", contexto_linea)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("estado", contexto_linea)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("almacen", contexto_linea)
-        if vacio: return resultado
-
-        if row.get("precio_unitario") is None or str(row.get("precio_unitario", "")).strip() == "":
-            row["precio_unitario"] = 0
-
-        cantidad = row.get("cantidad")
-        if cantidad is None or str(cantidad).strip() == "":
-            return _rechazo("cantidad", f"{contexto_linea}: campo 'cantidad' ausente", cantidad)
+    # 3. Campos que deben ser > 0
+    for campo in campos_mayor_cero:
+        valor = row.get(campo)
+        if valor is None or str(valor).strip() == "":
+            return _rechazo(campo, f"campo '{campo}' ausente", valor)
         try:
-            if float(cantidad) <= 0:
-                return _rechazo("cantidad", f"{contexto_linea}: cantidad es {cantidad} (debe ser > 0)", cantidad)
+            if float(valor) <= 0:
+                return _rechazo(campo, f"{campo} es {valor} (debe ser > 0)", valor)
         except (ValueError, TypeError):
-            return _rechazo("cantidad", f"{contexto_linea}: cantidad no numerica '{cantidad}'", cantidad)
-
-    elif entity_type == "sales":
-        pedido = str(row.get("pedido", "")).strip()
-        producto = str(row.get("producto", "")).strip()
-        contexto = f"Pedido '{pedido or '?'}'"
-        contexto_linea = f"Pedido '{pedido or '?'}', producto '{producto or '?'}'"
-
-        vacio, resultado = _campo_vacio("pedido", "Pedido")
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("producto", contexto)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("cliente", contexto_linea)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("sucursal_cliente", contexto_linea)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("fecha_pedido", contexto_linea)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("estado", contexto_linea)
-        if vacio: return resultado
-        vacio, resultado = _campo_vacio("almacen", contexto_linea)
-        if vacio: return resultado
-
-        if row.get("precio_unitario") is None or str(row.get("precio_unitario", "")).strip() == "":
-            row["precio_unitario"] = 0
-
-        cantidad = row.get("cantidad_pedida")
-        if cantidad is None or str(cantidad).strip() == "":
-            return _rechazo("cantidad_pedida", f"{contexto_linea}: campo 'cantidad_pedida' ausente", cantidad)
-        try:
-            if float(cantidad) <= 0:
-                return _rechazo("cantidad_pedida", f"{contexto_linea}: cantidad_pedida es {cantidad} (debe ser > 0)", cantidad)
-        except (ValueError, TypeError):
-            return _rechazo("cantidad_pedida", f"{contexto_linea}: cantidad_pedida no numerica '{cantidad}'", cantidad)
+            return _rechazo(campo, f"{campo} no numerico '{valor}'", valor)
 
     return True, {}
 
