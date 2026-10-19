@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Select, Tooltip } from 'antd'
+import { useMemo, useState } from 'react'
+import { Button, Input, Select, Tooltip } from 'antd'
 import { InfoCircleOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 
 const TIPOS = [
@@ -103,6 +103,7 @@ const Check = ({ activo, deshabilitado, onChange, titulo }) => {
 
 const SeccionValidacion = ({ config, onChange }) => {
     const tabla = config.campos_validacion_tabla || []
+    const [campoLibre, setCampoLibre] = useState('')
 
     const disponibles = useMemo(
         () => extraerCamposDisponibles(config, tabla),
@@ -238,29 +239,41 @@ const SeccionValidacion = ({ config, onChange }) => {
             )}
 
             <div className="validacion__agregar">
-                <Select
-                    style={{ width: 220 }}
-                    size="small"
-                    placeholder="Elegir campo..."
-                    showSearch
-                    value={null}
-                    onChange={agregar}
-                    options={disponibles.map((c) => ({ value: c, label: c }))}
-                    notFoundContent="Sin campos disponibles"
-                />
-                <span className="validacion__agregar-o">o</span>
-                <Select
+                {disponibles.length > 0 && (
+                    <>
+                        <Select
+                            style={{ width: 220 }}
+                            size="small"
+                            placeholder="Elegir campo..."
+                            showSearch
+                            value={undefined}
+                            onChange={(v) => { agregar(v) }}
+                            options={disponibles.map((c) => ({ value: c, label: c }))}
+                        />
+                        <span className="validacion__agregar-o">o</span>
+                    </>
+                )}
+                <Input
                     style={{ width: 200 }}
                     size="small"
-                    mode="tags"
-                    placeholder="Escribir nombre libre"
-                    value={[]}
-                    onChange={(vals) => { if (vals.length) agregar(vals[vals.length - 1]) }}
-                    maxCount={1}
-                    open={false}
-                    suffixIcon={null}
-                    tokenSeparators={[',']}
+                    placeholder="Escribir nombre y Enter"
+                    value={campoLibre}
+                    onChange={(e) => setCampoLibre(e.target.value)}
+                    onPressEnter={() => {
+                        const nombre = campoLibre.trim()
+                        if (nombre) { agregar(nombre); setCampoLibre('') }
+                    }}
                 />
+                <Button
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                        const nombre = campoLibre.trim()
+                        if (nombre) { agregar(nombre); setCampoLibre('') }
+                    }}
+                >
+                    Agregar
+                </Button>
             </div>
         </div>
     )
