@@ -14,6 +14,7 @@ import SeccionConfigPartners from './SeccionConfigPartners'
 import SeccionConditionals from './SeccionConditionals'
 import SeccionDocumentos from './SeccionDocumentos'
 import SeccionResolve from './SeccionResolve'
+import SeccionValidacion from './SeccionValidacion'
 import SeccionOrigenExcel from './SeccionOrigenExcel'
 
 const TITULOS_TIPO = {
@@ -307,6 +308,14 @@ function deserializar(flow, erpType, flowType) {
 
     estado.config.documentos_tabla = documentosATabla(fc.documentos)
 
+    // Validación y tipado configurable
+    if (fc.campos_float) estado.config.campos_float = fc.campos_float
+    if (fc.campos_int) estado.config.campos_int = fc.campos_int
+    if (fc.campos_fecha) estado.config.campos_fecha = fc.campos_fecha
+    if (fc.campos_obligatorios) estado.config.campos_obligatorios = fc.campos_obligatorios
+    if (fc.campos_default_cero) estado.config.campos_default_cero = fc.campos_default_cero
+    if (fc.campos_mayor_cero) estado.config.campos_mayor_cero = fc.campos_mayor_cero
+
     if (flowType === 'items' || flowType === 'customer' || flowType === 'supplier') {
         estado.config.resolve_enabled = fc.resolve_enabled !== false
 
@@ -402,6 +411,14 @@ function serializar(base, config, erpType, flowType) {
             if (config.resolve_sql_inject) fc.resolve_sql_inject = config.resolve_sql_inject
         }
     }
+
+    // Validación y tipado configurable — solo se guarda si el admin lo configuró
+    if (config.campos_float?.length) fc.campos_float = config.campos_float
+    if (config.campos_int?.length) fc.campos_int = config.campos_int
+    if (config.campos_fecha?.length) fc.campos_fecha = config.campos_fecha
+    if (config.campos_obligatorios?.length) fc.campos_obligatorios = config.campos_obligatorios
+    if (config.campos_default_cero?.length) fc.campos_default_cero = config.campos_default_cero
+    if (config.campos_mayor_cero?.length) fc.campos_mayor_cero = config.campos_mayor_cero
 
     return {
         flow_name: base.flow_name,
@@ -600,6 +617,11 @@ const EditorFlow = ({ cliente, flowId, flowType: flowTypeInicial, onVolver }) =>
                         flowType={flowType}
                     />
                 )}
+
+                <SeccionValidacion
+                    config={config}
+                    onChange={setConfig}
+                />
 
                 <SeccionResolve
                     erpType={erpType}
