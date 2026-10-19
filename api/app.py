@@ -14,6 +14,7 @@ from api.routes.catalog import router as catalog_router
 from api.routes.excel import router as excel_router
 from api.routes.provisioning import router as provisioning_router
 from api.routes.sql_blocks import router as sql_blocks_router
+from api.routes.wms_fields import router as wms_fields_router
 
 load_dotenv()
 
@@ -51,3 +52,4 @@ app.include_router(catalog_router)
 app.include_router(excel_router)
 app.include_router(provisioning_router)
 app.include_router(sql_blocks_router)
+app.include_router(wms_fields_router)

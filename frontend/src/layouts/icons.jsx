@@ -69,6 +69,12 @@ export const IconConfigSQL = (props) => (
     </svg>
 )
 
+export const IconCamposWms = (props) => (
+    <svg {...base} {...props}>
+        <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 17h7M17 14v7" />
+    </svg>
+)
+
 export const IconRueda = (props) => (
     <svg {...base} width={18} height={18} strokeWidth={1.6} strokeLinecap="butt" {...props}>
         <path d="M9.9 2.1h3.2l.5 2.5 1.9.8 2.2-1.3 2.2 2.2-1.3 2.2.8 1.9 2.5.5v3.2l-2.5.5-.8 1.9 1.3 2.2-2.2 2.2-2.2-1.3-1.9.8-.5 2.5H9.9l-.5-2.5-1.9-.8-2.2 1.3-2.2-2.2 1.3-2.2-.8-1.9-2.5-.5v-3.2l2.5-.5.8-1.9-1.3-2.2 2.2-2.2 2.2 1.3 1.9-.8z" />

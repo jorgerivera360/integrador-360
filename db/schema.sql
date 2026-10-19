@@ -176,6 +176,34 @@ CREATE TRIGGER update_sql_blocks_timestamp
     FOR EACH ROW EXECUTE FUNCTION update_timestamp();
 
 -- ============================================================
+-- 7. WMS_FIELD_MAPPINGS
+-- ============================================================
+CREATE TABLE wms_field_mappings (
+    id              SERIAL PRIMARY KEY,
+    campo_origen    VARCHAR(100) NOT NULL,
+    campo_destino   VARCHAR(100) NOT NULL,
+    ubicacion       VARCHAR(20)  NOT NULL CHECK (ubicacion IN ('cabecera', 'linea')),
+    modelos         TEXT[]       NOT NULL,
+    tipo_valor      VARCHAR(20)  NOT NULL DEFAULT 'texto'
+                    CHECK (tipo_valor IN ('texto', 'entero', 'decimal', 'booleano')),
+    valor_default   VARCHAR(100),
+    descripcion     TEXT DEFAULT '',
+    is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_by      INTEGER      REFERENCES users(id),
+    updated_by      INTEGER      REFERENCES users(id),
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    UNIQUE (campo_origen, campo_destino, ubicacion)
+);
+
+CREATE INDEX idx_wms_fields_active ON wms_field_mappings (is_active) WHERE is_active = true;
+
+CREATE TRIGGER trg_wms_fields_updated
+    BEFORE UPDATE ON wms_field_mappings
+    FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+
+-- ============================================================
 -- DATOS INICIALES
 -- ============================================================
 

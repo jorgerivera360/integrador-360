@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { IconClientes, IconUsuarios, IconConfigSQL } from '@/layouts/icons'
+import { IconClientes, IconUsuarios, IconConfigSQL, IconCamposWms } from '@/layouts/icons'
 import useAuthStore from '@/store/authStore'
 import { ROLES } from '@/config/roles'
 import './admin.css'
@@ -30,6 +30,15 @@ const SECCIONES = [
         path: '/admin/config-sql',
         icono: IconConfigSQL,
         color: '#fa8c16',
+        roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
+    },
+    {
+        key: 'campos-wms',
+        titulo: 'Campos WMS',
+        descripcion: 'Mapeo de campos del ERP hacia modelos de Odoo WMS',
+        path: '/admin/campos-wms',
+        icono: IconCamposWms,
+        color: '#722ed1',
         roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
     },
 ]

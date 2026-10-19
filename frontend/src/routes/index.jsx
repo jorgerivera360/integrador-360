@@ -13,6 +13,7 @@ import ClienteDetallePage from '@/pages/admin/clientes/ClienteDetallePage'
 import UsuariosPage from '@/pages/admin/usuarios/UsuariosPage'
 import UsuarioDetallePage from '@/pages/admin/usuarios/UsuarioDetallePage'
 import SqlBlocksPage from '@/pages/admin/sql-blocks/SqlBlocksPage'
+import WmsFieldsPage from '@/pages/admin/wms-fields/WmsFieldsPage'
 import AdminPage from '@/pages/admin/AdminPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -48,6 +49,14 @@ const AppRoutes = () => (
                 element={
                     <ProtectedRoute roles={[ROLES.SUPERADMIN, ROLES.ADMIN]}>
                         <SqlBlocksPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/admin/campos-wms"
+                element={
+                    <ProtectedRoute roles={[ROLES.SUPERADMIN, ROLES.ADMIN]}>
+                        <WmsFieldsPage />
                     </ProtectedRoute>
                 }
             />

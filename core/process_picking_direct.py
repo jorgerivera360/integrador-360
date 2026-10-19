@@ -15,6 +15,7 @@ from collections import defaultdict
 from config.logger import IntegradorLogger
 from core.base import CoreProcessor
 from core.utils.lookups import lookup_partner, lookup_product
+from core.utils.wms_fields import cargar_wms_mappings, aplicar_wms_fields
 
 
 class ProcessPickingDirect(CoreProcessor):
@@ -31,6 +32,9 @@ class ProcessPickingDirect(CoreProcessor):
             return {"creados": 0, "fallidos": [], "descartados": 0, "total": 0}
 
         try:
+            # ---- Cargar campos WMS dinámicos ----
+            wms = cargar_wms_mappings("stock.picking", logger=self.logger)
+
             # ---- Determinar dirección ----
             flow_type = self.flow_config.get("flow_type", "purchases")
             es_entrada = flow_type == "purchases"
@@ -236,6 +240,7 @@ class ProcessPickingDirect(CoreProcessor):
                             "location_id": linea["location_id"],
                             "location_dest_id": linea["location_dest_id"],
                         }
+                        aplicar_wms_fields(line_vals, linea, wms["linea"], logger=self.logger)
                         move_lines.append((0, 0, line_vals))
 
                     # Armar payload cabecera
@@ -248,6 +253,7 @@ class ProcessPickingDirect(CoreProcessor):
                         "scheduled_date": fecha,
                         "move_ids_without_package": move_lines,
                     }
+                    aplicar_wms_fields(payload, lineas[0], wms["cabecera"], logger=self.logger)
 
                     ok, res = self.odoo.create("stock.picking", payload)
                     if ok:
@@ -273,6 +279,20 @@ class ProcessPickingDirect(CoreProcessor):
                                     self.logger.warning(
                                         f"PickingDirect | action_assign falló para picking {picking_id}: {res_assign}"
                                     )
+
+                        # Quitar reserva si está configurado (do_unreserve)
+                        if lineas[0].get("_sin_reserva"):
+                            ok_unr, res_unr = self.odoo.action(
+                                "stock.picking", "do_unreserve", [picking_id]
+                            )
+                            if ok_unr:
+                                self.logger.info(
+                                    f"PickingDirect | do_unreserve ejecutado para picking {picking_id}"
+                                )
+                            else:
+                                self.logger.warning(
+                                    f"PickingDirect | do_unreserve falló para picking {picking_id}: {res_unr}"
+                                )
 
                         if len(creados_detalle) < self.MAX_DETALLE:
                             creados_detalle.append({doc_field: doc_name, "odoo_id": picking_id})

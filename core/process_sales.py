@@ -14,6 +14,7 @@ from collections import defaultdict
 from config.logger import IntegradorLogger
 from core.base import CoreProcessor
 from core.utils.lookups import lookup_partner, lookup_product, lookup_zone, resolve_warehouse
+from core.utils.wms_fields import cargar_wms_mappings, aplicar_wms_fields
 
 
 class ProcessSales(CoreProcessor):
@@ -30,6 +31,9 @@ class ProcessSales(CoreProcessor):
             return {"creados": 0, "fallidos": [], "descartados": 0, "total": 0}
 
         try:
+            # ---- Cargar campos WMS dinámicos ----
+            wms = cargar_wms_mappings("sale.order", logger=self.logger)
+
             # ---- Fase 1: Filtrar órdenes existentes (con reintentos) ----
             pedidos_unicos = list({str(row["pedido"]) for row in data if row.get("pedido")})
             existentes = set()
@@ -210,6 +214,7 @@ class ProcessSales(CoreProcessor):
                             "product_uom": linea["uom_id"],
                             "price_unit": linea.get("precio_unitario", 0),
                         }
+                        aplicar_wms_fields(line_vals, linea, wms["linea"], logger=self.logger)
                         order_lines.append((0, 0, line_vals))
 
                     # Armar payload cabecera
@@ -226,6 +231,7 @@ class ProcessSales(CoreProcessor):
                         payload["delivery_zone_id"] = zone_id
                     if observacion:
                         payload["note"] = observacion
+                    aplicar_wms_fields(payload, lineas[0], wms["cabecera"], logger=self.logger)
 
                     ok, res = self.odoo.create("sale.order", payload)
                     if ok:
