@@ -112,11 +112,11 @@ function _filtrosABackend(filtros) {
 function _reglaATabla(regla) {
     return {
         filtros: _filtrosATabla(regla.filtros),
-        warehouse_mapping: dictATabla(regla.warehouse_mapping),
         hardcodes: dictATabla(regla.hardcodes),
         crear_como: regla.crear_como || regla.method || 'order',
         estado: regla.estado || 'draft',
         operacion_id: regla.operacion_id ?? '',
+        sin_reserva: regla.sin_reserva || false,
     }
 }
 
@@ -127,12 +127,11 @@ function _reglaABackend(regla) {
         crear_como: regla.crear_como || 'order',
         estado: regla.estado || 'draft',
     }
+    if (regla.operacion_id) out.operacion_id = Number(regla.operacion_id)
     if (regla.crear_como === 'picking_direct') {
         out.method = 'picking_direct'
-        if (regla.operacion_id) out.operacion_id = Number(regla.operacion_id)
+        if (regla.sin_reserva) out.sin_reserva = true
     }
-    const wm = tablaADict(regla.warehouse_mapping || [])
-    if (Object.keys(wm).length) out.warehouse_mapping = wm
     return out
 }
 
@@ -143,29 +142,29 @@ function documentosATabla(documentos) {
         const tieneReglas = Array.isArray(doc.reglas) && doc.reglas.length > 0
 
         const base = {
+            doc_nombre: doc.nombre || doc.doc_nombre || '',
             ident_campo: ident.campo || '',
-            ident_operador: ident.operador || 'contiene',
+            ident_operador: ident.operador || '=',
             ident_valor: String(ident.valor ?? ''),
             tiene_variantes: tieneReglas,
         }
 
         if (tieneReglas) {
             base.reglas = doc.reglas.map(_reglaATabla)
-            // campos de nivel documento no aplican en modo reglas
             base.filtros = []
-            base.warehouse_mapping = []
             base.hardcodes = []
             base.crear_como = 'order'
             base.estado = 'draft'
             base.operacion_id = ''
+            base.sin_reserva = false
         } else {
             base.reglas = []
             base.filtros = _filtrosATabla(doc.filtros)
-            base.warehouse_mapping = dictATabla(doc.warehouse_mapping)
             base.hardcodes = dictATabla(doc.hardcodes)
             base.crear_como = doc.crear_como || doc.method || 'order'
             base.estado = doc.estado || 'draft'
             base.operacion_id = doc.operacion_id ?? ''
+            base.sin_reserva = doc.sin_reserva || false
         }
 
         return base
@@ -178,9 +177,10 @@ function tablaADocumentos(tabla) {
         .map((d, i) => {
             const doc = {
                 codigo: String(d.ident_valor ?? '').trim() || `#${i}`,
+                nombre: (d.doc_nombre || '').trim(),
                 identificar_por: {
                     campo: (d.ident_campo || '').trim(),
-                    operador: d.ident_operador || 'contiene',
+                    operador: d.ident_operador || '=',
                     valor: d.ident_valor ?? '',
                 },
             }
@@ -192,12 +192,11 @@ function tablaADocumentos(tabla) {
                 doc.hardcodes = tablaADict(d.hardcodes || [])
                 doc.crear_como = d.crear_como || 'order'
                 doc.estado = d.estado || 'draft'
+                if (d.operacion_id) doc.operacion_id = Number(d.operacion_id)
                 if (d.crear_como === 'picking_direct') {
                     doc.method = 'picking_direct'
-                    if (d.operacion_id) doc.operacion_id = Number(d.operacion_id)
+                    if (d.sin_reserva) doc.sin_reserva = true
                 }
-                const wm = tablaADict(d.warehouse_mapping || [])
-                if (Object.keys(wm).length) doc.warehouse_mapping = wm
             }
 
             return doc

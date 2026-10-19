@@ -909,139 +909,459 @@
     }
 }
 
-/* ========== Documentos ========== */
+/* ========== Documentos (rediseño) ========== */
 
-.flujo-doc__grupo {
-    margin-top: 20px;
-    padding-top: 18px;
-    border-top: 1px solid #d0d5dd;
+.doc-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.flujo-doc__bloque {
-    margin-top: 16px;
-}
-
-.flujo-doc__bloque:first-child {
-    margin-top: 0;
-}
-
-.flujo-doc__tabla {
-    max-width: 520px;
-}
-
-.flujo-doc__vacio {
-    font-size: 12.5px;
-    color: #8c8c8c;
-    padding: 6px 0;
-}
-
-.flujo-condicional__tipo--doc {
-    text-transform: none;
-    letter-spacing: 0;
+.doc-vacio {
     font-size: 13px;
-    font-weight: 600;
-    color: #434343;
+    color: #bfbfbf;
+    font-style: italic;
+    padding: 4px 0;
 }
 
-.flujo-doc__etiqueta {
-    font-size: 13px;
-    font-weight: 500;
-    color: #434343;
+.doc-label {
     display: flex;
     align-items: center;
     gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #434343;
     margin-bottom: 8px;
 }
 
-.flujo-doc__tabla .flujo-tcv {
-    border: none;
-    border-radius: 0;
-}
-
-.flujo-doc__tabla .flujo-tcv__cabecera {
-    background: transparent;
-    padding-left: 0;
-    padding-right: 0;
-}
-
-.flujo-doc__tabla .flujo-tcv__fila {
-    background: transparent;
-    border-top: none;
-    padding-left: 0;
-    padding-right: 0;
-}
-
-.flujo-doc__tabla .flujo-tcv__agregar {
-    margin-left: 0;
-    margin-right: 0;
-}
-
-.flujo-doc__cabecera {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.flujo-doc__cabecera .flujo-seccion__subtitulo {
-    margin: 0;
-}
-
-.flujo-doc__documento {
+/* Acordeón de documento */
+.doc-acordeon {
     border: 1px solid #e8e8e8;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 12px;
+    border-radius: 10px;
     background: #fff;
+    overflow: hidden;
+    transition: border-color 0.16s, box-shadow 0.16s;
 }
 
-.flujo-doc__reglas-container {
-    margin-top: 12px;
+.doc-acordeon--open {
+    border-color: #d6e4ff;
+    box-shadow: 0 2px 8px rgba(22, 119, 255, 0.06);
 }
 
-.flujo-doc__reglas-info {
-    font-size: 12px;
-    color: #8c8c8c;
-    margin-bottom: 8px;
+.doc-acordeon__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    flex-wrap: wrap;
+    transition: background 0.16s;
 }
 
-.flujo-doc__regla {
-    border: 1px solid #f0f0f0;
+.doc-acordeon__head:hover,
+.doc-acordeon--open .doc-acordeon__head {
+    background: #fafcff;
+}
+
+.doc-acordeon__chevron {
+    flex: 0 0 auto;
+    display: flex;
+    color: rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s;
+}
+
+.doc-acordeon--open .doc-acordeon__chevron {
+    transform: rotate(90deg);
+}
+
+.doc-acordeon__code {
+    flex: 0 0 auto;
+    min-width: 48px;
+    text-align: center;
+    padding: 3px 8px;
     border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 8px;
-    background: #fafafa;
+    background: #f0f5ff;
+    color: #1d39c4;
+    font-size: 12.5px;
+    font-weight: 500;
+    font-family: "Fira Code", Consolas, monospace;
 }
 
-.flujo-doc__regla-header {
+.doc-acordeon__titulos {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.doc-acordeon__nombre {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.doc-acordeon__ident {
+    font-size: 11.5px;
+    color: #8c8c8c;
+    font-family: "Fira Code", Consolas, monospace;
+    margin-top: 1px;
+}
+
+.doc-acordeon__resumen {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.doc-acordeon__body {
+    padding: 4px 20px 20px;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* Pills de resumen */
+.doc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    white-space: nowrap;
+}
+
+.doc-pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.doc-pill--orden {
+    color: #1677ff;
+    background: #f0f7ff;
+    border: 1px solid #d6e4ff;
+}
+
+.doc-pill--picking {
+    color: #389e0d;
+    background: #f6ffed;
+    border: 1px solid #d9f7be;
+}
+
+/* Datos del documento */
+.doc-datos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px 0;
+}
+
+.doc-ident {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.doc-ident__campo {
+    flex: 1 1 140px;
+}
+
+.doc-ident__op {
+    flex: 0 0 150px;
+}
+
+.doc-ident__valor {
+    flex: 0 0 100px;
+}
+
+/* Reglas con conectores */
+.doc-reglas {
+    display: flex;
+    flex-direction: column;
+}
+
+.doc-regla {
+    display: flex;
+    gap: 14px;
+}
+
+.doc-regla__riel {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.doc-regla__conector {
+    flex: 0 0 auto;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: #1677ff;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+.doc-regla__conector--fin {
+    background: #f0f0f0;
+    color: #8c8c8c;
+}
+
+.doc-regla__linea {
+    flex: 1 1 auto;
+    width: 2px;
+    background: #e6f0ff;
+    margin: 4px 0;
+}
+
+.doc-regla__caja {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    background: #fcfcfd;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+
+.doc-regla__top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
-.flujo-doc__regla-etiqueta {
-    font-weight: 500;
+.doc-regla__frase {
     font-size: 13px;
     color: #595959;
 }
 
-.flujo-doc__destino {
-    padding: 8px 0;
+.doc-regla__botones {
+    display: flex;
+    align-items: center;
+    gap: 2px;
 }
 
-.flujo-doc__destino-fila {
+.doc-regla__criterios {
+    margin-bottom: 8px;
+}
+
+.doc-regla__sep {
+    height: 1px;
+    background: #f0f0f0;
+    margin: 16px 0;
+}
+
+.doc-regla-fin {
     display: flex;
-    gap: 16px;
-    align-items: flex-end;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.doc-regla-fin__texto {
+    font-size: 13px;
+    color: #8c8c8c;
+}
+
+/* Condiciones */
+.doc-cond {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
     flex-wrap: wrap;
 }
 
-.flujo-doc__bodega-mapping {
-    margin-top: 4px;
+.doc-cond__campo {
+    flex: 0 0 160px;
+    font-size: 12.5px !important;
 }
 
-.flujo-doc__sub {
-    margin-top: 4px;
+.doc-cond__op {
+    flex: 0 0 150px;
+}
+
+.doc-cond__valor {
+    flex: 1 1 160px;
+    min-width: 120px;
+}
+
+/* Tarjetas de destino */
+.doc-destinos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.doc-destino-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1.5px solid #f0f0f0;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.16s, background 0.16s;
+}
+
+.doc-destino-card:hover {
+    border-color: #69b1ff;
+}
+
+.doc-destino-card--sel {
+    border-color: #1677ff;
+    background: #f5faff;
+}
+
+.doc-destino-card__ico {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #f5f5f5;
+    color: #8c8c8c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.doc-destino-card--sel .doc-destino-card__ico {
+    background: #1677ff;
+    color: #fff;
+}
+
+.doc-destino-card__titulo {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.doc-destino-card__desc {
+    font-size: 11.5px;
+    color: #8c8c8c;
+    line-height: 1.45;
+    margin-top: 2px;
+}
+
+/* Config: estado + operación + sin reserva */
+.doc-config-fila {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.doc-config-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.doc-config-campo--switch {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+/* Valores fijos colapsable */
+.doc-extras {
+    margin-top: 14px;
+}
+
+.doc-extras__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: #595959;
+    cursor: pointer;
+    user-select: none;
+}
+
+.doc-extras__toggle:hover {
+    color: #1677ff;
+}
+
+.doc-extras__chevron {
+    display: flex;
+    transition: transform 0.2s;
+}
+
+.doc-extras__chevron--open {
+    transform: rotate(90deg);
+}
+
+.doc-extras__count {
+    padding: 0 7px;
+    border-radius: 8px;
+    background: #f0f0f0;
+    font-size: 11px;
+    color: #595959;
+}
+
+.doc-extras__cuerpo {
+    margin-top: 10px;
+    max-width: 520px;
+}
+
+/* Botones utilitarios */
+.doc-btn-x {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: #bfbfbf;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 13px;
+    border-radius: 4px;
+    transition: background 0.16s, color 0.16s;
+}
+
+.doc-btn-x:hover {
+    background: #f5f5f5;
+    color: #8c8c8c;
+}
+
+.doc-btn-x--borrar:hover {
+    background: #fff1f0;
+    color: #cf1322;
+}
+
+.doc-btn-x:disabled {
+    color: #e8e8e8;
+    cursor: default;
+    background: transparent;
+}
+
+.doc-btn-agregar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    border: 1px dashed #91caff;
+    border-radius: 10px;
+    background: #f5faff;
+    color: #1677ff;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.16s, border-color 0.16s;
+}
+
+.doc-btn-agregar:hover {
+    background: #e6f4ff;
+    border-color: #1677ff;
 }
 
 /* ========== Sección Validación y tipado ========== */
@@ -1072,10 +1392,11 @@
 
 .validacion__th-check {
     text-align: center !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
+    white-space: nowrap;
+}
+
+.validacion__th-check .flujo-seccion__info {
+    margin-left: 2px;
 }
 
 .validacion__tabla td {
