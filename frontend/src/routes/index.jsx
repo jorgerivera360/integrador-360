@@ -13,6 +13,7 @@ import ClienteDetallePage from '@/pages/admin/clientes/ClienteDetallePage'
 import UsuariosPage from '@/pages/admin/usuarios/UsuariosPage'
 import UsuarioDetallePage from '@/pages/admin/usuarios/UsuarioDetallePage'
 import SqlBlocksPage from '@/pages/admin/sql-blocks/SqlBlocksPage'
+import AdminPage from '@/pages/admin/AdminPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
 /**
@@ -39,6 +40,7 @@ const AppRoutes = () => (
             <Route path="/ejecuciones" element={<EjecucionesPage />} />
             <Route path="/auditoria" element={<AuditoriaPage />} />
 
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/clientes" element={<ClientesListPage />} />
             <Route path="/admin/clientes/:id" element={<ClienteDetallePage />} />
             <Route

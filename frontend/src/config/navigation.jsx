@@ -13,9 +13,6 @@ import {
     IconEjecuciones,
     IconAuditoria,
     IconAdmin,
-    IconClientes,
-    IconUsuarios,
-    IconConfigSQL,
 } from '@/layouts/icons'
 
 import { ROLES } from '@/config/roles'
@@ -57,30 +54,9 @@ export const NAV_ITEMS = [
     {
         key: 'admin',
         label: 'Admin',
+        path: '/admin',
         icon: IconAdmin,
-        children: [
-            {
-                key: 'clientes',
-                label: 'Clientes',
-                path: '/admin/clientes',
-                icon: IconClientes,
-                roles: TODOS,
-            },
-            {
-                key: 'usuarios',
-                label: 'Usuarios',
-                path: '/admin/usuarios',
-                icon: IconUsuarios,
-                roles: [ROLES.SUPERADMIN],
-            },
-            {
-                key: 'config-sql',
-                label: 'Config SQL',
-                path: '/admin/config-sql',
-                icon: IconConfigSQL,
-                roles: [ROLES.SUPERADMIN, ROLES.ADMIN],
-            },
-        ],
+        roles: TODOS,
     },
 ]
 
