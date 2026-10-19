@@ -4,7 +4,9 @@ import { Alert, App, Button, Select, Space, Table, Tooltip } from 'antd'
 import RolBadge from '@/components/RolBadge'
 import { useUsuarios } from '@/hooks/useUsuarios'
 import { mensajeDeError } from '@/hooks/useClientes'
+import { useSetBreadcrumb } from '@/layouts/BreadcrumbContext'
 import { formatFechaHora } from '@/utils/format'
+import BotonVolver from '@/components/BotonVolver'
 import ModalCrearUsuario from './components/ModalCrearUsuario'
 import { IconFlecha, IconInfo, IconMas } from './icons'
 import '@/styles/pagina.css'
@@ -83,6 +85,7 @@ const columnas = [
 const UsuariosPage = () => {
     const navigate = useNavigate()
     const { message } = App.useApp()
+    useSetBreadcrumb('Usuarios')
 
     const [filtros, setFiltros] = useState(FILTROS_VACIOS)
     const [modalAbierto, setModalAbierto] = useState(false)
@@ -113,6 +116,8 @@ const UsuariosPage = () => {
 
     return (
         <>
+            <BotonVolver to="/admin" />
+
             <div className="pagina-head">
                 <div>
                     <h1 className="pagina-head__titulo">

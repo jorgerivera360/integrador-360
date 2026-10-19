@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Table, Button, Tag, Switch, Tabs, Popconfirm, message, Space, Empty } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import useHasRole from '@/hooks/useHasRole'
+import { useSetBreadcrumb } from '@/layouts/BreadcrumbContext'
 import { getSqlBlocks, createSqlBlock, updateSqlBlock, deleteSqlBlock } from '@/services/sqlBlocks'
+import BotonVolver from '@/components/BotonVolver'
 import ModalBloque from './ModalBloque'
 
 const ENTITY_LABELS = {
@@ -26,6 +28,7 @@ const SqlBlocksPage = () => {
     const queryClient = useQueryClient()
     const puedeEditar = useHasRole(['superadmin', 'admin'])
     const puedeBorrar = useHasRole(['superadmin'])
+    useSetBreadcrumb('Config SQL')
 
     const [modalOpen, setModalOpen] = useState(false)
     const [bloqueActual, setBloqueActual] = useState(null)
@@ -257,6 +260,8 @@ const SqlBlocksPage = () => {
 
     return (
         <div style={{ padding: '0 4px' }}>
+            <BotonVolver to="/admin" />
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Configuracion SQL</h1>
                 {puedeEditar && (

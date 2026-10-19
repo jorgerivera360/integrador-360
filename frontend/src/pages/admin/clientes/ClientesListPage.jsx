@@ -6,8 +6,10 @@ import ErpTag from '@/components/ErpTag'
 import { etiquetaErp } from '@/config/erp'
 import useHasRole from '@/hooks/useHasRole'
 import { useClientes, mensajeDeError } from '@/hooks/useClientes'
+import { useSetBreadcrumb } from '@/layouts/BreadcrumbContext'
 import { ROLES } from '@/config/navigation'
 import { formatFechaHora } from '@/utils/format'
+import BotonVolver from '@/components/BotonVolver'
 import FiltrosClientes, { FILTROS_VACIOS } from './components/FiltrosClientes'
 import ModalCrearCliente from './components/ModalCrearCliente'
 import ModalProbarConexion from './components/ModalProbarConexion'
@@ -75,6 +77,7 @@ const ClientesListPage = () => {
     const navigate = useNavigate()
     const { message } = App.useApp()
     const puedeCrear = useHasRole([ROLES.SUPERADMIN, ROLES.ADMIN])
+    useSetBreadcrumb('Clientes')
 
     const [filtros, setFiltros] = useState(FILTROS_VACIOS)
     const [modalAbierto, setModalAbierto] = useState(false)
@@ -106,6 +109,8 @@ const ClientesListPage = () => {
 
     return (
         <>
+            <BotonVolver to="/admin" />
+
             <div className="pagina-head">
                 <div>
                     <h1 className="pagina-head__titulo">

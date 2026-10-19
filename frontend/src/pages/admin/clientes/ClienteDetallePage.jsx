@@ -64,7 +64,10 @@ const ClienteDetallePage = () => {
 
     const [modalBorrar, setModalBorrar] = useState(false)
 
-    useSetBreadcrumb(cliente?.name)
+    useSetBreadcrumb(
+        cliente?.name ? ['Clientes', cliente.name] : 'Clientes',
+        (indice) => { if (indice === 0) navigate('/admin/clientes') }
+    )
 
     // Los valores del servidor mandan: al recargar o guardar, el formulario
     // vuelve a reflejar lo que hay en BD.

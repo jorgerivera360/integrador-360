@@ -35,7 +35,10 @@ const UsuarioDetallePage = () => {
     const rolElegido = Form.useWatch('role', form)
     const info = ROLES_INFO[rolElegido]
 
-    useSetBreadcrumb(usuario?.name)
+    useSetBreadcrumb(
+        usuario?.name ? ['Usuarios', usuario.name] : 'Usuarios',
+        (indice) => { if (indice === 0) navigate('/admin/usuarios') }
+    )
 
     useEffect(() => {
         if (usuario) form.setFieldsValue(usuario)
