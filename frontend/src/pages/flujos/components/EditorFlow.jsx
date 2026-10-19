@@ -14,7 +14,7 @@ import SeccionConfigPartners from './SeccionConfigPartners'
 import SeccionConditionals from './SeccionConditionals'
 import SeccionDocumentos from './SeccionDocumentos'
 import SeccionResolve from './SeccionResolve'
-import SeccionValidacion from './SeccionValidacion'
+import SeccionValidacion, { camposATabla, tablaACampos } from './SeccionValidacion'
 import SeccionOrigenExcel from './SeccionOrigenExcel'
 
 const TITULOS_TIPO = {
@@ -308,13 +308,8 @@ function deserializar(flow, erpType, flowType) {
 
     estado.config.documentos_tabla = documentosATabla(fc.documentos)
 
-    // Validación y tipado configurable
-    if (fc.campos_float) estado.config.campos_float = fc.campos_float
-    if (fc.campos_int) estado.config.campos_int = fc.campos_int
-    if (fc.campos_fecha) estado.config.campos_fecha = fc.campos_fecha
-    if (fc.campos_obligatorios) estado.config.campos_obligatorios = fc.campos_obligatorios
-    if (fc.campos_default_cero) estado.config.campos_default_cero = fc.campos_default_cero
-    if (fc.campos_mayor_cero) estado.config.campos_mayor_cero = fc.campos_mayor_cero
+    // Validación y tipado — 6 arrays del backend → tabla unificada para la UI
+    estado.config.campos_validacion_tabla = camposATabla(fc)
 
     if (flowType === 'items' || flowType === 'customer' || flowType === 'supplier') {
         estado.config.resolve_enabled = fc.resolve_enabled !== false
@@ -412,13 +407,16 @@ function serializar(base, config, erpType, flowType) {
         }
     }
 
-    // Validación y tipado configurable — solo se guarda si el admin lo configuró
-    if (config.campos_float?.length) fc.campos_float = config.campos_float
-    if (config.campos_int?.length) fc.campos_int = config.campos_int
-    if (config.campos_fecha?.length) fc.campos_fecha = config.campos_fecha
-    if (config.campos_obligatorios?.length) fc.campos_obligatorios = config.campos_obligatorios
-    if (config.campos_default_cero?.length) fc.campos_default_cero = config.campos_default_cero
-    if (config.campos_mayor_cero?.length) fc.campos_mayor_cero = config.campos_mayor_cero
+    // Validación y tipado — tabla unificada de la UI → 6 arrays para el backend
+    if (config.campos_validacion_tabla?.length) {
+        const cv = tablaACampos(config.campos_validacion_tabla)
+        if (cv.campos_float.length) fc.campos_float = cv.campos_float
+        if (cv.campos_int.length) fc.campos_int = cv.campos_int
+        if (cv.campos_fecha.length) fc.campos_fecha = cv.campos_fecha
+        if (cv.campos_obligatorios.length) fc.campos_obligatorios = cv.campos_obligatorios
+        if (cv.campos_default_cero.length) fc.campos_default_cero = cv.campos_default_cero
+        if (cv.campos_mayor_cero.length) fc.campos_mayor_cero = cv.campos_mayor_cero
+    }
 
     return {
         flow_name: base.flow_name,

@@ -1043,3 +1043,128 @@
 .flujo-doc__sub {
     margin-top: 4px;
 }
+
+/* ========== Sección Validación y tipado ========== */
+
+.validacion__tabla-wrap {
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.validacion__tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    min-width: 620px;
+}
+
+.validacion__tabla th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 500;
+    color: #595959;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+    white-space: nowrap;
+}
+
+.validacion__th-check {
+    text-align: center !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.validacion__tabla td {
+    padding: 7px 14px;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.validacion__tabla tbody tr:hover {
+    background: #fafcff;
+}
+
+.validacion__campo {
+    font-family: "Fira Code", "Cascadia Code", "Consolas", monospace;
+    font-size: 12.5px;
+    color: #1a1a2e;
+    font-weight: 500;
+}
+
+.validacion__td-check {
+    text-align: center;
+}
+
+.validacion__check {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1.5px solid #d9d9d9;
+    background: #fff;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.validacion__check:hover {
+    border-color: #1677ff;
+}
+
+.validacion__check--on {
+    background: #1677ff;
+    border-color: #1677ff;
+}
+
+.validacion__check--on:hover {
+    background: #4096ff;
+    border-color: #4096ff;
+}
+
+.validacion__check--off {
+    background: #fafafa;
+    border-color: #f0f0f0;
+    cursor: not-allowed;
+}
+
+.validacion__check--off:hover {
+    border-color: #f0f0f0;
+}
+
+.validacion__eliminar {
+    border: none;
+    background: none;
+    color: #bfbfbf;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 13px;
+    transition: color 0.15s;
+}
+
+.validacion__eliminar:hover {
+    color: #ff4d4f;
+}
+
+.validacion__vacio {
+    font-size: 13px;
+    color: #bfbfbf;
+    font-style: italic;
+    padding: 4px 0;
+}
+
+.validacion__agregar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.validacion__agregar-o {
+    font-size: 12px;
+    color: #bfbfbf;
+}

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Integrador 360 — Tipos de documento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- Base ---------- */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #f0f2f5; }
+  body { font-family: Inter, "Segoe UI", system-ui, sans-serif; color: rgba(0,0,0,.85); }
+  a { color: #1677ff; text-decoration: none; }
+  a:hover { color: #4096ff; }
+  button, input, select { font-family: inherit; }
+  .mono { font-family: "Fira Code", Consolas, monospace; }
+
+  .pagina { min-height: 100vh; padding: 24px; }
+  .contenedor { max-width: 1000px; margin: 0 auto; }
+
+  /* ---------- Cabecera del flujo ---------- */
+  .form-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .form-head__izq { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .form-head__titulo { margin: 0; font-size: 24px; font-weight: 700; color: #1a1a2e; letter-spacing: -.02em; }
+  .form-head__cliente { font-size: 14px; color: #8b93a1; }
+  .form-head__acciones { display: flex; align-items: center; gap: 12px; }
+
+  .tag-tipo { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 4px; font-size: 12.5px; color: #1677ff; background: #e6f4ff; border: 1px solid #91caff; }
+
+  /* ---------- Botones ---------- */
+  .btn { padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: background .18s ease, border-color .16s ease, color .16s ease, box-shadow .18s ease; }
+  .btn--outline { border: 1px solid #d9d9d9; background: #fff; color: #595959; }
+  .btn--outline:hover { border-color: #8c8c8c; color: #1a1a2e; }
+  .btn--primario { border: none; background: #1677ff; color: #fff; font-weight: 500; box-shadow: 0 2px 6px rgba(22,119,255,.24); }
+  .btn--primario:hover { background: #0958d9; }
+  .btn--probar { display: inline-flex; align-items: center; gap: 8px; padding: 7px 16px; border: 1px solid #91caff; background: #f5faff; color: #1677ff; font-size: 13.5px; font-weight: 500; }
+  .btn--probar:hover { background: #e6f4ff; border-color: #1677ff; }
+
+  .btn-dashed { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border: 1px dashed #d9d9d9; border-radius: 6px; background: #fff; color: #595959; font-size: 12.5px; cursor: pointer; transition: border-color .16s ease, color .16s ease; }
+  .btn-dashed:hover { border-color: #1677ff; color: #1677ff; }
+  .btn-dashed--md { padding: 7px 14px; font-size: 13px; }
+  .btn-agregar-doc { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 12px; border: 1px dashed #91caff; border-radius: 10px; background: #f5faff; color: #1677ff; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background .16s ease, border-color .16s ease; }
+  .btn-agregar-doc:hover { background: #e6f4ff; border-color: #1677ff; }
+
+  .btn-icono { flex: 0 0 auto; width: 30px; height: 30px; border: none; border-radius: 6px; background: transparent; color: #bfbfbf; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background .16s ease, color .16s ease; }
+  .btn-icono--sm { width: 26px; height: 26px; border-radius: 5px; }
+  .btn-icono--34 { width: 34px; height: 34px; }
+  .btn-icono--borrar:hover { background: #fff1f0; color: #cf1322; }
+  .btn-icono--mover { color: #8c8c8c; }
+  .btn-icono--mover:hover { background: #f0f0f0; }
+  .btn-icono--mover:disabled { color: #e8e8e8; cursor: default; background: transparent; }
+
+  /* ---------- Secciones ---------- */
+  .seccion { background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,21,41,.06); padding: 24px; margin-bottom: 20px; }
+  .seccion__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; }
+  .seccion__titulo { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; color: #1a1a2e; }
+
+  /* ---------- Popover de ayuda ---------- */
+  .info { position: relative; display: inline-flex; }
+  .info__icono { width: 17px; height: 17px; border-radius: 50%; border: 1px solid #d9d9d9; background: #fff; color: #bfbfbf; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; cursor: pointer; user-select: none; transition: background .16s ease, color .16s ease, border-color .16s ease; }
+  .info__icono:hover, .info.is-open .info__icono { background: #e6f4ff; border-color: #1677ff; color: #1677ff; }
+  .info__pop { display: none; position: absolute; top: 26px; left: -8px; width: 360px; max-width: 80vw; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; box-shadow: 0 6px 16px rgba(0,0,0,.12); padding: 12px 14px; font-size: 12.5px; font-weight: 400; line-height: 1.55; color: #595959; z-index: 30; }
+  .info.is-open .info__pop { display: block; }
+
+  /* ---------- Resultado de prueba ---------- */
+  .prueba { display: none; border: 1px solid #e6f0ff; border-radius: 8px; background: #fafcff; padding: 16px 18px; margin-bottom: 20px; animation: abrir .2s ease both; }
+  .prueba.is-visible { display: block; }
+  .prueba__cargando { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: #595959; }
+  .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #d6e4ff; border-top-color: #1677ff; animation: girar .7s linear infinite; }
+  .prueba__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .prueba__titulo { font-size: 13.5px; font-weight: 600; color: #1a1a2e; }
+  .prueba__cerrar { font-size: 12.5px; color: #8c8c8c; cursor: pointer; }
+  .prueba__cerrar:hover { color: #1677ff; }
+  .prueba__filas { display: flex; flex-direction: column; gap: 8px; }
+  .prueba__fila { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .prueba__code { flex: 0 0 auto; min-width: 46px; text-align: center; padding: 1px 6px; border-radius: 4px; font-size: 12px; color: #1d39c4; background: #f0f5ff; }
+  .prueba__label { flex: 0 1 220px; min-width: 0; color: #434343; }
+  .prueba__barra { flex: 1 1 auto; height: 6px; border-radius: 3px; background: #f0f0f0; overflow: hidden; }
+  .prueba__barra span { display: block; height: 100%; background: #4096ff; border-radius: 3px; }
+  .prueba__n { flex: 0 0 64px; text-align: right; font-variant-numeric: tabular-nums; color: #1d39c4; font-weight: 500; }
+  .prueba__fila--warn .prueba__code { color: #d48806; background: #fffbe6; }
+  .prueba__fila--warn .prueba__barra span { background: #faad14; }
+  .prueba__fila--warn .prueba__n { color: #d48806; }
+  .aviso { display: flex; align-items: flex-start; gap: 9px; margin-top: 14px; padding: 10px 12px; border: 1px solid #ffe58f; border-radius: 6px; background: #fffbe6; font-size: 12.5px; color: #874d00; line-height: 1.5; }
+  .aviso svg { flex: 0 0 15px; margin-top: 1px; }
+
+  /* ---------- Tarjeta de documento ---------- */
+  .docs { display: flex; flex-direction: column; gap: 12px; }
+  .doc { border: 1px solid #e8e8e8; border-radius: 10px; background: #fff; overflow: hidden; transition: border-color .16s ease, box-shadow .16s ease; }
+  .doc.is-open { border-color: #d6e4ff; box-shadow: 0 2px 8px rgba(22,119,255,.06); }
+  .doc__head { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; flex-wrap: wrap; transition: background .16s ease; }
+  .doc__head:hover, .doc.is-open .doc__head { background: #fafcff; }
+  .doc__chevron { flex: 0 0 auto; display: flex; color: rgba(0,0,0,.35); transition: transform .2s ease; }
+  .doc.is-open .doc__chevron { transform: rotate(90deg); }
+  .doc__code { flex: 0 0 auto; min-width: 52px; text-align: center; padding: 4px 8px; border-radius: 6px; background: #f0f5ff; color: #1d39c4; font-size: 13px; font-weight: 500; }
+  .doc__titulos { flex: 1 1 200px; min-width: 0; }
+  .doc__nombre { font-size: 14.5px; font-weight: 600; color: #1a1a2e; }
+  .doc__ident { font-size: 12px; color: #8c8c8c; margin-top: 2px; }
+  .doc__resumen { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .doc__body { display: none; padding: 4px 20px 20px; border-top: 1px solid #f0f0f0; animation: abrir .2s ease both; }
+  .doc.is-open .doc__body { display: block; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; white-space: nowrap; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill--orden { color: #1677ff; background: #f0f7ff; border: 1px solid #d6e4ff; }
+  .pill--picking { color: #389e0d; background: #f6ffed; border: 1px solid #d9f7be; }
+  .pill--vacio { color: #8c8c8c; background: #fafafa; border: 1px solid #f0f0f0; }
+
+  /* ---------- Campos ---------- */
+  .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .grid-auto--sm { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .doc__datos { padding: 18px 0 20px; }
+  .label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #434343; margin-bottom: 8px; }
+  .input, .select { width: 100%; height: 36px; padding: 0 12px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; font-size: 14px; color: rgba(0,0,0,.85); outline: none; transition: border-color .16s ease, box-shadow .16s ease; }
+  .select { padding: 0 10px; }
+  .input:focus, .select:focus { border-color: #1677ff; box-shadow: 0 0 0 2px rgba(22,119,255,.12); }
+  .input.mono, .select.mono { font-size: 13px; }
+  .ident { display: flex; align-items: center; gap: 8px; }
+  .ident .select { flex: 1 1 auto; min-width: 0; }
+  .ident__es { flex: 0 0 auto; font-size: 13px; color: #8c8c8c; }
+  .ident .input { flex: 0 0 90px; width: 90px; }
+
+  /* ---------- Reglas ---------- */
+  .reglas { display: flex; flex-direction: column; }
+  .regla { display: flex; gap: 14px; }
+  .regla__riel { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; }
+  .conector { flex: 0 0 auto; padding: 3px 9px; border-radius: 10px; background: #1677ff; color: #fff; font-size: 11px; font-weight: 600; letter-spacing: .4px; white-space: nowrap; }
+  .conector--fin { background: #f0f0f0; color: #8c8c8c; }
+  .regla__linea { flex: 1 1 auto; width: 2px; background: #e6f0ff; margin: 4px 0; }
+  .regla__caja { flex: 1 1 auto; min-width: 0; border: 1px solid #f0f0f0; border-radius: 8px; background: #fcfcfd; padding: 16px 18px; margin-bottom: 12px; }
+  .regla__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  .regla__frase { font-size: 13px; color: #595959; }
+  .regla__frase strong { color: #1a1a2e; }
+  .regla__botones { display: flex; align-items: center; gap: 2px; }
+  .regla__sep { height: 1px; background: #f0f0f0; margin: 18px 0 16px; }
+  .regla-fin { display: flex; gap: 14px; align-items: center; }
+  .regla-fin span:last-child { font-size: 13px; color: #8c8c8c; }
+
+  /* Condiciones */
+  .conds { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .cond { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+  .cond .select { height: 34px; font-size: 13px; }
+  .cond__campo { flex: 0 0 170px; width: 170px; font-size: 12.5px !important; }
+  .cond__op { flex: 0 0 150px; width: 150px; }
+  .chips { flex: 1 1 220px; min-width: 0; min-height: 34px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 6px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; cursor: text; transition: border-color .16s ease; }
+  .chips:focus-within { border-color: #1677ff; box-shadow: 0 0 0 2px rgba(22,119,255,.12); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 4px 0 8px; border-radius: 4px; background: #f0f5ff; border: 1px solid #d6e4ff; color: #1d39c4; font-size: 12px; }
+  .chip__x { display: flex; width: 16px; height: 16px; align-items: center; justify-content: center; border-radius: 3px; color: #85a5ff; cursor: pointer; }
+  .chip__x:hover { background: #d6e4ff; color: #1d39c4; }
+  .chips__input { flex: 1 1 80px; min-width: 80px; height: 24px; border: none; outline: none; background: transparent; font-size: 12.5px; color: rgba(0,0,0,.85); }
+
+  /* Destino */
+  .destinos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .destino { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1.5px solid #f0f0f0; border-radius: 8px; background: #fff; cursor: pointer; transition: border-color .16s ease, background .16s ease; }
+  .destino:hover { border-color: #69b1ff; }
+  .destino.is-sel { border-color: #1677ff; background: #f5faff; }
+  .destino__ico { flex: 0 0 34px; width: 34px; height: 34px; border-radius: 8px; background: #f5f5f5; color: #8c8c8c; display: flex; align-items: center; justify-content: center; }
+  .destino.is-sel .destino__ico { background: #1677ff; color: #fff; }
+  .destino__titulo { font-size: 13.5px; font-weight: 600; color: #1a1a2e; }
+  .destino__desc { font-size: 12px; color: #8c8c8c; line-height: 1.45; margin-top: 2px; }
+
+  .auto { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: #8c8c8c; }
+  .auto__valor { padding: 1px 7px; border-radius: 4px; background: #f5f5f5; color: #595959; }
+
+  /* Valores fijos */
+  .extras { margin-top: 14px; }
+  .extras__toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #595959; cursor: pointer; user-select: none; }
+  .extras__toggle:hover { color: #1677ff; }
+  .extras__chevron { display: flex; transition: transform .2s ease; }
+  .extras.is-open .extras__chevron { transform: rotate(90deg); }
+  .extras__count { padding: 0 7px; border-radius: 8px; background: #f0f0f0; font-size: 11.5px; color: #595959; }
+  .extras__cuerpo { display: none; margin-top: 10px; max-width: 520px; animation: abrir .2s ease both; }
+  .extras.is-open .extras__cuerpo { display: block; }
+  .kv { border: 1px solid #f0f0f0; border-radius: 6px; overflow: hidden; background: #fff; }
+  .kv__head { display: flex; padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #f0f0f0; font-size: 12px; font-weight: 500; color: #595959; text-transform: uppercase; letter-spacing: .5px; }
+  .kv__head span { flex: 1 1 0; }
+  .kv__head span:last-child { flex: 0 0 30px; }
+  .kv__fila { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #f5f5f5; }
+  .kv__input { flex: 1 1 0; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid #f0f0f0; border-radius: 4px; font-size: 12.5px; outline: none; }
+  .kv__input:focus { border-color: #1677ff; }
+  .extras .btn-dashed { margin-top: 8px; }
+
+  /* ---------- Tabla de validación ---------- */
+  .tabla-wrap { border: 1px solid #f0f0f0; border-radius: 8px; overflow-x: auto; }
+  .tabla { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 680px; }
+  .tabla th { padding: 11px 16px; text-align: left; font-size: 12.5px; font-weight: 500; color: #595959; text-transform: uppercase; letter-spacing: .5px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }
+  .tabla th.c-centro, .tabla td.c-centro { text-align: center; }
+  .tabla td { padding: 8px 16px; border-bottom: 1px solid #f5f5f5; }
+  .tabla tbody tr { transition: background .16s ease; }
+  .tabla tbody tr:hover { background: #fafafa; }
+  .tabla__campo { font-size: 13px; color: #1a1a2e; }
+  .tabla .select { width: 160px; height: 32px; font-size: 13px; }
+
+  .check { display: inline-flex; width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #d9d9d9; background: #fff; align-items: center; justify-content: center; cursor: pointer; vertical-align: middle; transition: background .14s ease, border-color .14s ease; }
+  .check svg { display: none; }
+  .check.is-on { background: #1677ff; border-color: #1677ff; }
+  .check.is-on svg { display: block; }
+  .check.is-off { background: #fafafa; border-color: #f0f0f0; cursor: not-allowed; }
+  .check.is-off svg { display: none; }
+
+  .agregar-campo { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .agregar-campo .select { width: 200px; height: 34px; font-size: 12.5px; }
+  .agregar-campo .btn-dashed { height: 34px; padding: 0 14px; font-size: 13px; }
+
+  @keyframes girar { to { transform: rotate(360deg); } }
+  @keyframes abrir { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 640px) {
+    .pagina { padding: 16px; }
+    .cond__campo, .cond__op { flex: 1 1 140px; width: auto; }
+    .regla { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="pagina">
+<div class="contenedor">
+
+  <div class="form-head">
+    <div class="form-head__izq">
+      <h1 class="form-head__titulo">compras</h1>
+      <span class="tag-tipo">purchases</span>
+      <span class="form-head__cliente">Aurofarma</span>
+    </div>
+    <div class="form-head__acciones">
+      <button type="button" class="btn btn--outline">Cancelar</button>
+      <button type="button" class="btn btn--primario" id="btn-guardar">Guardar</button>
+    </div>
+  </div>
+
+  <!-- ══════ Tipos de documento ══════ -->
+  <div class="seccion">
+    <div class="seccion__head">
+      <div class="seccion__titulo">
+        Tipos de documento
+        <span class="info">
+          <span class="info__icono">i</span>
+          <span class="info__pop" style="width: 380px;">Un mismo SQL puede traer varios tipos de documento del ERP. Para cada uno defines cómo se reconoce, qué filas se traen y qué se crea en el WMS.</span>
+        </span>
+      </div>
+      <button type="button" class="btn btn--probar" id="btn-probar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l11 7-11 7z" /></svg>
+        Probar con datos
+      </button>
+    </div>
+
+    <div class="prueba" id="prueba"></div>
+
+    <div class="docs" id="docs"></div>
+
+    <button type="button" class="btn-agregar-doc" data-accion="add-doc">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+      Agregar tipo de documento
+    </button>
+  </div>
+
+  <!-- ══════ Validación y tipado ══════ -->
+  <div class="seccion">
+    <div class="seccion__head">
+      <div class="seccion__titulo">
+        Validación y tipado de campos
+        <span class="info">
+          <span class="info__icono">i</span>
+          <span class="info__pop" style="width: 380px;">Cómo se interpreta y valida cada campo antes de enviarlo al WMS. Las filas que no pasen la validación se reportan como fallidas en la ejecución. "Default 0" y "Mayor a 0" solo aplican a campos numéricos.</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="tabla-wrap">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Tipo</th>
+            <th class="c-centro">Obligatorio</th>
+            <th class="c-centro">Default 0</th>
+            <th class="c-centro">Mayor a 0</th>
+            <th style="width: 50px;"></th>
+          </tr>
+        </thead>
+        <tbody id="campos"></tbody>
+      </table>
+    </div>
+
+    <div class="agregar-campo">
+      <select class="select mono" id="nuevo-campo">
+        <option value="">Elegir campo…</option>
+        <option value="proveedor">proveedor</option>
+        <option value="sucursal_proveedor">sucursal_proveedor</option>
+        <option value="impuesto">impuesto</option>
+        <option value="referencia_compra">referencia_compra</option>
+      </select>
+      <button type="button" class="btn-dashed" data-accion="add-campo">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        Agregar campo
+      </button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+  // ════════════════════════════════════════════════
+  //  Catálogos (reemplazar por los reales del backend)
+  // ════════════════════════════════════════════════
+  var CAMPOS_SQL = ['estado_siesa', 'motivo', 'bodega_origen', 'bodega_destino', 'tercero'];
+  var CAMPOS_IDENT = ['tipo_docto', 'clase_docto'];
+  var OPERADORES = [
+    { v: 'es', t: 'es igual a', lista: false },
+    { v: 'no_es', t: 'es distinto de', lista: false },
+    { v: 'en', t: 'es uno de', lista: true },
+    { v: 'no_en', t: 'no es ninguno de', lista: true }
+  ];
+  var ALMACENES = [
+    { id: '1', t: 'Almacén principal · Recepciones' },
+    { id: '9', t: 'Bodega M01 · Traslados salida' },
+    { id: '11', t: 'Almacén principal · Devoluciones' },
+    { id: '17', t: 'Bodega materia prima' }
+  ];
+  var ESTADOS = {
+    orden: ['Borrador', 'Confirmado'],
+    picking: ['Borrador', 'Listo']
+  };
+  var ESTADO_CODE = { Borrador: 'draft', Confirmado: 'confirmed', Listo: 'assigned' };
+  var TIPOS_CAMPO = ['Texto', 'Número decimal', 'Número entero', 'Fecha'];
+
+  // ════════════════════════════════════════════════
+  //  Estado (ejemplo Aurofarma)
+  // ════════════════════════════════════════════════
+  var docs = [
+    { code: 'OCN', name: 'Orden Compra Nacional', identField: 'tipo_docto', orden: 'Orden de compra', open: true, rules: [
+      { crit: [{ f: 'estado_siesa', op: 'en', v: ['1', '2'] }, { f: 'motivo', op: 'en', v: ['04', '01'] }], destino: 'orden', estado: 'Borrador', almacen: '1', extrasOpen: false, extras: [] }
+    ] },
+    { code: 'DVN', name: 'Devolución entrada', identField: 'tipo_docto', orden: 'Orden de compra', open: false, rules: [
+      { crit: [{ f: 'estado_siesa', op: 'es', v: ['1'] }, { f: 'motivo', op: 'en', v: ['01', '91', '95'] }], destino: 'picking', estado: 'Listo', almacen: '11', extrasOpen: false, extras: [] }
+    ] },
+    { code: 'I08', name: 'Traslado bodegas salida', identField: 'tipo_docto', orden: 'Orden de venta', open: true, rules: [
+      { crit: [{ f: 'bodega_origen', op: 'en', v: ['M0101', 'M0102', 'M0103', 'M0104', 'M0105', 'M0107'] }, { f: 'motivo', op: 'es', v: ['09'] }], destino: 'picking', estado: 'Listo', almacen: '9', extrasOpen: true, extras: [['cliente', '800007355'], ['sucursal_cliente', '001']] },
+      { crit: [{ f: 'bodega_origen', op: 'en', v: ['M0101', 'M0102', 'M0104', 'M0106', 'M0108'] }], destino: 'orden', estado: 'Borrador', almacen: '1', extrasOpen: false, extras: [['cliente', '800007355'], ['sucursal_cliente', '001']] }
+    ] }
+  ];
+
+  var campos = [
+    { c: 'compra', t: 'Texto', req: true, d0: false, gt0: false },
+    { c: 'producto', t: 'Texto', req: true, d0: false, gt0: false },
+    { c: 'almacen', t: 'Texto', req: true, d0: false, gt0: false },
+    { c: 'estado', t: 'Texto', req: true, d0: false, gt0: false },
+    { c: 'cantidad', t: 'Número decimal', req: false, d0: false, gt0: true },
+    { c: 'precio_unitario', t: 'Número decimal', req: false, d0: true, gt0: false },
+    { c: 'fecha_entrega', t: 'Fecha', req: false, d0: false, gt0: false }
+  ];
+
+  // ════════════════════════════════════════════════
+  //  Íconos
+  // ════════════════════════════════════════════════
+  var I = {
+    chevron: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>',
+    chevronSm: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6" /></svg>',
+    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>',
+    up: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6" /></svg>',
+    down: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>',
+    x: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>',
+    xSm: '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>',
+    plus: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>',
+    check: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5" /></svg>',
+    orden: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l2 3v15H5V6z" /><path d="M9 10h6M9 14h6M9 18h3" /></svg>',
+    picking: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z" /><path d="M3 8l9 5 9-5M12 13v8" /></svg>'
+  };
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  function opts(lista, sel) {
+    return lista.map(function (o) {
+      var v = typeof o === 'string' ? o : (o.v || o.id);
+      var t = typeof o === 'string' ? o : (o.t + (o.id ? ' (' + o.id + ')' : ''));
+      return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(t) + '</option>';
+    }).join('');
+  }
+  function esLista(op) { return OPERADORES.some(function (o) { return o.v === op && o.lista; }); }
+  function info(texto, ancho) {
+    return '<span class="info"><span class="info__icono">i</span><span class="info__pop"' + (ancho ? ' style="width:' + ancho + 'px;"' : '') + '>' + texto + '</span></span>';
+  }
+
+  // ════════════════════════════════════════════════
+  //  Render — Tipos de documento
+  // ════════════════════════════════════════════════
+  function renderResumen(doc) {
+    if (!doc.rules.length) return '<span class="pill pill--vacio">Sin reglas</span>';
+    return doc.rules.map(function (r) {
+      return r.destino === 'orden'
+        ? '<span class="pill pill--orden">' + esc(doc.orden) + ' · ' + r.estado + '</span>'
+        : '<span class="pill pill--picking">Picking directo · ' + r.estado + '</span>';
+    }).join('');
+  }
+
+  function renderCond(c, di, ri, ci) {
+    var lista = esLista(c.op);
+    var puedeAgregar = lista || c.v.length === 0;
+    var id = di + '-' + ri + '-' + ci;
+    return '<div class="cond">' +
+      '<select class="select mono cond__campo" data-cambio="crit-f" data-id="' + id + '">' + opts(CAMPOS_SQL, c.f) + '</select>' +
+      '<select class="select cond__op" data-cambio="crit-op" data-id="' + id + '">' + opts(OPERADORES, c.op) + '</select>' +
+      '<div class="chips" data-accion="focus-chips">' +
+        c.v.map(function (v, vi) {
+          return '<span class="chip mono">' + esc(v) + '<span class="chip__x" data-accion="chip-del" data-id="' + id + '-' + vi + '">' + I.xSm + '</span></span>';
+        }).join('') +
+        (puedeAgregar ? '<input type="text" class="chips__input mono" data-chip="' + id + '" placeholder="' + (lista ? 'Escribe y presiona Enter' : 'Valor') + '" />' : '') +
+      '</div>' +
+      '<button type="button" class="btn-icono btn-icono--34 btn-icono--borrar" data-accion="crit-del" data-id="' + id + '" title="Quitar condición">' + I.x + '</button>' +
+    '</div>';
+  }
+
+  function renderRegla(doc, r, di, ri) {
+    var id = di + '-' + ri;
+    var isOrden = r.destino === 'orden';
+    return '<div class="regla">' +
+      '<div class="regla__riel"><span class="conector">' + (ri === 0 ? 'SI' : 'SI NO, SI') + '</span><span class="regla__linea"></span></div>' +
+      '<div class="regla__caja">' +
+
+        '<div class="regla__top">' +
+          '<span class="regla__frase">Traer la fila cuando se cumpla <strong>todo</strong> esto:</span>' +
+          '<div class="regla__botones">' +
+            '<button type="button" class="btn-icono btn-icono--sm btn-icono--mover" data-accion="rule-up" data-id="' + id + '" title="Subir"' + (ri === 0 ? ' disabled' : '') + '>' + I.up + '</button>' +
+            '<button type="button" class="btn-icono btn-icono--sm btn-icono--mover" data-accion="rule-down" data-id="' + id + '" title="Bajar"' + (ri === doc.rules.length - 1 ? ' disabled' : '') + '>' + I.down + '</button>' +
+            '<button type="button" class="btn-icono btn-icono--sm btn-icono--borrar" data-accion="rule-del" data-id="' + id + '" title="Eliminar regla">' + I.trash + '</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="conds">' + r.crit.map(function (c, ci) { return renderCond(c, di, ri, ci); }).join('') + '</div>' +
+        '<button type="button" class="btn-dashed" data-accion="crit-add" data-id="' + id + '">' + I.plus + ' Agregar condición</button>' +
+
+        '<div class="regla__sep"></div>' +
+
+        '<div class="label">Crear en el WMS como</div>' +
+        '<div class="destinos">' +
+          '<div class="destino' + (isOrden ? ' is-sel' : '') + '" data-accion="destino" data-valor="orden" data-id="' + id + '">' +
+            '<span class="destino__ico">' + I.orden + '</span>' +
+            '<div><div class="destino__titulo">' + esc(doc.orden) + '</div><div class="destino__desc">El WMS genera los movimientos cuando la orden se confirma</div></div>' +
+          '</div>' +
+          '<div class="destino' + (!isOrden ? ' is-sel' : '') + '" data-accion="destino" data-valor="picking" data-id="' + id + '">' +
+            '<span class="destino__ico">' + I.picking + '</span>' +
+            '<div><div class="destino__titulo">Picking directo</div><div class="destino__desc">Se crea el movimiento de inventario sin pasar por una orden</div></div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="grid-auto grid-auto--sm">' +
+          '<div><div class="label">Estado inicial</div><select class="select" data-cambio="estado" data-id="' + id + '">' + opts(ESTADOS[r.destino], r.estado) + '</select></div>' +
+          '<div><div class="label">' + (isOrden ? 'Almacén' : 'Almacén / tipo de operación') + '</div><select class="select" data-cambio="almacen" data-id="' + id + '">' + opts(ALMACENES, r.almacen) + '</select></div>' +
+        '</div>' +
+
+        '<div class="auto">Se envía automáticamente:' +
+          '<span class="auto__valor mono">estado = ' + ESTADO_CODE[r.estado] + '</span>' +
+          '<span class="auto__valor mono">almacen = ' + r.almacen + '</span>' +
+        '</div>' +
+
+        '<div class="extras' + (r.extrasOpen ? ' is-open' : '') + '">' +
+          '<span class="extras__toggle" data-accion="extras" data-id="' + id + '"><span class="extras__chevron">' + I.chevronSm + '</span>Valores fijos adicionales<span class="extras__count">' + r.extras.length + '</span></span>' +
+          '<div class="extras__cuerpo">' +
+            '<div class="kv"><div class="kv__head"><span>Campo</span><span>Valor</span><span></span></div>' +
+              r.extras.map(function (x, xi) {
+                var xid = id + '-' + xi;
+                return '<div class="kv__fila">' +
+                  '<input type="text" class="kv__input mono" value="' + esc(x[0]) + '" data-cambio="extra-k" data-id="' + xid + '" />' +
+                  '<input type="text" class="kv__input mono" value="' + esc(x[1]) + '" data-cambio="extra-v" data-id="' + xid + '" />' +
+                  '<button type="button" class="btn-icono btn-icono--borrar" data-accion="extra-del" data-id="' + xid + '">' + I.trash + '</button>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
+            '<button type="button" class="btn-dashed" data-accion="extra-add" data-id="' + id + '">' + I.plus + ' Agregar valor fijo</button>' +
+          '</div>' +
+        '</div>' +
+
+      '</div>' +
+    '</div>';
+  }
+
+  function renderDoc(doc, di) {
+    return '<div class="doc' + (doc.open ? ' is-open' : '') + '">' +
+      '<div class="doc__head" data-accion="doc-toggle" data-id="' + di + '">' +
+        '<span class="doc__chevron">' + I.chevron + '</span>' +
+        '<span class="doc__code mono">' + esc(doc.code || '—') + '</span>' +
+        '<div class="doc__titulos"><div class="doc__nombre">' + esc(doc.name || 'Nuevo documento') + '</div><div class="doc__ident mono">' + doc.identField + ' = ' + esc(doc.code || '—') + '</div></div>' +
+        '<div class="doc__resumen">' + renderResumen(doc) + '</div>' +
+        '<button type="button" class="btn-icono btn-icono--borrar" data-accion="doc-del" data-id="' + di + '" title="Eliminar documento">' + I.trash + '</button>' +
+      '</div>' +
+      '<div class="doc__body">' +
+        '<div class="grid-auto doc__datos">' +
+          '<div><div class="label">Nombre del documento</div><input type="text" class="input" value="' + esc(doc.name) + '" data-cambio="doc-name" data-id="' + di + '" /></div>' +
+          '<div><div class="label">Se reconoce cuando ' + info('Campo del SQL que indica el tipo de documento de cada fila. Todas las filas con este valor se procesan con las reglas de abajo.', 320) + '</div>' +
+            '<div class="ident">' +
+              '<select class="select mono" data-cambio="doc-ident" data-id="' + di + '">' + opts(CAMPOS_IDENT, doc.identField) + '</select>' +
+              '<span class="ident__es">es</span>' +
+              '<input type="text" class="input mono" value="' + esc(doc.code) + '" data-cambio="doc-code" data-id="' + di + '" />' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="label">Reglas ' + info('Las reglas se evalúan de arriba hacia abajo. La primera que se cumpla decide qué se crea en el WMS; las siguientes ya no se revisan para esa fila.', 340) + '</div>' +
+        '<div class="reglas">' +
+          doc.rules.map(function (r, ri) { return renderRegla(doc, r, di, ri); }).join('') +
+          '<div class="regla-fin"><span class="conector conector--fin">SI NO</span><span>La fila no cumple ninguna regla y se descarta.</span></div>' +
+          '<div style="margin-top: 14px;"><button type="button" class="btn-dashed btn-dashed--md" data-accion="rule-add" data-id="' + di + '">' + I.plus + ' Agregar regla</button></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  var focoPendiente = null;
+  function renderDocs() {
+    document.getElementById('docs').innerHTML = docs.map(renderDoc).join('');
+    if (focoPendiente) {
+      var el = document.querySelector('[data-chip="' + focoPendiente + '"]');
+      if (el) el.focus();
+      focoPendiente = null;
+    }
+  }
+
+  // ════════════════════════════════════════════════
+  //  Render — Validación
+  // ════════════════════════════════════════════════
+  function renderCampos() {
+    document.getElementById('campos').innerHTML = campos.map(function (c, i) {
+      var num = c.t === 'Número decimal' || c.t === 'Número entero';
+      function chk(k, habilitado) {
+        var cls = !habilitado ? ' is-off' : (c[k] ? ' is-on' : '');
+        return '<span class="check' + cls + '" data-accion="campo-check" data-k="' + k + '" data-id="' + i + '">' + I.check + '</span>';
+      }
+      return '<tr>' +
+        '<td class="tabla__campo mono">' + esc(c.c) + '</td>' +
+        '<td><select class="select" data-cambio="campo-tipo" data-id="' + i + '">' + opts(TIPOS_CAMPO, c.t) + '</select></td>' +
+        '<td class="c-centro">' + chk('req', true) + '</td>' +
+        '<td class="c-centro">' + chk('d0', num) + '</td>' +
+        '<td class="c-centro">' + chk('gt0', num) + '</td>' +
+        '<td class="c-centro"><button type="button" class="btn-icono btn-icono--sm btn-icono--borrar" data-accion="campo-del" data-id="' + i + '" title="Quitar campo">' + I.trash + '</button></td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  // ════════════════════════════════════════════════
+  //  Helpers de estado
+  // ════════════════════════════════════════════════
+  function ids(el) { return el.getAttribute('data-id').split('-').map(Number); }
+  function regla(el) { var p = ids(el); return docs[p[0]].rules[p[1]]; }
+  function nuevaRegla() { return { crit: [{ f: 'motivo', op: 'es', v: [] }], destino: 'orden', estado: 'Borrador', almacen: '1', extrasOpen: false, extras: [] }; }
+
+  function agregarValores(chipId, texto) {
+    var p = chipId.split('-').map(Number);
+    var c = docs[p[0]].rules[p[1]].crit[p[2]];
+    var vals = texto.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!vals.length) return false;
+    if (esLista(c.op)) vals.forEach(function (v) { if (c.v.indexOf(v) < 0) c.v.push(v); });
+    else c.v = [vals[0]];
+    return true;
+  }
+
+  // ════════════════════════════════════════════════
+  //  Eventos (delegación)
+  // ════════════════════════════════════════════════
+  document.addEventListener('click', function (e) {
+    // Popovers
+    var icono = e.target.closest('.info__icono');
+    document.querySelectorAll('.info.is-open').forEach(function (p) { if (!icono || p !== icono.parentElement) p.classList.remove('is-open'); });
+    if (icono) { e.stopPropagation(); icono.parentElement.classList.toggle('is-open'); return; }
+
+    var el = e.target.closest('[data-accion]');
+    if (!el) return;
+    var a = el.getAttribute('data-accion');
+    var p, r;
+
+    switch (a) {
+      case 'focus-chips':
+        var inp = el.querySelector('.chips__input');
+        if (inp && e.target === el) inp.focus();
+        return;
+      case 'doc-toggle':
+        if (e.target.closest('[data-accion="doc-del"]')) return;
+        p = ids(el); docs[p[0]].open = !docs[p[0]].open; break;
+      case 'doc-del':
+        e.stopPropagation(); p = ids(el); docs.splice(p[0], 1); break;
+      case 'add-doc':
+        docs.push({ code: '', name: '', identField: 'tipo_docto', orden: 'Orden de compra', open: true, rules: [nuevaRegla()] }); break;
+      case 'rule-add':
+        p = ids(el); docs[p[0]].rules.push(nuevaRegla()); break;
+      case 'rule-del':
+        p = ids(el); docs[p[0]].rules.splice(p[1], 1); break;
+      case 'rule-up':
+        p = ids(el); if (p[1] > 0) { var a1 = docs[p[0]].rules; a1.splice(p[1] - 1, 0, a1.splice(p[1], 1)[0]); } break;
+      case 'rule-down':
+        p = ids(el); var a2 = docs[p[0]].rules; if (p[1] < a2.length - 1) a2.splice(p[1] + 1, 0, a2.splice(p[1], 1)[0]); break;
+      case 'crit-add':
+        regla(el).crit.push({ f: 'motivo', op: 'es', v: [] }); break;
+      case 'crit-del':
+        p = ids(el); docs[p[0]].rules[p[1]].crit.splice(p[2], 1); break;
+      case 'chip-del':
+        p = ids(el); docs[p[0]].rules[p[1]].crit[p[2]].v.splice(p[3], 1); break;
+      case 'destino':
+        r = regla(el); r.destino = el.getAttribute('data-valor');
+        if (ESTADOS[r.destino].indexOf(r.estado) < 0) r.estado = ESTADOS[r.destino][r.destino === 'picking' ? 1 : 0];
+        break;
+      case 'extras':
+        r = regla(el); r.extrasOpen = !r.extrasOpen; break;
+      case 'extra-add':
+        r = regla(el); r.extras.push(['', '']); r.extrasOpen = true; break;
+      case 'extra-del':
+        p = ids(el); docs[p[0]].rules[p[1]].extras.splice(p[2], 1); break;
+      case 'campo-check':
+        if (el.classList.contains('is-off')) return;
+        p = ids(el); var k = el.getAttribute('data-k'); campos[p[0]][k] = !campos[p[0]][k]; renderCampos(); return;
+      case 'campo-del':
+        p = ids(el); campos.splice(p[0], 1); renderCampos(); return;
+      case 'add-campo':
+        var sel = document.getElementById('nuevo-campo');
+        if (sel.value && !campos.some(function (c) { return c.c === sel.value; })) {
+          campos.push({ c: sel.value, t: 'Texto', req: false, d0: false, gt0: false });
+          sel.value = '';
+          renderCampos();
+        }
+        return;
+      default: return;
+    }
+    renderDocs();
+  });
+
+  document.addEventListener('change', function (e) {
+    var el = e.target.closest('[data-cambio]');
+    if (!el) return;
+    var c = el.getAttribute('data-cambio');
+    var p = ids(el);
+    var v = el.value;
+
+    switch (c) {
+      case 'doc-name': docs[p[0]].name = v; break;
+      case 'doc-code': docs[p[0]].code = v.toUpperCase(); break;
+      case 'doc-ident': docs[p[0]].identField = v; break;
+      case 'crit-f': docs[p[0]].rules[p[1]].crit[p[2]].f = v; break;
+      case 'crit-op':
+        var cr = docs[p[0]].rules[p[1]].crit[p[2]];
+        cr.op = v; if (!esLista(v)) cr.v = cr.v.slice(0, 1);
+        break;
+      case 'estado': docs[p[0]].rules[p[1]].estado = v; break;
+      case 'almacen': docs[p[0]].rules[p[1]].almacen = v; break;
+      case 'extra-k': docs[p[0]].rules[p[1]].extras[p[2]][0] = v; return;
+      case 'extra-v': docs[p[0]].rules[p[1]].extras[p[2]][1] = v; return;
+      case 'campo-tipo':
+        campos[p[0]].t = v;
+        if (v !== 'Número decimal' && v !== 'Número entero') { campos[p[0]].d0 = false; campos[p[0]].gt0 = false; }
+        renderCampos(); return;
+    }
+    renderDocs();
+  });
+
+  // Chips: Enter o coma agrega, Backspace en vacío borra el último
+  document.addEventListener('keydown', function (e) {
+    var el = e.target.closest('[data-chip]');
+    if (!el) return;
+    var chipId = el.getAttribute('data-chip');
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (agregarValores(chipId, el.value)) { focoPendiente = chipId; renderDocs(); }
+    } else if (e.key === 'Backspace' && !el.value) {
+      var p = chipId.split('-').map(Number);
+      var vals = docs[p[0]].rules[p[1]].crit[p[2]].v;
+      if (vals.length) { vals.pop(); focoPendiente = chipId; renderDocs(); }
+    }
+  });
+  document.addEventListener('focusout', function (e) {
+    var el = e.target.closest && e.target.closest('[data-chip]');
+    if (el && el.value.trim()) { if (agregarValores(el.getAttribute('data-chip'), el.value)) renderDocs(); }
+  });
+
+  // ════════════════════════════════════════════════
+  //  Probar con datos (simulado)
+  // ════════════════════════════════════════════════
+  var RESULTADO_PRUEBA = {
+    total: 70,
+    filas: [
+      { code: 'OCN', label: 'Orden Compra Nacional', n: 42 },
+      { code: 'DVN', label: 'Devolución entrada', n: 8 },
+      { code: 'I08', label: 'Regla 1 · Picking directo', n: 5 },
+      { code: 'I08', label: 'Regla 2 · Orden de venta', n: 12 },
+      { code: '—', label: 'Sin clasificar', n: 3, warn: true }
+    ],
+    descartados: 'I09 (2), OCX (1)'
+  };
+
+  var prueba = document.getElementById('prueba');
+  document.getElementById('btn-probar').addEventListener('click', function () {
+    prueba.classList.add('is-visible');
+    prueba.innerHTML = '<div class="prueba__cargando"><span class="spinner"></span>Ejecutando el SQL contra el ERP y clasificando filas…</div>';
+
+    setTimeout(function () {
+      var max = Math.max.apply(null, RESULTADO_PRUEBA.filas.map(function (f) { return f.n; }));
+      prueba.innerHTML =
+        '<div class="prueba__head"><span class="prueba__titulo">Resultado de la prueba · ' + RESULTADO_PRUEBA.total + ' filas leídas</span><span class="prueba__cerrar" id="prueba-cerrar">Cerrar</span></div>' +
+        '<div class="prueba__filas">' +
+          RESULTADO_PRUEBA.filas.map(function (f) {
+            return '<div class="prueba__fila' + (f.warn ? ' prueba__fila--warn' : '') + '">' +
+              '<span class="prueba__code mono">' + f.code + '</span>' +
+              '<span class="prueba__label">' + f.label + '</span>' +
+              '<span class="prueba__barra"><span style="width:' + Math.round(f.n / max * 100) + '%"></span></span>' +
+              '<span class="prueba__n">' + f.n + ' filas</span>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+        '<div class="aviso"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d48806" stroke-width="1.9" stroke-linecap="round"><path d="M12 3l9 16H3z" /><path d="M12 9v5M12 16h.01" /></svg>' +
+        '<span>3 filas no coincidieron con ningún documento y se descartarán: ' + RESULTADO_PRUEBA.descartados + '.</span></div>';
+
+      document.getElementById('prueba-cerrar').addEventListener('click', function () {
+        prueba.classList.remove('is-visible');
+      });
+    }, 1500);
+  });
+
+  // ════════════════════════════════════════════════
+  //  Guardar: muestra el JSON resultante en consola
+  // ════════════════════════════════════════════════
+  document.getElementById('btn-guardar').addEventListener('click', function () {
+    var payload = {
+      document_types: docs.map(function (d) {
+        return {
+          name: d.name,
+          match: { field: d.identField, value: d.code },
+          rules: d.rules.map(function (r) {
+            return {
+              criteria: r.crit.map(function (c) { return { field: c.f, operator: c.op, values: c.v }; }),
+              create_as: r.destino,
+              fixed_values: Object.assign(
+                { estado: ESTADO_CODE[r.estado], almacen: r.almacen },
+                r.extras.reduce(function (acc, x) { if (x[0]) acc[x[0]] = x[1]; return acc; }, {})
+              )
+            };
+          })
+        };
+      }),
+      validation: campos
+    };
+    console.log(JSON.stringify(payload, null, 2));
+  });
+
+  renderDocs();
+  renderCampos();
+</script>
+</body>
+</html>

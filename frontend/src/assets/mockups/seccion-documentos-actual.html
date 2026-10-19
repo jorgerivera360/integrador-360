@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sección Documentos — Estado actual</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 32px; color: #1a1a2e; }
+
+  /* ========== Sección contenedora ========== */
+  .flujo-seccion {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0, 21, 41, 0.06);
+    max-width: 900px;
+  }
+  .flujo-seccion__titulo {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 16px; font-weight: 600; color: #1a1a2e;
+    margin: 0 0 16px; padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .flujo-seccion__info { font-size: 14px; color: #8c8c8c; cursor: pointer; }
+  .flujo-seccion__subtitulo {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 14px; font-weight: 500; color: #434343; margin: 0 0 12px;
+  }
+  .flujo-campo__label {
+    font-size: 13px; font-weight: 500; color: #434343;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+
+  /* ========== Documento (tarjeta) ========== */
+  .flujo-doc__documento {
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: #fff;
+  }
+  .flujo-doc__cabecera {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .flujo-doc__vacio {
+    font-size: 12.5px; color: #8c8c8c; padding: 6px 0;
+  }
+
+  /* ========== Regla dentro de documento ========== */
+  .flujo-doc__reglas-container { margin-top: 12px; }
+  .flujo-doc__reglas-info { font-size: 12px; color: #8c8c8c; margin-bottom: 8px; }
+  .flujo-doc__regla {
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #fafafa;
+  }
+  .flujo-doc__regla-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+  }
+  .flujo-doc__regla-etiqueta { font-weight: 500; font-size: 13px; color: #595959; }
+  .flujo-doc__sub { margin-top: 4px; }
+
+  /* ========== Destino ========== */
+  .flujo-doc__destino { padding: 8px 0; }
+  .flujo-doc__destino-fila { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+
+  /* ========== Línea de condición ========== */
+  .flujo-regla-linea { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+
+  /* ========== Controles genéricos ========== */
+  input, select {
+    font-size: 13px; padding: 4px 8px; border: 1px solid #d9d9d9;
+    border-radius: 4px; color: #1a1a2e; background: #fff;
+  }
+  input:focus, select:focus { outline: none; border-color: #1677ff; }
+  .input-campo { width: 180px; }
+  .input-operador { width: 140px; }
+  .input-valor { width: 180px; }
+  .input-id { width: 80px; }
+  .select-crear { width: 170px; }
+  .select-estado { width: 140px; }
+
+  .btn-dashed {
+    font-size: 12px; padding: 3px 10px; border: 1px dashed #d9d9d9;
+    border-radius: 4px; background: #fff; color: #595959; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .btn-dashed:hover { border-color: #1677ff; color: #1677ff; }
+
+  .btn-link {
+    font-size: 12px; border: none; background: none; color: #8c8c8c;
+    cursor: pointer; padding: 0;
+  }
+  .btn-link:hover { color: #1677ff; }
+
+  .btn-eliminar {
+    border: none; background: none; color: #bfbfbf; cursor: pointer;
+    font-size: 14px; padding: 2px 4px;
+  }
+  .btn-eliminar:hover { color: #ff4d4f; }
+
+  /* ========== Tabla clave-valor inline ========== */
+  .tcv { width: 100%; max-width: 400px; border: 1px solid #f0f0f0; border-radius: 6px; overflow: hidden; }
+  .tcv__head { display: flex; background: #fafafa; padding: 6px 10px; font-size: 12px; font-weight: 500; color: #8c8c8c; }
+  .tcv__head span { flex: 1; }
+  .tcv__row { display: flex; align-items: center; padding: 4px 10px; border-top: 1px solid #f5f5f5; gap: 8px; }
+  .tcv__row input { flex: 1; border: none; font-size: 12.5px; padding: 2px 0; }
+  .tcv__row input:focus { outline: none; }
+
+  .campo-grupo { display: flex; flex-direction: column; gap: 6px; }
+
+  /* Nota contextual */
+  .nota-contexto {
+    background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px;
+    padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #874d00;
+    max-width: 900px;
+  }
+</style>
+</head>
+<body>
+
+<!-- NOTA PARA EL DISEÑADOR -->
+<div class="nota-contexto">
+  <strong>Contexto para rediseño:</strong> Esta es la sección "Tipos de documento" del editor de flujos del Integrador 360.
+  Cada flujo de transacción (compras/ventas) puede traer múltiples tipos de documento del ERP en un solo SQL.
+  Esta sección permite al admin clasificar cada tipo, definir filtros, elegir cómo se crea en WMS (orden vs picking directo),
+  y configurar estados, operaciones y valores fijos por tipo de documento.<br><br>
+  El ejemplo muestra 3 documentos reales de Aurofarma:<br>
+  • <strong>OCN</strong> — Orden Compra Nacional: orden de compra en borrador, filtra por estado y motivo<br>
+  • <strong>DVN</strong> — Devolución entrada: picking directo, operación 11, estado "Listo"<br>
+  • <strong>I08</strong> — Traslado bodegas salida: 2 reglas if/elif según bodega+motivo (una va a picking directo, otra a orden de venta)<br><br>
+  Necesita ser más visual, intuitivo y fácil de entender para un admin no técnico.
+  El almacén/operación va como valor fijo ("almacen": 1), no como mapping de bodegas.
+</div>
+
+<!-- ============================================================ -->
+<!-- SECCIÓN: TIPOS DE DOCUMENTO — ESTADO ACTUAL                   -->
+<!-- ============================================================ -->
+
+<div class="flujo-seccion">
+  <h3 class="flujo-seccion__titulo">
+    Tipos de documento
+    <span class="flujo-seccion__info" title="Define cómo se procesan las filas según su tipo de documento.">ℹ️</span>
+  </h3>
+
+  <!-- ─── DOCUMENTO 1: OCN — Orden Compra Nacional (modo simple) ─── -->
+  <div class="flujo-doc__documento">
+    <div class="flujo-doc__cabecera">
+      <h4 class="flujo-seccion__subtitulo" style="margin:0">
+        Documento a identificar
+        <span class="flujo-seccion__info" title="Identifica cuáles filas pertenecen a este documento">ℹ️</span>
+      </h4>
+      <button class="btn-eliminar" title="Eliminar documento">🗑</button>
+    </div>
+
+    <!-- Identificación -->
+    <div class="flujo-regla-linea" style="margin-top:8px">
+      <input class="input-campo" value="tipo_docto" placeholder="campo">
+      <select class="input-operador">
+        <option selected>es igual a</option>
+      </select>
+      <input class="input-valor" value="OCN" placeholder="valor">
+    </div>
+
+    <!-- Regla única (modo simple) -->
+    <div class="flujo-doc__reglas-container">
+      <div class="flujo-doc__regla">
+        <div class="flujo-doc__regla-header">
+          <span class="flujo-doc__regla-etiqueta">Configuración</span>
+        </div>
+
+        <!-- Criterios -->
+        <div class="flujo-doc__sub">
+          <label class="flujo-campo__label">Criterios para traer documento</label>
+          <div class="flujo-regla-linea">
+            <input class="input-campo" value="estado_siesa" placeholder="campo">
+            <select class="input-operador"><option selected>está en la lista</option></select>
+            <input class="input-valor" value="1, 2" placeholder="valor">
+            <button class="btn-eliminar">🗑</button>
+          </div>
+          <div class="flujo-regla-linea">
+            <input class="input-campo" value="motivo" placeholder="campo">
+            <select class="input-operador"><option selected>está en la lista</option></select>
+            <input class="input-valor" value="04, 01" placeholder="valor">
+            <button class="btn-eliminar">🗑</button>
+          </div>
+          <button class="btn-dashed" style="margin-top:4px">+ Criterio</button>
+        </div>
+
+        <!-- Destino -->
+        <div class="flujo-doc__destino">
+          <div class="flujo-doc__destino-fila">
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">Crear como</label>
+              <select class="select-crear"><option selected>Orden de compra</option><option>Picking directo</option></select>
+            </div>
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">Estado en WMS</label>
+              <select class="select-estado"><option selected>Borrador</option><option>Confirmado</option></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Valores fijos -->
+        <div class="flujo-doc__sub" style="margin-top:8px">
+          <button class="btn-link">▾ Valores fijos adicionales</button>
+          <div class="tcv" style="margin-top:6px">
+            <div class="tcv__head"><span>Campo</span><span>Valor fijo</span></div>
+            <div class="tcv__row"><input value="estado"><input value="draft"><button class="btn-eliminar">🗑</button></div>
+            <div class="tcv__row"><input value="almacen"><input value="1"><button class="btn-eliminar">🗑</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-dashed" style="margin-top:6px">+ Agregar regla</button>
+  </div>
+
+  <!-- ─── DOCUMENTO 2: DVN — Devolución entrada (picking directo) ─── -->
+  <div class="flujo-doc__documento">
+    <div class="flujo-doc__cabecera">
+      <h4 class="flujo-seccion__subtitulo" style="margin:0">
+        Documento a identificar <span class="flujo-seccion__info">ℹ️</span>
+      </h4>
+      <button class="btn-eliminar" title="Eliminar documento">🗑</button>
+    </div>
+
+    <div class="flujo-regla-linea" style="margin-top:8px">
+      <input class="input-campo" value="tipo_docto">
+      <select class="input-operador"><option selected>es igual a</option></select>
+      <input class="input-valor" value="DVN">
+    </div>
+
+    <div class="flujo-doc__reglas-container">
+      <div class="flujo-doc__regla">
+        <div class="flujo-doc__regla-header">
+          <span class="flujo-doc__regla-etiqueta">Configuración</span>
+        </div>
+
+        <div class="flujo-doc__sub">
+          <label class="flujo-campo__label">Criterios para traer documento</label>
+          <div class="flujo-regla-linea">
+            <input class="input-campo" value="estado_siesa">
+            <select class="input-operador"><option selected>es igual a</option></select>
+            <input class="input-valor" value="1">
+            <button class="btn-eliminar">🗑</button>
+          </div>
+          <div class="flujo-regla-linea">
+            <input class="input-campo" value="motivo">
+            <select class="input-operador"><option selected>está en la lista</option></select>
+            <input class="input-valor" value="01, 91, 95">
+            <button class="btn-eliminar">🗑</button>
+          </div>
+          <button class="btn-dashed" style="margin-top:4px">+ Criterio</button>
+        </div>
+
+        <div class="flujo-doc__destino">
+          <div class="flujo-doc__destino-fila">
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">Crear como</label>
+              <select class="select-crear"><option>Orden de compra</option><option selected>Picking directo</option></select>
+            </div>
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">Estado en WMS</label>
+              <select class="select-estado"><option>Borrador</option><option>Confirmado</option><option selected>Listo</option></select>
+            </div>
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">ID Tipo de operación <span class="flujo-seccion__info">ℹ️</span></label>
+              <input class="input-id" value="11">
+            </div>
+          </div>
+        </div>
+
+        <div class="flujo-doc__sub" style="margin-top:8px">
+          <button class="btn-link">▾ Valores fijos adicionales</button>
+          <div class="tcv" style="margin-top:6px">
+            <div class="tcv__head"><span>Campo</span><span>Valor fijo</span></div>
+            <div class="tcv__row"><input value="estado"><input value="assigned"><button class="btn-eliminar">🗑</button></div>
+            <div class="tcv__row"><input value="almacen"><input value="11"><button class="btn-eliminar">🗑</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-dashed" style="margin-top:6px">+ Agregar regla</button>
+  </div>
+
+  <!-- ─── DOCUMENTO 3: I08 — Traslado bodegas salida (con reglas if/elif) ─── -->
+  <div class="flujo-doc__documento">
+    <div class="flujo-doc__cabecera">
+      <h4 class="flujo-seccion__subtitulo" style="margin:0">
+        Documento a identificar <span class="flujo-seccion__info">ℹ️</span>
+      </h4>
+      <button class="btn-eliminar" title="Eliminar documento">🗑</button>
+    </div>
+
+    <div class="flujo-regla-linea" style="margin-top:8px">
+      <input class="input-campo" value="tipo_docto">
+      <select class="input-operador"><option selected>es igual a</option></select>
+      <input class="input-valor" value="I08">
+    </div>
+
+    <div class="flujo-doc__reglas-container">
+      <div class="flujo-doc__reglas-info">
+        Las reglas se evalúan en orden. La primera que coincida captura la fila.
+      </div>
+
+      <!-- Regla 1: picking directo -->
+      <div class="flujo-doc__regla">
+        <div class="flujo-doc__regla-header">
+          <span class="flujo-doc__regla-etiqueta">Regla 1</span>
+          <button class="btn-eliminar">🗑</button>
+        </div>
+
+        <div class="flujo-doc__sub">
+          <label class="flujo-campo__label">Criterios para traer documento</label>
+          <div class="flujo-regla-linea">
+            <input class="input-campo" value="bodega_origen">
+            <select class="input-operador"><option selected>está en la lista</option></select>
+            <input class="input-valor" value="M0101, M0102, M0103, M0104, M0105, M0107">
+            <button class="btn-eliminar">🗑</button>
+          </div>
+          <div class="flujo-regla-linea">
+            <input class="input-campo" value="motivo">
+            <select class="input-operador"><option selected>es igual a</option></select>
+            <input class="input-valor" value="09">
+            <button class="btn-eliminar">🗑</button>
+          </div>
+          <button class="btn-dashed" style="margin-top:4px">+ Criterio</button>
+        </div>
+
+        <div class="flujo-doc__destino">
+          <div class="flujo-doc__destino-fila">
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">Crear como</label>
+              <select class="select-crear"><option>Orden de venta</option><option selected>Picking directo</option></select>
+            </div>
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">Estado en WMS</label>
+              <select class="select-estado"><option>Borrador</option><option>Confirmado</option><option selected>Listo</option></select>
+            </div>
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">ID Tipo de operación</label>
+              <input class="input-id" value="9">
+            </div>
+          </div>
+        </div>
+
+        <div class="flujo-doc__sub" style="margin-top:8px">
+          <button class="btn-link">▾ Valores fijos adicionales</button>
+          <div class="tcv" style="margin-top:6px">
+            <div class="tcv__head"><span>Campo</span><span>Valor fijo</span></div>
+            <div class="tcv__row"><input value="estado"><input value="assigned"><button class="btn-eliminar">🗑</button></div>
+            <div class="tcv__row"><input value="almacen"><input value="9"><button class="btn-eliminar">🗑</button></div>
+            <div class="tcv__row"><input value="cliente"><input value="800007355"><button class="btn-eliminar">🗑</button></div>
+            <div class="tcv__row"><input value="sucursal_cliente"><input value="001"><button class="btn-eliminar">🗑</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Regla 2: orden de venta -->
+      <div class="flujo-doc__regla">
+        <div class="flujo-doc__regla-header">
+          <span class="flujo-doc__regla-etiqueta">Regla 2 (si no entró en la anterior)</span>
+          <button class="btn-eliminar">🗑</button>
+        </div>
+
+        <div class="flujo-doc__sub">
+          <label class="flujo-campo__label">Criterios para traer documento</label>
+          <div class="flujo-regla-linea">
+            <input class="input-campo" value="bodega_origen">
+            <select class="input-operador"><option selected>está en la lista</option></select>
+            <input class="input-valor" value="M0101, M0102, M0104, M0106, M0108">
+            <button class="btn-eliminar">🗑</button>
+          </div>
+          <button class="btn-dashed" style="margin-top:4px">+ Criterio</button>
+        </div>
+
+        <div class="flujo-doc__destino">
+          <div class="flujo-doc__destino-fila">
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">Crear como</label>
+              <select class="select-crear"><option selected>Orden de venta</option><option>Picking directo</option></select>
+            </div>
+            <div class="campo-grupo">
+              <label class="flujo-campo__label">Estado en WMS</label>
+              <select class="select-estado"><option selected>Borrador</option><option>Confirmado</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="flujo-doc__sub" style="margin-top:8px">
+          <button class="btn-link">▾ Valores fijos adicionales</button>
+          <div class="tcv" style="margin-top:6px">
+            <div class="tcv__head"><span>Campo</span><span>Valor fijo</span></div>
+            <div class="tcv__row"><input value="estado"><input value="draft"><button class="btn-eliminar">🗑</button></div>
+            <div class="tcv__row"><input value="almacen"><input value="1"><button class="btn-eliminar">🗑</button></div>
+            <div class="tcv__row"><input value="cliente"><input value="800007355"><button class="btn-eliminar">🗑</button></div>
+            <div class="tcv__row"><input value="sucursal_cliente"><input value="001"><button class="btn-eliminar">🗑</button></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-dashed" style="margin-top:6px">+ Agregar regla</button>
+    </div>
+  </div>
+
+  <!-- ─── Botón agregar documento ─── -->
+  <div style="margin-top:10px">
+    <button class="btn-dashed">+ Agregar tipo de documento</button>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECCIÓN: VALIDACIÓN Y TIPADO — ESTADO ACTUAL (para contexto) -->
+<!-- ============================================================ -->
+
+<div class="flujo-seccion">
+  <h3 class="flujo-seccion__titulo">
+    Validación y tipado de campos
+    <span class="flujo-seccion__info">ℹ️</span>
+  </h3>
+
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+    <div class="campo-grupo" style="grid-column:1/-1">
+      <label class="flujo-campo__label">Campos obligatorios</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">compra <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">producto <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">almacen <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">estado <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+      </div>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="flujo-campo__label">Campos numéricos (float)</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">cantidad <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">precio_unitario <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+      </div>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="flujo-campo__label">Campos fecha</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">fecha_entrega <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+      </div>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="flujo-campo__label">Campos con default 0</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">precio_unitario <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+      </div>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="flujo-campo__label">Campos mayor a 0</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <span style="background:#f5f5f5;border:1px solid #d9d9d9;border-radius:4px;padding:2px 8px;font-size:12px">cantidad <button class="btn-eliminar" style="font-size:11px">✕</button></span>
+      </div>
+    </div>
+
+    <div class="campo-grupo">
+      <label class="flujo-campo__label">Campos enteros (int)</label>
+      <div style="font-size:12.5px; color:#bfbfbf; font-style:italic; padding:4px 0">Sin campos configurados</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
