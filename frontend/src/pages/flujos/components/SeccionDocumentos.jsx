@@ -11,31 +11,16 @@ const OPERADORES = [
     { value: 'empieza_con', label: 'empieza con' },
 ]
 
-const ESTADOS_PICKING = [
-    { value: 'draft', label: 'Borrador' },
-    { value: 'confirmed', label: 'Confirmado' },
-    { value: 'assigned', label: 'Listo' },
-]
-
-function getEstadosOrden(flowType) {
-    return [
-        { value: 'draft', label: 'Borrador' },
-        { value: flowType === 'purchases' ? 'purchase' : 'sale', label: 'Confirmado' },
-    ]
-}
-
 function getLabelOrden(flowType) {
     return flowType === 'purchases' ? 'Orden de compra' : 'Orden de venta'
 }
 
 function getResumenRegla(regla, flowType) {
+    const estado = regla.estado || 'draft'
     if (regla.crear_como === 'picking_direct') {
-        const estado = ESTADOS_PICKING.find((e) => e.value === regla.estado)
-        return { tipo: 'picking', texto: `Picking directo \u00b7 ${estado?.label || regla.estado}` }
+        return { tipo: 'picking', texto: `Picking directo \u00b7 ${estado}` }
     }
-    const estados = getEstadosOrden(flowType)
-    const estado = estados.find((e) => e.value === regla.estado)
-    return { tipo: 'orden', texto: `${getLabelOrden(flowType)} \u00b7 ${estado?.label || regla.estado}` }
+    return { tipo: 'orden', texto: `${getLabelOrden(flowType)} \u00b7 ${estado}` }
 }
 
 // ─── Iconos ───
@@ -79,6 +64,7 @@ const LineaCondicion = ({ condicion, onChange, onEliminar }) => (
         <Select
             size="small"
             className="doc-cond__op"
+            popupMatchSelectWidth={false}
             value={condicion.operador || '='}
             options={OPERADORES}
             onChange={(v) => onChange({ ...condicion, operador: v })}
@@ -91,7 +77,7 @@ const LineaCondicion = ({ condicion, onChange, onEliminar }) => (
             placeholder={condicion.operador === 'in' ? 'val1, val2, val3' : 'valor'}
         />
         {onEliminar && (
-            <button className="doc-btn-x" onClick={onEliminar} type="button" title="Quitar">
+            <button className="doc-btn-x doc-btn-x--borrar" onClick={onEliminar} type="button" title="Quitar">
                 <DeleteOutlined />
             </button>
         )}
@@ -100,17 +86,18 @@ const LineaCondicion = ({ condicion, onChange, onEliminar }) => (
 
 // ─── Tarjetas de destino ───
 
-const TarjetaDestino = ({ tipo, seleccionado, onClick, flowType }) => {
+const TarjetaDestino = ({ tipo, seleccionado, onSelect, flowType }) => {
     const esOrden = tipo === 'order'
     return (
-        <div
+        <button
+            type="button"
             className={`doc-destino-card ${seleccionado ? 'doc-destino-card--sel' : ''}`}
-            onClick={onClick}
+            onClick={onSelect}
         >
             <span className="doc-destino-card__ico">
                 {esOrden ? <IconOrden /> : <IconPicking />}
             </span>
-            <div>
+            <div style={{ textAlign: 'left' }}>
                 <div className="doc-destino-card__titulo">
                     {esOrden ? getLabelOrden(flowType) : 'Picking directo'}
                 </div>
@@ -120,7 +107,7 @@ const TarjetaDestino = ({ tipo, seleccionado, onClick, flowType }) => {
                         : 'Se crea el movimiento de inventario sin pasar por una orden'}
                 </div>
             </div>
-        </div>
+        </button>
     )
 }
 
@@ -131,15 +118,24 @@ const BloqueRegla = ({ regla, indice, total, onChange, onEliminar, onSubir, onBa
     const cambiar = (campo, valor) => onChange({ ...regla, [campo]: valor })
 
     const esPicking = (regla.crear_como || 'order') === 'picking_direct'
-    const estadosDisponibles = esPicking ? ESTADOS_PICKING : getEstadosOrden(flowType)
-    const estadoActual = estadosDisponibles.some((e) => e.value === regla.estado) ? regla.estado : 'draft'
 
     const filtros = regla.filtros || []
-    const cambiarFiltro = (i, nuevo) => cambiar('filtros', filtros.map((f, j) => j === i ? nuevo : f))
-    const eliminarFiltro = (i) => cambiar('filtros', filtros.filter((_, j) => j !== i))
-    const agregarFiltro = () => cambiar('filtros', [...filtros, { campo: '', operador: '=', valor: '' }])
+    const cambiarFiltro = (i, nuevo) => {
+        const nuevos = filtros.map((f, j) => j === i ? nuevo : f)
+        cambiar('filtros', nuevos)
+    }
+    const eliminarFiltro = (i) => {
+        cambiar('filtros', filtros.filter((_, j) => j !== i))
+    }
+    const agregarFiltro = () => {
+        cambiar('filtros', [...filtros, { campo: '', operador: '=', valor: '' }])
+    }
 
     const cantExtras = (regla.hardcodes || []).filter((h) => h.clave?.trim()).length
+
+    const seleccionarDestino = (tipo) => {
+        cambiar('crear_como', tipo)
+    }
 
     return (
         <div className="doc-regla">
@@ -155,9 +151,9 @@ const BloqueRegla = ({ regla, indice, total, onChange, onEliminar, onSubir, onBa
                     <div className="doc-regla__botones">
                         {total > 1 && (
                             <>
-                                <button className="doc-btn-x" onClick={onSubir} disabled={indice === 0} title="Subir">&#x25B2;</button>
-                                <button className="doc-btn-x" onClick={onBajar} disabled={indice === total - 1} title="Bajar">&#x25BC;</button>
-                                <button className="doc-btn-x doc-btn-x--borrar" onClick={onEliminar} title="Eliminar regla">
+                                <button type="button" className="doc-btn-x" onClick={onSubir} disabled={indice === 0} title="Subir">&#x25B2;</button>
+                                <button type="button" className="doc-btn-x" onClick={onBajar} disabled={indice === total - 1} title="Bajar">&#x25BC;</button>
+                                <button type="button" className="doc-btn-x doc-btn-x--borrar" onClick={onEliminar} title="Eliminar regla">
                                     <DeleteOutlined />
                                 </button>
                             </>
@@ -172,32 +168,32 @@ const BloqueRegla = ({ regla, indice, total, onChange, onEliminar, onSubir, onBa
                             key={i}
                             condicion={f}
                             onChange={(n) => cambiarFiltro(i, n)}
-                            onEliminar={() => eliminarFiltro(i)}
+                            onEliminar={filtros.length > 1 ? () => eliminarFiltro(i) : undefined}
                         />
                     ))}
                     {filtros.length === 0 && (
                         <div className="doc-vacio">Sin criterios: todas las filas de este documento pasan</div>
                     )}
-                    <Button type="dashed" size="small" onClick={agregarFiltro} icon={<PlusOutlined />} style={{ marginTop: 4 }}>
-                        Condici&oacute;n
+                    <Button type="dashed" size="small" onClick={agregarFiltro} icon={<PlusOutlined />} style={{ marginTop: 6 }}>
+                        Agregar condici&oacute;n
                     </Button>
                 </div>
 
                 <div className="doc-regla__sep" />
 
                 {/* Destino */}
-                <label className="doc-label">Crear en el WMS como</label>
+                <div className="doc-label">Crear en el WMS como</div>
                 <div className="doc-destinos">
                     <TarjetaDestino
                         tipo="order"
                         seleccionado={!esPicking}
-                        onClick={() => cambiar('crear_como', 'order')}
+                        onSelect={() => seleccionarDestino('order')}
                         flowType={flowType}
                     />
                     <TarjetaDestino
                         tipo="picking_direct"
                         seleccionado={esPicking}
-                        onClick={() => cambiar('crear_como', 'picking_direct')}
+                        onSelect={() => seleccionarDestino('picking_direct')}
                         flowType={flowType}
                     />
                 </div>
@@ -207,16 +203,16 @@ const BloqueRegla = ({ regla, indice, total, onChange, onEliminar, onSubir, onBa
                     <div className="doc-config-campo">
                         <label className="doc-label">
                             Estado inicial{' '}
-                            <Tooltip title="Estado con el que se crea el documento en WMS. 'Borrador' permite revisarlo antes de procesar. 'Listo' lo deja disponible para despachar de inmediato.">
+                            <Tooltip title="Estado con el que se crea el documento en WMS. Ejemplos: draft (borrador), assigned (listo para despachar), confirmed (confirmado). El valor se env&iacute;a tal cual al WMS.">
                                 <InfoCircleOutlined className="flujo-seccion__info" />
                             </Tooltip>
                         </label>
-                        <Select
+                        <Input
                             size="small"
                             style={{ width: 150 }}
-                            value={estadoActual}
-                            options={estadosDisponibles}
-                            onChange={(v) => cambiar('estado', v)}
+                            value={regla.estado || ''}
+                            onChange={(e) => cambiar('estado', e.target.value)}
+                            placeholder="draft"
                         />
                     </div>
                     <div className="doc-config-campo">
@@ -228,7 +224,7 @@ const BloqueRegla = ({ regla, indice, total, onChange, onEliminar, onSubir, onBa
                         </label>
                         <InputNumber
                             size="small"
-                            style={{ width: 90 }}
+                            style={{ width: 100 }}
                             min={1}
                             value={regla.operacion_id || undefined}
                             onChange={(v) => cambiar('operacion_id', v)}
@@ -237,17 +233,17 @@ const BloqueRegla = ({ regla, indice, total, onChange, onEliminar, onSubir, onBa
                     </div>
                     {esPicking && (
                         <div className="doc-config-campo doc-config-campo--switch">
-                            <label className="doc-label">
-                                Quitar reserva{' '}
-                                <Tooltip title="Despu&eacute;s de crear y confirmar el picking, quita la reserva de stock autom&aacute;ticamente (do_unreserve). &Uacute;til para traslados de separaci&oacute;n donde el stock debe quedar bloqueado, no reservado.">
-                                    <InfoCircleOutlined className="flujo-seccion__info" />
-                                </Tooltip>
-                            </label>
                             <Switch
                                 size="small"
                                 checked={regla.sin_reserva || false}
                                 onChange={(v) => cambiar('sin_reserva', v)}
                             />
+                            <label className="doc-label" style={{ marginBottom: 0 }}>
+                                Quitar reserva{' '}
+                                <Tooltip title="Despu&eacute;s de crear y confirmar el picking, quita la reserva de stock autom&aacute;ticamente (do_unreserve). &Uacute;til para traslados de separaci&oacute;n donde el stock debe quedar bloqueado.">
+                                    <InfoCircleOutlined className="flujo-seccion__info" />
+                                </Tooltip>
+                            </label>
                         </div>
                     )}
                 </div>
@@ -295,15 +291,14 @@ const BloqueDocumento = ({ documento, indice, onChange, onEliminar, flowType }) 
         }]
 
     const cambiarRegla = (i, nueva) => {
-        const nuevas = [...reglas]
-        nuevas[i] = nueva
+        const nuevas = reglas.map((r, j) => j === i ? nueva : r)
         cambiar('reglas', nuevas)
-        cambiar('tiene_variantes', nuevas.length > 1)
+        if (nuevas.length > 1) cambiar('tiene_variantes', true)
     }
 
     const eliminarRegla = (i) => {
         const nuevas = reglas.filter((_, j) => j !== i)
-        cambiar('reglas', nuevas.length > 0 ? nuevas : [])
+        cambiar('reglas', nuevas)
         cambiar('tiene_variantes', nuevas.length > 1)
     }
 
@@ -323,7 +318,7 @@ const BloqueDocumento = ({ documento, indice, onChange, onEliminar, flowType }) 
 
     const agregarRegla = () => {
         cambiar('reglas', [...reglas, {
-            filtros: [],
+            filtros: [{ campo: '', operador: '=', valor: '' }],
             hardcodes: [],
             crear_como: 'order',
             estado: 'draft',
@@ -339,14 +334,23 @@ const BloqueDocumento = ({ documento, indice, onChange, onEliminar, flowType }) 
     return (
         <div className={`doc-acordeon ${abierto ? 'doc-acordeon--open' : ''}`}>
             {/* Cabecera colapsable */}
-            <div className="doc-acordeon__head" onClick={() => setAbierto(!abierto)}>
+            <div
+                className="doc-acordeon__head"
+                onClick={(e) => {
+                    // No colapsar si clickeó el botón eliminar
+                    if (e.target.closest('.doc-btn-x')) return
+                    setAbierto(!abierto)
+                }}
+            >
                 <span className="doc-acordeon__chevron"><IconChevron /></span>
                 {codigo && <span className="doc-acordeon__code">{codigo}</span>}
                 <div className="doc-acordeon__titulos">
                     <div className="doc-acordeon__nombre">{nombre || 'Nuevo documento'}</div>
-                    <div className="doc-acordeon__ident">
-                        {documento.ident_campo || '???'} = {codigo || '???'}
-                    </div>
+                    {(documento.ident_campo || codigo) && (
+                        <div className="doc-acordeon__ident">
+                            {documento.ident_campo || '???'} = {codigo || '???'}
+                        </div>
+                    )}
                 </div>
                 <div className="doc-acordeon__resumen">
                     {reglas.map((r, i) => (
@@ -354,6 +358,7 @@ const BloqueDocumento = ({ documento, indice, onChange, onEliminar, flowType }) 
                     ))}
                 </div>
                 <button
+                    type="button"
                     className="doc-btn-x doc-btn-x--borrar"
                     onClick={(e) => { e.stopPropagation(); onEliminar(indice) }}
                     title="Eliminar documento"
@@ -394,6 +399,7 @@ const BloqueDocumento = ({ documento, indice, onChange, onEliminar, flowType }) 
                                 <Select
                                     size="small"
                                     className="doc-ident__op"
+                                    popupMatchSelectWidth={false}
                                     value={documento.ident_operador || '='}
                                     options={OPERADORES}
                                     onChange={(v) => cambiar('ident_operador', v)}
@@ -410,12 +416,12 @@ const BloqueDocumento = ({ documento, indice, onChange, onEliminar, flowType }) 
                     </div>
 
                     {/* Reglas */}
-                    <label className="doc-label" style={{ marginTop: 16 }}>
+                    <div className="doc-label" style={{ marginTop: 16 }}>
                         Reglas{' '}
                         <Tooltip title="Las reglas se eval&uacute;an de arriba hacia abajo. La primera que se cumpla decide qu&eacute; se crea en el WMS. Las filas que no coincidan con ninguna regla se descartan.">
                             <InfoCircleOutlined className="flujo-seccion__info" />
                         </Tooltip>
-                    </label>
+                    </div>
                     <div className="doc-reglas">
                         {reglas.map((regla, i) => (
                             <BloqueRegla
@@ -444,7 +450,7 @@ const BloqueDocumento = ({ documento, indice, onChange, onEliminar, flowType }) 
                             size="small"
                             onClick={agregarRegla}
                             icon={<PlusOutlined />}
-                            style={{ marginTop: 10 }}
+                            style={{ marginTop: 10, marginLeft: 50 }}
                         >
                             Agregar regla
                         </Button>
